@@ -21,8 +21,8 @@ export async function updateSession(request: NextRequest) {
                             ...options,
                             path: '/',
                             sameSite: 'lax' as const,
-                            // Set secure flag based on protocol (HTTPS = production)
-                            secure: request.nextUrl.protocol === 'https:',
+                            // Always set secure to true (works in both dev and prod)
+                            secure: true,
                         }
 
                         request.cookies.set(name, value)
@@ -36,8 +36,8 @@ export async function updateSession(request: NextRequest) {
                             ...options,
                             path: '/',
                             sameSite: 'lax' as const,
-                            // Set secure flag based on protocol (HTTPS = production)
-                            secure: request.nextUrl.protocol === 'https:',
+                            // Always set secure to true (works in both dev and prod)
+                            secure: true,
                         }
                         supabaseResponse.cookies.set(name, value, cookieOptions)
                     })
