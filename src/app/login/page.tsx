@@ -55,14 +55,19 @@ export default function LoginPage() {
             }
 
             // Refresh router to ensure middleware sees the new session
-            router.refresh()
+            // Refresh router to ensure middleware sees the new session
+            // Using window.location.href to force a full reload and ensure cookies are sent
+            console.log('Login successful, redirecting based on role:', profile.role)
+            setError("Redirigiendo...") // Show feedback to user
 
-            // Redirect based on role
             if (profile.role === 'admin') {
-                router.push('/dashboard/admin')
+                window.location.href = '/dashboard/admin'
             } else {
-                router.push('/dashboard/investor')
+                window.location.href = '/dashboard/investor'
             }
+
+            // Keep loading state true while redirecting
+            return
         } catch (err: unknown) {
             console.error('Login error:', err)
             const errorMessage = err instanceof Error ? err.message : 'Error al iniciar sesión. Por favor intenta nuevamente.'
