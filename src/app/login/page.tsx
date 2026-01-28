@@ -13,6 +13,7 @@ export default function LoginPage() {
     const [email, setEmail] = useState("")
     const [password, setPassword] = useState("")
     const [isLoading, setIsLoading] = useState(false)
+    const [isRedirecting, setIsRedirecting] = useState(false)
     const [error, setError] = useState("")
     const router = useRouter()
     const supabase = createClient()
@@ -54,25 +55,25 @@ export default function LoginPage() {
                 throw new Error('No se encontró el perfil del usuario')
             }
 
-            // Refresh router to ensure middleware sees the new session
-            // Refresh router to ensure middleware sees the new session
-            // Using window.location.href to force a full reload and ensure cookies are sent
+            // Set redirecting state to show success message
             console.log('Login successful, redirecting based on role:', profile.role)
-            setError("Redirigiendo...") // Show feedback to user
+            setIsRedirecting(true)
 
+            // Small delay to ensure session cookies are properly set
+            await new Promise(resolve => setTimeout(resolve, 150))
+
+            // Using window.location.href to force a full reload and ensure cookies are sent
             if (profile.role === 'admin') {
                 window.location.href = '/dashboard/admin'
             } else {
                 window.location.href = '/dashboard/investor'
             }
 
-            // Keep loading state true while redirecting
-            return
+            // Keep loading state true while redirecting - don't set to false
         } catch (err: unknown) {
             console.error('Login error:', err)
             const errorMessage = err instanceof Error ? err.message : 'Error al iniciar sesión. Por favor intenta nuevamente.'
             setError(errorMessage)
-        } finally {
             setIsLoading(false)
         }
     }
@@ -97,7 +98,14 @@ export default function LoginPage() {
                 </CardHeader>
                 <form onSubmit={handleLogin}>
                     <CardContent className="space-y-4">
-                        {error && (
+                        {isRedirecting && (
+                            <div className="p-3 rounded-md bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800">
+                                <p className="text-sm text-green-600 dark:text-green-400">
+                                    ✓ Redirigiendo al panel de control...
+                                </p>
+                            </div>
+                        )}
+                        {error && !isRedirecting && (
                             <div className="p-3 rounded-md bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800">
                                 <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
                             </div>
@@ -134,9 +142,9 @@ export default function LoginPage() {
                             type="submit"
                             className="w-full shadow-lg shadow-primary/20"
                             size="lg"
-                            disabled={isLoading}
+                            disabled={isLoading || isRedirecting}
                         >
-                            {isLoading ? "Ingresando..." : "Ingresar"}
+                            {isRedirecting ? "Redirigiendo..." : isLoading ? "Ingresando..." : "Ingresar"}
                         </Button>
                     </CardContent>
                 </form>
