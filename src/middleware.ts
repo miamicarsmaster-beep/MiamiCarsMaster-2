@@ -6,6 +6,11 @@ export async function updateSession(request: NextRequest) {
         request,
     })
 
+    // Debug logging: Check what cookies are arriving in production
+    const allCookies = request.cookies.getAll()
+    const hasAuthCookie = allCookies.some(c => c.name.includes('sb-') && c.name.includes('-auth-token'))
+    console.log(`[Middleware] ${request.nextUrl.pathname} - Cookies: ${allCookies.length}, HasAuth: ${hasAuthCookie}`)
+
     const supabase = createServerClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -15,47 +20,41 @@ export async function updateSession(request: NextRequest) {
                     return request.cookies.getAll()
                 },
                 setAll(cookiesToSet) {
+                    // Update request cookies for the current operation
                     cookiesToSet.forEach(({ name, value, options }) => {
-                        // Ensure cookies work in production (HTTPS) and development (HTTP)
-                        const cookieOptions = {
-                            ...options,
-                            path: '/',
-                            sameSite: 'lax' as const,
-                            // Set secure flag based on environment
-                            secure: process.env.NODE_ENV === 'production',
-                        }
-
                         request.cookies.set(name, value)
                     })
+
+                    // Create a new response with the updated request cookies
                     supabaseResponse = NextResponse.next({
                         request,
                     })
+
+                    // Set the cookies on the response for the browser with production-safe options
                     cookiesToSet.forEach(({ name, value, options }) => {
-                        // Apply production-compatible cookie options
-                        const cookieOptions = {
+                        supabaseResponse.cookies.set(name, value, {
                             ...options,
                             path: '/',
-                            sameSite: 'lax' as const,
-                            // Set secure flag based on environment
+                            sameSite: 'lax',
                             secure: process.env.NODE_ENV === 'production',
-                        }
-                        supabaseResponse.cookies.set(name, value, cookieOptions)
+                            httpOnly: true, // Security best practice
+                        })
                     })
                 },
             },
         }
     )
 
-    // Refresh session if expired
+    // IMPORTANT: calling getUser() triggers the setAll if the token needs refresh
     const { data: { user } } = await supabase.auth.getUser()
 
     const pathname = request.nextUrl.pathname
-    console.log('[Middleware]', {
-        pathname,
-        hasUser: !!user,
-        userEmail: user?.email,
-        timestamp: new Date().toISOString()
-    })
+
+    if (user) {
+        console.log(`[Middleware] ✅ User authenticated: ${user.email} - Path: ${pathname}`)
+    } else {
+        console.log(`[Middleware] ❌ No user session - Path: ${pathname} - Cookies: ${hasAuthCookie}`)
+    }
 
     // Protect dashboard routes
     if (pathname.startsWith('/dashboard') && !user) {
@@ -65,7 +64,7 @@ export async function updateSession(request: NextRequest) {
 
     // Redirect logged-in users away from login
     if (pathname === '/login' && user) {
-        // Get user role
+        // Get user role to redirect correctly
         const { data: profile } = await supabase
             .from('profiles')
             .select('role')
@@ -77,6 +76,7 @@ export async function updateSession(request: NextRequest) {
         if (profile?.role === 'admin') {
             return NextResponse.redirect(new URL('/dashboard/admin', request.url))
         } else {
+            // Default to investor if no role or investor
             return NextResponse.redirect(new URL('/dashboard/investor', request.url))
         }
     }
@@ -90,6 +90,13 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
     matcher: [
+        /*
+         * Match all request paths except for the ones starting with:
+         * - _next/static (static files)
+         * - _next/image (image optimization files)
+         * - favicon.ico (favicon file)
+         * - public folder files (images, etc)
+         */
         '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
     ],
 }

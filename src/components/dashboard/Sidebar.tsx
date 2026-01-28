@@ -92,6 +92,7 @@ export function Sidebar() {
                         <Link
                             key={route.href}
                             href={route.href}
+                            prefetch={false}
                             className={cn(
                                 "text-sm group flex p-3 w-full justify-start font-medium cursor-pointer hover:bg-sidebar-accent hover:text-sidebar-accent-foreground rounded-lg transition",
                                 pathname === route.href ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-muted-foreground"
@@ -115,6 +116,7 @@ export function Sidebar() {
                 </div>
                 <Link
                     href="/api/auth/logout"
+                    prefetch={false}
                     className="text-sm group flex p-3 w-full justify-start font-medium cursor-pointer hover:bg-sidebar-accent hover:text-sidebar-accent-foreground rounded-lg transition text-muted-foreground"
                 >
                     <div className="flex items-center flex-1">

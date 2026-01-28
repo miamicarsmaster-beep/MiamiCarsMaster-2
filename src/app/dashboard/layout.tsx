@@ -1,5 +1,6 @@
 import { Sidebar } from "@/components/dashboard/Sidebar"
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader"
+import { SessionStatus } from "@/components/debug/SessionStatus"
 
 export default function DashboardLayout({
     children,
@@ -17,6 +18,7 @@ export default function DashboardLayout({
                     {children}
                 </div>
             </main>
+            <SessionStatus />
         </div>
     )
 }

@@ -4,13 +4,7 @@ import { Vehicle } from '@/types/database'
 export async function getVehicles(): Promise<Vehicle[]> {
     const supabase = await createClient()
 
-    // Verify authentication
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) {
-        console.error('[getVehicles] Authentication failed:', authError)
-        throw new Error('Authentication required to fetch vehicles')
-    }
-
+    // Auth is handled by middleware - this function is only called from protected routes
     const { data, error } = await supabase
         .from('vehicles')
         .select(`

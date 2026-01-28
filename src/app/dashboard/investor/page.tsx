@@ -10,25 +10,23 @@ import { redirect } from "next/navigation"
 export default async function InvestorDashboardPage() {
     const supabase = await createClient()
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    // Auth is already handled by middleware - if we're here, user is authenticated
+    const { data: { user } } = await supabase.auth.getUser()
 
-    if (authError || !user) {
-        redirect('/login')
-    }
-
-    // Get investor profile
+    // Get investor profile (user is guaranteed to exist by middleware)
     const { data: profile } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', user.id)
+        .eq('id', user!.id)
         .single()
 
-    if (!profile || profile.role !== 'investor') {
-        redirect('/login')
+    // Optional: redirect to correct dashboard if wrong role
+    if (profile?.role === 'admin') {
+        redirect('/dashboard/admin')
     }
 
     // Get investor's vehicles
-    const vehicles = await getVehiclesByInvestor(user.id)
+    const vehicles = await getVehiclesByInvestor(user!.id)
 
     // Calculate stats
     const totalVehicles = vehicles.length

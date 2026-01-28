@@ -5,17 +5,6 @@ import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
 
 export default async function VehiclesPage() {
-    // Verify authentication
-    const supabase = await createClient()
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-
-    if (authError || !user) {
-        console.error('[VehiclesPage] Authentication failed:', authError)
-        redirect('/login')
-    }
-
-    console.log('[VehiclesPage] User authenticated:', user.email)
-
     // Fetch data with error handling
     try {
         const [vehicles, investors] = await Promise.all([

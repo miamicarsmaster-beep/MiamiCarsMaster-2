@@ -9,21 +9,19 @@ import { redirect } from "next/navigation"
 export default async function AdminDashboardPage() {
     const supabase = await createClient()
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    // Auth is already handled by middleware - if we're here, user is authenticated
+    const { data: { user } } = await supabase.auth.getUser()
 
-    if (authError || !user) {
-        redirect('/login')
-    }
-
-    // Get admin profile
+    // Get admin profile (user is guaranteed to exist by middleware)
     const { data: profile } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', user.id)
+        .eq('id', user!.id)
         .single()
 
-    if (!profile || profile.role !== 'admin') {
-        redirect('/login')
+    // Optional: redirect to correct dashboard if wrong role
+    if (profile?.role !== 'admin') {
+        redirect('/dashboard/investor')
     }
 
     // Fetch all data
