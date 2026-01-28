@@ -21,12 +21,11 @@ export async function updateSession(request: NextRequest) {
                     })
                     cookiesToSet.forEach(({ name, value }) =>
                         supabaseResponse.cookies.set(name, value, {
-                            // TEST FIX: Force standard settings to debug production issue
                             path: '/',
                             sameSite: 'lax',
                             httpOnly: true,
                             maxAge: 60 * 60 * 24 * 7, // 1 week
-                            // secure: process.env.NODE_ENV === 'production', // Let's try laxing this too temporarily if needed
+                            secure: true, // Always true for Vercel/Production
                         })
                     )
                 },
