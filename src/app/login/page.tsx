@@ -45,7 +45,9 @@ export default function LoginPage() {
 
             if (profileError) {
                 console.error('Profile error:', profileError)
-                throw new Error('Error al obtener perfil de usuario')
+                // Expose specific error details for debugging
+                const errorDetails = `Error: ${profileError.message} (Code: ${profileError.code}) ${profileError.details || ''} ${profileError.hint || ''}`
+                throw new Error(errorDetails)
             }
 
             if (!profile) {
