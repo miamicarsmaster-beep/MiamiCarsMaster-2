@@ -20,8 +20,8 @@ export async function createClient() {
                                 ...options,
                                 path: '/',
                                 sameSite: 'lax' as const,
-                                // Always set secure to true (works in both dev and prod)
-                                secure: true,
+                                // Always set secure in production (Vercel uses HTTPS)
+                                secure: process.env.NODE_ENV === 'production',
                             }
                             cookieStore.set(name, value, cookieOptions)
                         })

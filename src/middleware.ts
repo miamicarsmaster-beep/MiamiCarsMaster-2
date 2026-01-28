@@ -21,8 +21,8 @@ export async function updateSession(request: NextRequest) {
                             ...options,
                             path: '/',
                             sameSite: 'lax' as const,
-                            // Always set secure to true (works in both dev and prod)
-                            secure: true,
+                            // Set secure flag based on environment
+                            secure: process.env.NODE_ENV === 'production',
                         }
 
                         request.cookies.set(name, value)
@@ -36,8 +36,8 @@ export async function updateSession(request: NextRequest) {
                             ...options,
                             path: '/',
                             sameSite: 'lax' as const,
-                            // Always set secure to true (works in both dev and prod)
-                            secure: true,
+                            // Set secure flag based on environment
+                            secure: process.env.NODE_ENV === 'production',
                         }
                         supabaseResponse.cookies.set(name, value, cookieOptions)
                     })
