@@ -4,6 +4,13 @@ import { Vehicle } from '@/types/database'
 export async function getVehicles(): Promise<Vehicle[]> {
     const supabase = await createClient()
 
+    // Verify authentication
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) {
+        console.error('[getVehicles] Authentication failed:', authError)
+        throw new Error('Authentication required to fetch vehicles')
+    }
+
     const { data, error } = await supabase
         .from('vehicles')
         .select(`
@@ -13,10 +20,11 @@ export async function getVehicles(): Promise<Vehicle[]> {
         .order('created_at', { ascending: false })
 
     if (error) {
-        console.error('Error fetching vehicles:', error)
-        return []
+        console.error('[getVehicles] Database error:', error)
+        throw new Error(`Failed to fetch vehicles: ${error.message}`)
     }
 
+    console.log('[getVehicles] Successfully loaded', data?.length || 0, 'vehicles')
     return data || []
 }
 

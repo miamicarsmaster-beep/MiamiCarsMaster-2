@@ -30,19 +30,30 @@ export async function updateSession(request: NextRequest) {
     // Refresh session if expired
     const { data: { user } } = await supabase.auth.getUser()
 
+    const pathname = request.nextUrl.pathname
+    console.log('[Middleware]', {
+        pathname,
+        hasUser: !!user,
+        userEmail: user?.email,
+        timestamp: new Date().toISOString()
+    })
+
     // Protect dashboard routes
-    if (request.nextUrl.pathname.startsWith('/dashboard') && !user) {
+    if (pathname.startsWith('/dashboard') && !user) {
+        console.log('[Middleware] Redirecting to login - no user found for:', pathname)
         return NextResponse.redirect(new URL('/login', request.url))
     }
 
     // Redirect logged-in users away from login
-    if (request.nextUrl.pathname === '/login' && user) {
+    if (pathname === '/login' && user) {
         // Get user role
         const { data: profile } = await supabase
             .from('profiles')
             .select('role')
             .eq('id', user.id)
             .single()
+
+        console.log('[Middleware] User logged in, redirecting from login to dashboard. Role:', profile?.role)
 
         if (profile?.role === 'admin') {
             return NextResponse.redirect(new URL('/dashboard/admin', request.url))
