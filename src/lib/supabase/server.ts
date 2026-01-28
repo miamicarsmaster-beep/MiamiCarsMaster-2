@@ -14,9 +14,17 @@ export async function createClient() {
                 },
                 setAll(cookiesToSet) {
                     try {
-                        cookiesToSet.forEach(({ name, value, options }) =>
-                            cookieStore.set(name, value, options)
-                        )
+                        cookiesToSet.forEach(({ name, value, options }) => {
+                            // Apply production-compatible cookie options
+                            const cookieOptions = {
+                                ...options,
+                                path: '/',
+                                sameSite: 'lax' as const,
+                                // Always set secure in production (Vercel uses HTTPS)
+                                secure: process.env.NODE_ENV === 'production',
+                            }
+                            cookieStore.set(name, value, cookieOptions)
+                        })
                     } catch {
                         // The `setAll` method was called from a Server Component.
                         // This can be ignored if you have middleware refreshing
