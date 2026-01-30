@@ -146,30 +146,6 @@ export default function LoginPage() {
                         </Button>
                     </CardContent>
                 </form>
-                <CardFooter className="flex flex-col gap-4 text-center text-sm text-muted-foreground">
-                    <div className="relative w-full">
-                        <div className="absolute inset-0 flex items-center">
-                            <span className="w-full border-t" />
-                        </div>
-                        <div className="relative flex justify-center text-xs uppercase">
-                            <span className="bg-background px-2 text-muted-foreground">
-                                Acceso rápido (desarrollo)
-                            </span>
-                        </div>
-                    </div>
-                    <div className="flex gap-2 justify-center w-full">
-                        <Link href="/dashboard/admin" className="w-full">
-                            <Button variant="outline" className="w-full text-xs" type="button">
-                                Demo Admin
-                            </Button>
-                        </Link>
-                        <Link href="/dashboard/investor" className="w-full">
-                            <Button variant="outline" className="w-full text-xs" type="button">
-                                Demo Inversor
-                            </Button>
-                        </Link>
-                    </div>
-                </CardFooter>
             </Card>
         </div>
     )

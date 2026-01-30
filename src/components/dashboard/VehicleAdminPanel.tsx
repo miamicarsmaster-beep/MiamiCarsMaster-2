@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
 import {
     Camera, Gauge, MapPin, Settings, Wrench, X, CalendarDays,
-    Activity, CreditCard, CheckCircle2, Edit3, Save, DollarSign, Eye, Upload, Trash2, AlertCircle, Plus, FileText
+    Activity, CreditCard, CheckCircle2, Edit3, Save, DollarSign, Eye, Upload, Trash2, AlertCircle, Plus, FileText, Loader2
 } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
@@ -141,6 +141,9 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
     const [maintenancePhotos, setMaintenancePhotos] = useState<File[]>([])
     const [isUploadingMaintenance, setIsUploadingMaintenance] = useState(false)
 
+    // Hero Image State
+    const [isUploadingHeroImage, setIsUploadingHeroImage] = useState(false)
+
     // Rentals State
     const [rentalHistory, setRentalHistory] = useState<RentalRecord[]>([])
     const [isRentalDialogOpen, setIsRentalDialogOpen] = useState(false)
@@ -155,6 +158,14 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
 
     // Documents State
     const [documentsList, setDocumentsList] = useState<DocumentRecord[]>([])
+
+    // Check-in State
+    const [isCheckInDialogOpen, setIsCheckInDialogOpen] = useState(false)
+    const [checkInData, setCheckInData] = useState({
+        date: new Date().toISOString().split('T')[0],
+        mileage: formData.mileage || 0,
+        notes: ""
+    })
 
     const router = useRouter()
     const supabase = createClient()
@@ -593,6 +604,105 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
         }
     }
 
+    // Hero Image Logic
+    const handleChangeHeroImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]
+        if (!file) return
+
+        setIsUploadingHeroImage(true)
+        try {
+            // Upload to Supabase Storage
+            const fileExt = file.name.split('.').pop()
+            const fileName = `${vehicle.id}-hero-${Date.now()}.${fileExt}`
+            const { data: uploadData, error: uploadError } = await supabase.storage
+                .from('vehicle-images')
+                .upload(fileName, file)
+
+            if (uploadError) throw uploadError
+
+            // Get public URL
+            const { data: { publicUrl } } = supabase.storage
+                .from('vehicle-images')
+                .getPublicUrl(fileName)
+
+            // Update vehicle in database
+            const { error: updateError } = await supabase
+                .from('vehicles')
+                .update({ image_url: publicUrl })
+                .eq('id', vehicle.id)
+
+            if (updateError) throw updateError
+
+            // Update local state
+            setFormData(prev => ({ ...prev, image_url: publicUrl }))
+            alert("Imagen actualizada exitosamente")
+        } catch (error) {
+            console.error("Error uploading hero image:", error)
+            alert("Error al subir imagen")
+        } finally {
+            setIsUploadingHeroImage(false)
+        }
+    }
+
+    const handleRemoveHeroImage = async () => {
+        if (!confirm("¿Estás seguro de eliminar la imagen de portada?")) return
+
+        try {
+            const { error } = await supabase
+                .from('vehicles')
+                .update({ image_url: null })
+                .eq('id', vehicle.id)
+
+            if (error) throw error
+
+            setFormData(prev => ({ ...prev, image_url: "" }))
+            alert("Imagen eliminada exitosamente")
+        } catch (error) {
+            console.error("Error removing hero image:", error)
+            alert("Error al eliminar imagen")
+        }
+    }
+
+    // Check-in Logic
+    const handleSaveCheckIn = async () => {
+        try {
+            // Update vehicle mileage
+            const { error: vehicleError } = await supabase
+                .from('vehicles')
+                .update({ mileage: checkInData.mileage })
+                .eq('id', vehicle.id)
+
+            if (vehicleError) throw vehicleError
+
+            // Create a maintenance record for the check-in
+            const { error: maintenanceError } = await supabase
+                .from('maintenances')
+                .insert({
+                    vehicle_id: vehicle.id,
+                    service_type: 'Check-in',
+                    date: checkInData.date,
+                    notes: checkInData.notes || 'Check-in rápido',
+                    status: 'completed',
+                    cost: 0
+                })
+
+            if (maintenanceError) throw maintenanceError
+
+            // Update local state
+            setFormData(prev => ({ ...prev, mileage: checkInData.mileage }))
+            setIsCheckInDialogOpen(false)
+            alert("Check-in registrado exitosamente")
+
+            // Reload maintenance history
+            if (activeTab === 'maintenance') {
+                loadMaintenanceHistory()
+            }
+        } catch (error) {
+            console.error("Error saving check-in:", error)
+            alert("Error al guardar check-in")
+        }
+    }
+
     // Documents Logic
     useEffect(() => {
         if (activeTab === "documents") loadDocuments()
@@ -643,7 +753,7 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                     className="!max-w-[100vw] !w-full h-screen sm:h-[94vh] sm:!max-w-[96vw] sm:!w-[96vw] sm:rounded-xl p-0 gap-0 overflow-hidden bg-background z-[100] border-0 outline-none ring-0 shadow-2xl"
                     style={{ zIndex: 100 }}>
                     {/* HEADER - Borderless & Airy */}
-                    <div className="flex-shrink-0 px-6 sm:px-10 py-6 sm:py-8 bg-background relative z-10">
+                    <div className="flex-shrink-0 px-6 sm:px-8 py-4 sm:py-6 bg-background relative z-10">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
                             <div className="flex-1 min-w-0 space-y-3">
                                 <div className="flex flex-wrap items-center gap-3 sm:gap-4">
@@ -694,7 +804,7 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
 
                             {/* HORIZONTAL TABS NAVIGATION */}
                             <div className="flex-shrink-0 border-b border-border/40 bg-background/95 backdrop-blur z-20 px-6 sm:px-8">
-                                <TabsList className="h-14 w-full justify-start gap-6 bg-transparent p-0 overflow-x-auto scrollbar-hide">
+                                <TabsList className="h-12 w-full justify-start gap-6 bg-transparent p-0 overflow-x-auto scrollbar-hide">
                                     {[
                                         { value: "overview", label: "General", icon: Settings },
                                         { value: "photos", label: "Galería", icon: Camera },
@@ -733,6 +843,55 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                                                 className="object-cover transition-transform duration-700 group-hover:scale-105"
                                             />
                                             <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-80" />
+
+                                            {/* Hero Image Action Buttons */}
+                                            <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <input
+                                                    type="file"
+                                                    id="hero-image-upload"
+                                                    accept="image/*"
+                                                    className="hidden"
+                                                    onChange={handleChangeHeroImage}
+                                                    disabled={isUploadingHeroImage}
+                                                />
+                                                <label htmlFor="hero-image-upload">
+                                                    <Button
+                                                        type="button"
+                                                        size="sm"
+                                                        variant="secondary"
+                                                        className="cursor-pointer bg-white/90 hover:bg-white text-black"
+                                                        disabled={isUploadingHeroImage}
+                                                        asChild
+                                                    >
+                                                        <span>
+                                                            {isUploadingHeroImage ? (
+                                                                <>
+                                                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                                                    Subiendo...
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <Upload className="h-4 w-4 mr-2" />
+                                                                    Cambiar
+                                                                </>
+                                                            )}
+                                                        </span>
+                                                    </Button>
+                                                </label>
+                                                {formData.image_url && (
+                                                    <Button
+                                                        type="button"
+                                                        size="sm"
+                                                        variant="destructive"
+                                                        className="bg-red-500/90 hover:bg-red-600"
+                                                        onClick={handleRemoveHeroImage}
+                                                    >
+                                                        <Trash2 className="h-4 w-4 mr-2" />
+                                                        Eliminar
+                                                    </Button>
+                                                )}
+                                            </div>
+
                                             <div className="absolute bottom-6 left-6 right-6 text-white space-y-2">
                                                 <div className="flex items-center gap-2 mb-2">
                                                     <Badge className="bg-white/20 hover:bg-white/30 text-white border-0 backdrop-blur-md">
@@ -970,7 +1129,7 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
 
                                                     {/* Quick Actions Grid */}
                                                     <div className="grid grid-cols-2 gap-3 pt-2">
-                                                        <Button variant="outline" className="h-auto py-3 flex-col gap-1 hover:bg-emerald-50 hover:border-emerald-200 dark:hover:bg-emerald-900/20 border-border/50 rounded-xl" onClick={() => alert("Función: Check-in rápido")}>
+                                                        <Button variant="outline" className="h-auto py-3 flex-col gap-1 hover:bg-emerald-50 hover:border-emerald-200 dark:hover:bg-emerald-900/20 border-border/50 rounded-xl" onClick={() => setIsCheckInDialogOpen(true)}>
                                                             <CheckCircle2 className="h-5 w-5 text-emerald-600" />
                                                             <span className="text-[10px] uppercase font-bold tracking-wider opacity-70">Check-in</span>
                                                         </Button>
@@ -1739,6 +1898,71 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                             </div >
                         </Tabs>
                     </div >
+                </DialogContent>
+            </Dialog>
+
+            {/* Check-in Dialog */}
+            <Dialog open={isCheckInDialogOpen} onOpenChange={setIsCheckInDialogOpen}>
+                <DialogContent className="sm:max-w-[400px]">
+                    <div className="space-y-6">
+                        <div>
+                            <h2 className="text-xl font-bold">Check-in Rápido</h2>
+                            <p className="text-muted-foreground text-sm mt-1">
+                                Actualiza el estado y millaje del vehículo
+                            </p>
+                        </div>
+
+                        <div className="space-y-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="checkin-date">Fecha</Label>
+                                <Input
+                                    id="checkin-date"
+                                    type="date"
+                                    value={checkInData.date}
+                                    onChange={(e) => setCheckInData({ ...checkInData, date: e.target.value })}
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="checkin-mileage">Millaje Actual</Label>
+                                <div className="relative">
+                                    <Input
+                                        id="checkin-mileage"
+                                        type="number"
+                                        value={checkInData.mileage}
+                                        onChange={(e) => setCheckInData({ ...checkInData, mileage: Number(e.target.value) })}
+                                        className="pl-20"
+                                    />
+                                    <span className="absolute left-3 top-2.5 text-xs font-bold text-muted-foreground uppercase">Millas:</span>
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="checkin-notes">Notas / Observaciones</Label>
+                                <Input
+                                    id="checkin-notes"
+                                    value={checkInData.notes}
+                                    onChange={(e) => setCheckInData({ ...checkInData, notes: e.target.value })}
+                                    placeholder="Ej: Tanque lleno, sin daños nuevos..."
+                                />
+                            </div>
+                        </div>
+
+                        <div className="flex gap-3 pt-2">
+                            <Button
+                                variant="outline"
+                                className="flex-1"
+                                onClick={() => setIsCheckInDialogOpen(false)}
+                            >
+                                Cancelar
+                            </Button>
+                            <Button
+                                className="flex-1 bg-emerald-600 hover:bg-emerald-700"
+                                onClick={handleSaveCheckIn}
+                            >
+                                <CheckCircle2 className="h-4 w-4 mr-2" />
+                                Guardar Check-in
+                            </Button>
+                        </div>
+                    </div>
                 </DialogContent>
             </Dialog>
 
