@@ -104,9 +104,90 @@
 
 ---
 
+### 4. **B) Reservas Recientes - RESUELTO** ✅
+**Prioridad**: ALTA
+**Tiempo**: 30 min
+
+**Problema**:
+- Botón "Nueva Reserva" no hacía nada
+- No había formulario para crear reservas
+- No se podían registrar alquileres
+
+**Solución Implementada**:
+- ✅ Añadido estado para nuevas reservas
+- ✅ Modal de creación con formulario completo
+- ✅ Campos: cliente, fechas inicio/fin, tarifa, plataforma, estado
+- ✅ Cálculo automático de días y total
+- ✅ Validación de fechas (fin > inicio)
+- ✅ Validación de campos requeridos
+- ✅ Auto-reset después de guardar
+- ✅ Integración con tabla `rentals`
+
+**Archivos Modificados**:
+- `src/components/dashboard/VehicleAdminPanel.tsx`
+
+**Funcionalidades**:
+- Modal responsive con diseño moderno
+- Preview de duración y total en tiempo real
+- Selector de plataforma (Direct, Turo, Getaround, Other)
+- Estados: Confirmado, Completado, Cancelado
+- Botones Cancelar/Crear con validación
+
+**Validación**:
+- [x] Modal se abre correctamente
+- [x] Formulario valida campos requeridos
+- [x] Cálculo de total funciona
+- [x] Validación de fechas funciona
+- [x] Reserva se guarda en DB
+- [x] Historial se actualiza
+
+---
+
+### 5. **D) Ver Detalles Inversor - RESUELTO** ✅
+**Prioridad**: CRÍTICA
+**Tiempo**: 25 min
+
+**Problema**:
+- Botón "Ver Detalles" no funcionaba
+- Inversores no podían ver información detallada de sus vehículos
+- No había página de detalles para inversores
+
+**Solución Implementada**:
+- ✅ Creada página `/dashboard/investor/vehicles/[id]/page.tsx`
+- ✅ Vista read-only completa con tabs
+- ✅ Tab Resumen: KPIs, imagen hero, especificaciones
+- ✅ Tab Fotos: Galería completa con zoom
+- ✅ Tab Mantenimiento: Historial con fotos de comprobantes
+- ✅ Tab Alquileres: Historial de rentas
+- ✅ Tab Documentos: Lista de documentos del vehículo
+- ✅ Navegación desde dashboard inversor
+
+**Archivos Modificados**:
+- `src/app/dashboard/investor/vehicles/[id]/page.tsx` (NUEVO)
+- `src/app/dashboard/investor/page.tsx`
+
+**Funcionalidades**:
+- Diseño responsive y moderno
+- Estados de carga
+- Manejo de errores (vehículo no encontrado)
+- Botón volver al dashboard
+- Galería de fotos clickeable
+- Visualización de comprobantes de mantenimiento
+- Información completa sin capacidad de edición
+
+**Validación**:
+- [x] Página carga correctamente
+- [x] Tabs funcionan
+- [x] Datos se muestran correctamente
+- [x] Fotos se pueden ver
+- [x] Navegación funciona
+- [x] Solo lectura (sin edición)
+
+---
+
 ## 📋 PENDIENTES
 
-### 4. **B) Reservas Recientes**
+### 6. **G) Asignación/Edición de Autos**
 **Prioridad**: CRÍTICA
 **Estado**: No iniciado
 
@@ -157,18 +238,18 @@
 ## 📊 ESTADÍSTICAS
 
 **Total de Issues**: 7
-**Completados**: 3 (43%)
+**Completados**: 5 (71%)
 **En Progreso**: 0 (0%)
-**Pendientes**: 4 (57%)
+**Pendientes**: 2 (29%)
 
-**Tiempo Invertido**: ~70 minutos
-**Tiempo Estimado Restante**: ~2-3 horas
+**Tiempo Invertido**: ~125 minutos
+**Tiempo Estimado Restante**: ~45-60 minutos
 
 ---
 
 ## 🎯 PRÓXIMA ACCIÓN
 
-**Implementar formulario de creación de reservas**
-- Archivo: `src/components/dashboard/VehicleAdminPanel.tsx`
-- Sección: Tab "Rentals" (líneas 1280-1350)
-- Añadir formulario para crear nuevas reservas con validación de fechas
+**Implementar edición de asignación de vehículos**
+- Archivo: `src/components/dashboard/VehiclesTable.tsx` o crear nuevo componente
+- Permitir reasignar vehículos a diferentes inversores
+- Validar que no se pueda desasignar si hay rentas activas

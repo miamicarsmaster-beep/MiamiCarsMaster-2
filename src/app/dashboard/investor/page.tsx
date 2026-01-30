@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { DollarSign, Calendar, MapPin, Gauge } from "lucide-react"
 import { ImageWithFallback } from "@/components/ui/image-with-fallback"
 import { redirect } from "next/navigation"
+import Link from "next/link"
 
 export default async function InvestorDashboardPage() {
     const supabase = await createClient()
@@ -165,7 +166,9 @@ export default async function InvestorDashboardPage() {
                                         <span className="text-blue-600">Disponible</span>
                                     )}
                                 </div>
-                                <Button variant="outline" size="sm">Ver Detalles</Button>
+                                <Link href={`/dashboard/investor/vehicles/${vehicle.id}`}>
+                                    <Button variant="outline" size="sm">Ver Detalles</Button>
+                                </Link>
                             </CardFooter>
                         </Card>
                     ))}
