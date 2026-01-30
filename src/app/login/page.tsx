@@ -59,14 +59,17 @@ export default function LoginPage() {
             console.log('Login successful, redirecting based on role:', profile.role)
             setIsRedirecting(true)
 
-            // Small delay to ensure session cookies are properly set
-            await new Promise(resolve => setTimeout(resolve, 150))
+            // Refresh the router to ensure cookies are properly set
+            router.refresh()
 
-            // Using window.location.href to force a full reload and ensure cookies are sent
+            // Small delay to ensure session cookies are properly set
+            await new Promise(resolve => setTimeout(resolve, 300))
+
+            // Use router.push for client-side navigation
             if (profile.role === 'admin') {
-                window.location.href = '/dashboard/admin'
+                router.push('/dashboard/admin')
             } else {
-                window.location.href = '/dashboard/investor'
+                router.push('/dashboard/investor')
             }
 
             // Keep loading state true while redirecting - don't set to false
