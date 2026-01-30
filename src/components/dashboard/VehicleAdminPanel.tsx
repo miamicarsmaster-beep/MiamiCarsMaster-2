@@ -47,8 +47,6 @@ interface MileageLog {
     created_at: string
 }
 
-
-
 interface RentalRecord {
     id: string
     vehicle_id: string
@@ -59,6 +57,20 @@ interface RentalRecord {
     total_amount: number
     status: 'confirmed' | 'completed' | 'cancelled'
     platform: string
+}
+
+interface MaintenanceRecord {
+    id: string
+    vehicle_id: string
+    service_type: string
+    cost: number | null
+    date: string
+    notes: string | null
+    next_service_date: string | null
+    next_service_mileage: number | null
+    status: 'pending' | 'completed'
+    receipt_images: string[] | null
+    created_at: string
 }
 
 interface DocumentRecord {
@@ -114,7 +126,19 @@ export function VehicleAdminPanel({ vehicle, onClose, onUpdate, onDelete }: Vehi
         notes: ""
     })
 
-
+    // Maintenance state
+    const [maintenanceHistory, setMaintenanceHistory] = useState<MaintenanceRecord[]>([])
+    const [newMaintenanceData, setNewMaintenanceData] = useState({
+        service_type: "",
+        cost: 0,
+        date: new Date().toISOString().split('T')[0],
+        notes: "",
+        next_service_date: "",
+        next_service_mileage: 0,
+        status: "completed" as "pending" | "completed"
+    })
+    const [maintenancePhotos, setMaintenancePhotos] = useState<File[]>([])
+    const [isUploadingMaintenance, setIsUploadingMaintenance] = useState(false)
 
     // Rentals State
     const [rentalHistory, setRentalHistory] = useState<RentalRecord[]>([])
@@ -385,9 +409,112 @@ export function VehicleAdminPanel({ vehicle, onClose, onUpdate, onDelete }: Vehi
         }
     }
 
+    // Maintenance Logic
+    useEffect(() => {
+        if (activeTab === "maintenance") loadMaintenanceHistory()
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [activeTab])
 
-    // handleSaveMaintenance removed as unused
+    const loadMaintenanceHistory = async () => {
+        const { data } = await supabase
+            .from("maintenances")
+            .select("*")
+            .eq("vehicle_id", vehicle.id)
+            .order("date", { ascending: false })
+        setMaintenanceHistory(data || [])
+    }
 
+    const handleMaintenancePhotosChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = Array.from(e.target.files || [])
+        // Limit to 5 photos
+        if (files.length > 5) {
+            alert("Máximo 5 fotos por servicio")
+            return
+        }
+        // Validate size (10MB per file)
+        const maxSize = 10 * 1024 * 1024
+        const invalidFiles = files.filter(f => f.size > maxSize)
+        if (invalidFiles.length > 0) {
+            alert(`Algunos archivos exceden 10MB: ${invalidFiles.map(f => f.name).join(', ')}`)
+            return
+        }
+        setMaintenancePhotos(files)
+    }
+
+    const handleSaveMaintenance = async () => {
+        if (!newMaintenanceData.service_type) {
+            alert("Por favor ingresa el tipo de servicio")
+            return
+        }
+
+        setIsUploadingMaintenance(true)
+        try {
+            let receiptImageUrls: string[] = []
+
+            // Upload photos if any
+            if (maintenancePhotos.length > 0) {
+                const uploadPromises = maintenancePhotos.map(async (file) => {
+                    const fileExt = file.name.split('.').pop()
+                    const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
+                    const filePath = `maintenance-receipts/${vehicle.id}/${fileName}`
+
+                    const { error: uploadError } = await supabase.storage
+                        .from('vehicle-documents')
+                        .upload(filePath, file)
+
+                    if (uploadError) throw uploadError
+
+                    const { data: { publicUrl } } = supabase.storage
+                        .from('vehicle-documents')
+                        .getPublicUrl(filePath)
+
+                    return publicUrl
+                })
+
+                receiptImageUrls = await Promise.all(uploadPromises)
+            }
+
+            // Insert maintenance record
+            const { data: maintenanceData, error: maintenanceError } = await supabase
+                .from("maintenances")
+                .insert({
+                    vehicle_id: vehicle.id,
+                    service_type: newMaintenanceData.service_type,
+                    cost: newMaintenanceData.cost || null,
+                    date: newMaintenanceData.date,
+                    notes: newMaintenanceData.notes || null,
+                    next_service_date: newMaintenanceData.next_service_date || null,
+                    next_service_mileage: newMaintenanceData.next_service_mileage || null,
+                    status: newMaintenanceData.status,
+                    receipt_images: receiptImageUrls.length > 0 ? receiptImageUrls : null
+                })
+                .select()
+                .single()
+
+            if (maintenanceError) throw maintenanceError
+
+            setMaintenanceHistory([maintenanceData, ...maintenanceHistory])
+
+            // Reset form
+            setNewMaintenanceData({
+                service_type: "",
+                cost: 0,
+                date: new Date().toISOString().split('T')[0],
+                notes: "",
+                next_service_date: "",
+                next_service_mileage: 0,
+                status: "completed"
+            })
+            setMaintenancePhotos([])
+
+            alert("Servicio registrado exitosamente")
+        } catch (error) {
+            console.error("Error saving maintenance:", error)
+            alert("Error al guardar servicio")
+        } finally {
+            setIsUploadingMaintenance(false)
+        }
+    }
 
     // Rentals Logic
     useEffect(() => {
@@ -1074,7 +1201,7 @@ export function VehicleAdminPanel({ vehicle, onClose, onUpdate, onDelete }: Vehi
                             </TabsContent>
 
                             {/* MAINTENANCE TAB */}
-                            {/* MAINTENANCE TAB - Clean Dashboard */}
+                            {/* MAINTENANCE TAB - Full Implementation */}
                             <TabsContent value="maintenance" className="m-0 p-4 sm:p-6 space-y-6">
                                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                                     {/* Left: Service History & Timeline */}
@@ -1083,68 +1210,300 @@ export function VehicleAdminPanel({ vehicle, onClose, onUpdate, onDelete }: Vehi
                                             <div className="p-6 border-b flex justify-between items-center bg-slate-50/50 dark:bg-slate-950/50">
                                                 <h3 className="font-bold text-lg flex items-center gap-2">
                                                     <Wrench className="h-5 w-5 text-orange-500" />
-                                                    Historial de Servicios
+                                                    Historial de Servicios ({maintenanceHistory.length})
                                                 </h3>
                                                 <div className="flex gap-2">
                                                     <Badge variant="outline" className="gap-1 bg-white dark:bg-slate-950">
                                                         <CheckCircle2 className="h-3 w-3 text-emerald-500" />
-                                                        Al día
+                                                        {maintenanceHistory.filter(m => m.status === 'completed').length} Completados
                                                     </Badge>
                                                 </div>
                                             </div>
 
-                                            {/* Empty State or List Placeholder (In a real app, integrate map over maintenanceLogs) */}
-                                            <div className="p-12 text-center h-[300px] flex flex-col items-center justify-center">
-                                                <div className="h-16 w-16 bg-orange-50 dark:bg-orange-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                                                    <Wrench className="h-8 w-8 text-orange-400 opacity-50" />
-                                                </div>
-                                                <h4 className="text-lg font-bold text-foreground mb-1">Sin registros de mantenimiento</h4>
-                                                <p className="text-muted-foreground max-w-sm mx-auto mb-6">
-                                                    Mantén el vehículo en óptimas condiciones registrando cada servicio.
-                                                </p>
-                                                <Button className="bg-orange-600 hover:bg-orange-700 text-white shadow-lg shadow-orange-600/20">
-                                                    <Plus className="h-4 w-4 mr-2" />
-                                                    Registrar Primer Servicio
-                                                </Button>
+                                            {/* Service History List */}
+                                            <div className="divide-y max-h-[600px] overflow-y-auto">
+                                                {maintenanceHistory.length > 0 ? maintenanceHistory.map((service) => (
+                                                    <div key={service.id} className="p-6 hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors">
+                                                        <div className="flex items-start justify-between mb-4">
+                                                            <div className="flex items-start gap-4">
+                                                                <div className={`h-12 w-12 rounded-full flex items-center justify-center ${service.status === 'completed'
+                                                                        ? 'bg-emerald-100 dark:bg-emerald-900/20'
+                                                                        : 'bg-orange-100 dark:bg-orange-900/20'
+                                                                    }`}>
+                                                                    <Wrench className={`h-6 w-6 ${service.status === 'completed'
+                                                                            ? 'text-emerald-600'
+                                                                            : 'text-orange-600'
+                                                                        }`} />
+                                                                </div>
+                                                                <div>
+                                                                    <h4 className="font-bold text-base">{service.service_type}</h4>
+                                                                    <p className="text-sm text-muted-foreground mt-1">
+                                                                        {new Date(service.date).toLocaleDateString('es-ES', {
+                                                                            year: 'numeric',
+                                                                            month: 'long',
+                                                                            day: 'numeric'
+                                                                        })}
+                                                                    </p>
+                                                                    {service.notes && (
+                                                                        <p className="text-sm text-muted-foreground mt-2 max-w-md">
+                                                                            {service.notes}
+                                                                        </p>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                            <div className="text-right">
+                                                                {service.cost && (
+                                                                    <p className="font-bold text-lg font-mono">
+                                                                        ${service.cost.toLocaleString()}
+                                                                    </p>
+                                                                )}
+                                                                <Badge
+                                                                    variant={service.status === 'completed' ? 'default' : 'secondary'}
+                                                                    className={service.status === 'completed' ? 'bg-emerald-500' : 'bg-orange-500'}
+                                                                >
+                                                                    {service.status === 'completed' ? 'Completado' : 'Pendiente'}
+                                                                </Badge>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Receipt Photos Gallery */}
+                                                        {service.receipt_images && service.receipt_images.length > 0 && (
+                                                            <div className="mt-4">
+                                                                <p className="text-xs font-semibold uppercase text-muted-foreground mb-2">
+                                                                    Comprobantes ({service.receipt_images.length})
+                                                                </p>
+                                                                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
+                                                                    {service.receipt_images.map((imageUrl, idx) => (
+                                                                        <div
+                                                                            key={idx}
+                                                                            className="aspect-square rounded-lg overflow-hidden border border-border/50 hover:border-primary cursor-pointer group relative"
+                                                                            onClick={() => window.open(imageUrl, '_blank')}
+                                                                        >
+                                                                            <ImageWithFallback
+                                                                                src={imageUrl}
+                                                                                fallbackSrc="https://source.unsplash.com/400x400/?receipt,document"
+                                                                                alt={`Comprobante ${idx + 1}`}
+                                                                                fill
+                                                                                className="object-cover transition-transform group-hover:scale-110"
+                                                                            />
+                                                                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
+                                                                                <Eye className="h-5 w-5 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                                            </div>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                        )}
+
+                                                        {/* Next Service Info */}
+                                                        {(service.next_service_date || service.next_service_mileage) && (
+                                                            <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-800/30">
+                                                                <p className="text-xs font-semibold uppercase text-blue-600 dark:text-blue-400 mb-1">
+                                                                    Próximo Servicio
+                                                                </p>
+                                                                <div className="flex gap-4 text-sm">
+                                                                    {service.next_service_date && (
+                                                                        <span className="text-blue-700 dark:text-blue-300">
+                                                                            📅 {new Date(service.next_service_date).toLocaleDateString()}
+                                                                        </span>
+                                                                    )}
+                                                                    {service.next_service_mileage && (
+                                                                        <span className="text-blue-700 dark:text-blue-300">
+                                                                            🛣️ {service.next_service_mileage.toLocaleString()} mi
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )) : (
+                                                    <div className="p-12 text-center h-[300px] flex flex-col items-center justify-center">
+                                                        <div className="h-16 w-16 bg-orange-50 dark:bg-orange-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                                                            <Wrench className="h-8 w-8 text-orange-400 opacity-50" />
+                                                        </div>
+                                                        <h4 className="text-lg font-bold text-foreground mb-1">Sin registros de mantenimiento</h4>
+                                                        <p className="text-muted-foreground max-w-sm mx-auto mb-6">
+                                                            Mantén el vehículo en óptimas condiciones registrando cada servicio.
+                                                        </p>
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                     </div>
 
-                                    {/* Right: Health Stats & Quick Actions */}
-                                    <div className="col-span-1 lg:col-span-4 space-y-6">
-                                        <div className="bg-slate-900 text-white rounded-2xl p-6 relative overflow-hidden shadow-xl">
-                                            <div className="relative z-10">
-                                                <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Próximo Servicio Estimado</p>
-                                                <h3 className="text-2xl font-bold mb-1">En 3,400 mi</h3>
-                                                <p className="text-sm text-slate-400">Basado en uso promedio</p>
-                                                <div className="mt-8 pt-6 border-t border-white/10 flex justify-between items-center">
-                                                    <span className="text-xs font-medium text-slate-300">Salud del Vehículo</span>
-                                                    <div className="flex items-center gap-2">
-                                                        <div className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-                                                        <span className="text-emerald-400 font-bold text-sm">98% Óptimo</span>
-                                                    </div>
+                                    {/* Right: New Service Form */}
+                                    <div className="col-span-1 lg:col-span-4">
+                                        <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-border/50 sticky top-6 shadow-sm">
+                                            <div className="flex items-center gap-3 mb-6">
+                                                <div className="h-10 w-10 rounded-full bg-orange-500/10 flex items-center justify-center text-orange-600">
+                                                    <Plus className="h-5 w-5" />
                                                 </div>
+                                                <h3 className="font-bold text-lg">Nuevo Servicio</h3>
                                             </div>
-                                            <Wrench className="absolute -right-4 -bottom-4 h-32 w-32 text-white/5 rotate-12" />
-                                        </div>
 
-                                        <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-border/50">
-                                            <h4 className="font-bold text-sm mb-4">Estado de Componentes</h4>
-                                            <div className="space-y-3">
-                                                <div className="flex items-start gap-3 p-3 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800/30">
-                                                    <CheckCircle2 className="h-5 w-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0 mt-0.5" />
-                                                    <div>
-                                                        <p className="text-sm font-bold text-emerald-800 dark:text-emerald-300">Aceite & Filtros</p>
-                                                        <p className="text-xs text-emerald-600 dark:text-emerald-400/80">Cambiado hace 1,200 mi</p>
+                                            <div className="space-y-4">
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="service-type" className="text-xs font-semibold uppercase text-muted-foreground">
+                                                        Tipo de Servicio *
+                                                    </Label>
+                                                    <Input
+                                                        id="service-type"
+                                                        value={newMaintenanceData.service_type}
+                                                        onChange={(e) => setNewMaintenanceData({ ...newMaintenanceData, service_type: e.target.value })}
+                                                        placeholder="Ej: Cambio de aceite, Alineación..."
+                                                        className="bg-slate-50 border-input font-medium"
+                                                    />
+                                                </div>
+
+                                                <div className="grid grid-cols-2 gap-3">
+                                                    <div className="space-y-2">
+                                                        <Label htmlFor="service-date" className="text-xs font-semibold uppercase text-muted-foreground">
+                                                            Fecha *
+                                                        </Label>
+                                                        <Input
+                                                            id="service-date"
+                                                            type="date"
+                                                            value={newMaintenanceData.date}
+                                                            onChange={(e) => setNewMaintenanceData({ ...newMaintenanceData, date: e.target.value })}
+                                                            className="bg-slate-50 border-input font-medium"
+                                                        />
+                                                    </div>
+
+                                                    <div className="space-y-2">
+                                                        <Label htmlFor="service-cost" className="text-xs font-semibold uppercase text-muted-foreground">
+                                                            Costo
+                                                        </Label>
+                                                        <div className="relative">
+                                                            <span className="absolute left-3 top-3 text-muted-foreground">$</span>
+                                                            <Input
+                                                                id="service-cost"
+                                                                type="number"
+                                                                value={newMaintenanceData.cost}
+                                                                onChange={(e) => setNewMaintenanceData({ ...newMaintenanceData, cost: parseFloat(e.target.value) || 0 })}
+                                                                className="pl-7 font-mono font-bold"
+                                                            />
+                                                        </div>
                                                     </div>
                                                 </div>
-                                                <div className="flex items-start gap-3 p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
-                                                    <AlertCircle className="h-5 w-5 text-slate-400 flex-shrink-0 mt-0.5" />
-                                                    <div>
-                                                        <p className="text-sm font-bold text-slate-700 dark:text-slate-300">Llantas</p>
-                                                        <p className="text-xs text-muted-foreground">Desgaste normal</p>
+
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="service-status" className="text-xs font-semibold uppercase text-muted-foreground">
+                                                        Estado
+                                                    </Label>
+                                                    <select
+                                                        id="service-status"
+                                                        value={newMaintenanceData.status}
+                                                        onChange={(e) => setNewMaintenanceData({ ...newMaintenanceData, status: e.target.value as "pending" | "completed" })}
+                                                        className="w-full rounded-md border border-input bg-slate-50 px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                                    >
+                                                        <option value="completed">Completado</option>
+                                                        <option value="pending">Pendiente</option>
+                                                    </select>
+                                                </div>
+
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="service-notes" className="text-xs font-semibold uppercase text-muted-foreground">
+                                                        Notas (Opcional)
+                                                    </Label>
+                                                    <textarea
+                                                        id="service-notes"
+                                                        value={newMaintenanceData.notes}
+                                                        onChange={(e) => setNewMaintenanceData({ ...newMaintenanceData, notes: e.target.value })}
+                                                        className="w-full min-h-[80px] rounded-md border border-input bg-slate-50 px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-y"
+                                                        placeholder="Detalles del servicio realizado..."
+                                                    />
+                                                </div>
+
+                                                <div className="space-y-2">
+                                                    <Label className="text-xs font-semibold uppercase text-muted-foreground">
+                                                        Fotos de Comprobante (Opcional)
+                                                    </Label>
+                                                    <div className="relative">
+                                                        <input
+                                                            type="file"
+                                                            accept="image/*"
+                                                            multiple
+                                                            onChange={handleMaintenancePhotosChange}
+                                                            className="absolute inset-0 opacity-0 cursor-pointer z-10"
+                                                        />
+                                                        <Button
+                                                            type="button"
+                                                            variant="outline"
+                                                            className="w-full gap-2"
+                                                        >
+                                                            <Camera className="h-4 w-4" />
+                                                            {maintenancePhotos.length > 0
+                                                                ? `${maintenancePhotos.length} foto(s) seleccionada(s)`
+                                                                : 'Seleccionar Fotos (Máx. 5)'}
+                                                        </Button>
+                                                    </div>
+                                                    {maintenancePhotos.length > 0 && (
+                                                        <div className="grid grid-cols-3 gap-2 mt-2">
+                                                            {maintenancePhotos.map((file, idx) => (
+                                                                <div key={idx} className="aspect-square rounded-lg overflow-hidden border border-border/50 relative">
+                                                                    <img
+                                                                        src={URL.createObjectURL(file)}
+                                                                        alt={`Preview ${idx + 1}`}
+                                                                        className="w-full h-full object-cover"
+                                                                    />
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => setMaintenancePhotos(maintenancePhotos.filter((_, i) => i !== idx))}
+                                                                        className="absolute top-1 right-1 h-5 w-5 rounded-full bg-red-500 text-white flex items-center justify-center text-xs hover:bg-red-600"
+                                                                    >
+                                                                        ×
+                                                                    </button>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                    <p className="text-xs text-muted-foreground">
+                                                        Sube hasta 5 fotos de facturas o comprobantes (10MB máx. c/u)
+                                                    </p>
+                                                </div>
+
+                                                <div className="pt-4 border-t">
+                                                    <p className="text-xs font-semibold uppercase text-muted-foreground mb-3">
+                                                        Próximo Servicio (Opcional)
+                                                    </p>
+                                                    <div className="grid grid-cols-2 gap-3">
+                                                        <div className="space-y-2">
+                                                            <Label htmlFor="next-date" className="text-xs">Fecha</Label>
+                                                            <Input
+                                                                id="next-date"
+                                                                type="date"
+                                                                value={newMaintenanceData.next_service_date}
+                                                                onChange={(e) => setNewMaintenanceData({ ...newMaintenanceData, next_service_date: e.target.value })}
+                                                                className="text-sm"
+                                                            />
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <Label htmlFor="next-mileage" className="text-xs">Millaje</Label>
+                                                            <Input
+                                                                id="next-mileage"
+                                                                type="number"
+                                                                value={newMaintenanceData.next_service_mileage}
+                                                                onChange={(e) => setNewMaintenanceData({ ...newMaintenanceData, next_service_mileage: parseInt(e.target.value) || 0 })}
+                                                                className="text-sm"
+                                                            />
+                                                        </div>
                                                     </div>
                                                 </div>
+
+                                                <Button
+                                                    className="w-full h-12 text-base font-bold shadow-lg shadow-orange-600/20 bg-orange-600 hover:bg-orange-700 mt-4"
+                                                    onClick={handleSaveMaintenance}
+                                                    disabled={isUploadingMaintenance || !newMaintenanceData.service_type}
+                                                >
+                                                    {isUploadingMaintenance ? (
+                                                        <>Guardando...</>
+                                                    ) : (
+                                                        <>
+                                                            <Plus className="h-4 w-4 mr-2" />
+                                                            Registrar Servicio
+                                                        </>
+                                                    )}
+                                                </Button>
                                             </div>
                                         </div>
                                     </div>

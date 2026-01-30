@@ -86,9 +86,19 @@ export default function DocumentsPage() {
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
         if (file) {
+            // Validate file size (10MB max)
+            const maxSize = 10 * 1024 * 1024 // 10MB in bytes
+            if (file.size > maxSize) {
+                toast.error(`El archivo es demasiado grande. Máximo permitido: 10MB. Tamaño actual: ${(file.size / 1024 / 1024).toFixed(2)}MB`)
+                e.target.value = '' // Clear input
+                return
+            }
+
             setUploadFile(file)
             if (!uploadTitle) {
-                setUploadTitle(file.name)
+                // Clean filename for title
+                const cleanName = file.name.replace(/\.[^/.]+$/, "") // Remove extension
+                setUploadTitle(cleanName)
             }
         }
     }
@@ -96,6 +106,13 @@ export default function DocumentsPage() {
     const handleUpload = async () => {
         if (!uploadFile) {
             toast.error("Por favor selecciona un archivo")
+            return
+        }
+
+        // Double-check file size before upload
+        const maxSize = 10 * 1024 * 1024 // 10MB
+        if (uploadFile.size > maxSize) {
+            toast.error("El archivo excede el tamaño máximo permitido (10MB)")
             return
         }
 
@@ -342,13 +359,35 @@ export default function DocumentsPage() {
                             <Input
                                 id="file"
                                 type="file"
-                                accept=".pdf,.png,.jpg,.jpeg,.gif,.doc,.docx"
+                                accept=".pdf,.png,.jpg,.jpeg,.gif,.doc,.docx,image/*"
                                 onChange={handleFileChange}
                             />
+                            <p className="text-xs text-muted-foreground">
+                                Formatos: PDF, imágenes (JPG, PNG, GIF), documentos Word. Máximo: 10MB
+                            </p>
                             {uploadFile && (
-                                <p className="text-sm text-muted-foreground">
-                                    Seleccionado: {uploadFile.name} ({(uploadFile.size / 1024).toFixed(2)} KB)
-                                </p>
+                                <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
+                                    <div className="flex-1">
+                                        <p className="text-sm font-medium">{uploadFile.name}</p>
+                                        <p className="text-xs text-muted-foreground">
+                                            {uploadFile.size > 1024 * 1024
+                                                ? `${(uploadFile.size / 1024 / 1024).toFixed(2)} MB`
+                                                : `${(uploadFile.size / 1024).toFixed(2)} KB`
+                                            }
+                                        </p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setUploadFile(null)
+                                            const input = document.getElementById('file') as HTMLInputElement
+                                            if (input) input.value = ''
+                                        }}
+                                        className="text-red-600 hover:text-red-700 text-sm font-medium"
+                                    >
+                                        Quitar
+                                    </button>
+                                </div>
                             )}
                         </div>
 
