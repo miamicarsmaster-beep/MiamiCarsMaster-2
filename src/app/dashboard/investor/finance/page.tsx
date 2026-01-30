@@ -20,6 +20,9 @@ interface FinancialRecord {
     }
 }
 
+// Force dynamic rendering since we use cookies for auth
+export const dynamic = 'force-dynamic'
+
 export default async function InvestorFinancePage() {
     const supabase = await createClient()
 

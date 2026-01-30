@@ -3,6 +3,9 @@ import { getVehicles } from "@/lib/data/vehicles"
 import { InvestorsTable } from "@/components/dashboard/InvestorsTable"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 
+// Force dynamic rendering since we use cookies for auth
+export const dynamic = 'force-dynamic'
+
 export default async function InvestorsPage() {
     const [investors, vehicles] = await Promise.all([
         getInvestors(),

@@ -4,6 +4,9 @@ import { VehiclesGrid } from "@/components/dashboard/VehiclesTable"
 import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
 
+// Force dynamic rendering since we use cookies for auth
+export const dynamic = 'force-dynamic'
+
 export default async function VehiclesPage() {
     // Fetch data with error handling
     try {

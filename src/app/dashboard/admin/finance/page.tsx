@@ -3,6 +3,9 @@ import { getVehicles } from "@/lib/data/vehicles"
 import { FinancialTable } from "@/components/dashboard/FinancialTable"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 
+// Force dynamic rendering since we use cookies for auth
+export const dynamic = 'force-dynamic'
+
 export default async function FinancePage() {
     const [records, vehicles] = await Promise.all([
         getFinancialRecords(),

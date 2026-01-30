@@ -6,6 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Users, Car, DollarSign, Activity, Wrench } from "lucide-react"
 import { redirect } from "next/navigation"
 
+// Force dynamic rendering since we use cookies for auth
+export const dynamic = 'force-dynamic'
+
 export default async function AdminDashboardPage() {
     const supabase = await createClient()
 
