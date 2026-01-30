@@ -86,12 +86,13 @@ interface DocumentRecord {
 
 interface VehicleAdminPanelProps {
     vehicle: Vehicle
+    investors?: { id: string; full_name: string | null; email: string }[]
     onClose: () => void
     onUpdate?: (vehicle: Vehicle) => void
     onDelete?: (vehicleId: string) => void
 }
 
-export function VehicleAdminPanel({ vehicle, onClose, onUpdate, onDelete }: VehicleAdminPanelProps) {
+export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, onDelete }: VehicleAdminPanelProps) {
     const [activeTab, setActiveTab] = useState("overview")
     const [isEditMode, setIsEditMode] = useState(false)
     const [isSaving, setIsSaving] = useState(false)
@@ -936,6 +937,36 @@ export function VehicleAdminPanel({ vehicle, onClose, onUpdate, onDelete }: Vehi
                                                         </select>
                                                         <div className={`absolute right-3 top-3 h-3 w-3 rounded-full pointer-events-none ${getStatusColor(formData.status).split(' ')[0]}`} />
                                                     </div>
+
+                                                    {/* Investor Assignment */}
+                                                    {investors.length > 0 && (
+                                                        <div className="space-y-2 pt-2 border-t border-border/30">
+                                                            <Label htmlFor="investor-select" className="text-xs font-semibold uppercase text-muted-foreground">
+                                                                Inversor Asignado
+                                                            </Label>
+                                                            <select
+                                                                id="investor-select"
+                                                                value={formData.assigned_investor_id || "none"}
+                                                                onChange={(e) => {
+                                                                    const value = e.target.value === "none" ? null : e.target.value
+                                                                    setFormData({ ...formData, assigned_investor_id: value || "" })
+                                                                }}
+                                                                className="w-full appearance-none bg-slate-50 dark:bg-slate-950 border border-border rounded-xl px-4 py-3 pr-10 font-medium focus:outline-none focus:ring-2 focus:ring-primary/20"
+                                                            >
+                                                                <option value="none">Sin asignar</option>
+                                                                {investors.map((investor) => (
+                                                                    <option key={investor.id} value={investor.id}>
+                                                                        {investor.full_name || investor.email}
+                                                                    </option>
+                                                                ))}
+                                                            </select>
+                                                            <p className="text-xs text-muted-foreground">
+                                                                {formData.assigned_investor_id
+                                                                    ? "Este vehículo está asignado a un inversor"
+                                                                    : "Asigna este vehículo a un inversor para tracking"}
+                                                            </p>
+                                                        </div>
+                                                    )}
 
                                                     {/* Quick Actions Grid */}
                                                     <div className="grid grid-cols-2 gap-3 pt-2">

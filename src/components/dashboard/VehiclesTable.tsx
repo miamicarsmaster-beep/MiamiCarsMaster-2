@@ -222,6 +222,7 @@ export function VehiclesGrid({ vehicles: initialVehicles, investors }: VehiclesG
             {showAdminPanel && adminVehicle && (
                 <VehicleAdminPanel
                     vehicle={adminVehicle}
+                    investors={investors}
                     onClose={() => {
                         setShowAdminPanel(false)
                         setAdminVehicle(null)
