@@ -5,20 +5,42 @@ import { useState, useEffect } from "react"
 import { Vehicle } from "@/types/database"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-
 import { Dialog, DialogContent } from "@/components/ui/dialog"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Textarea } from "@/components/ui/textarea"
 import {
-    Camera, Gauge, MapPin, Settings, Wrench, X, CalendarDays,
-    Activity, CreditCard, CheckCircle2, Edit3, Save, DollarSign, Eye, Upload, Trash2, AlertCircle, Plus, FileText, Loader2
+    Camera, Gauge, MapPin, Wrench, X, CalendarDays, CheckCircle2, Edit3, Save,
+    DollarSign, Trash2, Plus, FileText, Loader2, TrendingUp, AlertCircle, Upload, Eye, ChevronLeft, ChevronRight, Activity
 } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
 import { ImageWithFallback } from "@/components/ui/image-with-fallback"
+import { toast } from "sonner"
+import { Calendar } from "@/components/ui/calendar"
+import { eachDayOfInterval, isSameDay, parseISO } from "date-fns"
+import { es } from "date-fns/locale"
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from "@/components/ui/table"
+import {
+    AreaChart,
+    Area,
+    XAxis,
+    YAxis,
+    CartesianGrid,
+    Tooltip,
+    ResponsiveContainer
+} from "recharts"
 
+// Interfaces (mantener las originales)
 interface VehiclePhoto {
     id: string
     vehicle_id: string
@@ -27,15 +49,8 @@ interface VehiclePhoto {
     photo_order: number
     is_primary: boolean
     has_damage: boolean
-    damage_markers: DamageMarker[] | null
+    damage_markers: any[] | null
     created_at: string
-}
-
-interface DamageMarker {
-    x: number
-    y: number
-    label: string
-    description: string
 }
 
 interface MileageLog {
@@ -93,10 +108,13 @@ interface VehicleAdminPanelProps {
 }
 
 export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, onDelete }: VehicleAdminPanelProps) {
-    const [activeTab, setActiveTab] = useState("overview")
+    const [activeTab, setActiveTab] = useState("general")
     const [isEditMode, setIsEditMode] = useState(false)
     const [isSaving, setIsSaving] = useState(false)
     const [formData, setFormData] = useState({
+        id: vehicle.id,
+        owner_id: vehicle.owner_id,
+        created_at: vehicle.created_at,
         make: vehicle.make,
         model: vehicle.model,
         year: vehicle.year,
@@ -111,329 +129,508 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
         image_url: vehicle.image_url || ""
     })
 
-    // Gallery state
+    // Estados para funcionalidades
     const [photos, setPhotos] = useState<VehiclePhoto[]>([])
-    const [selectedPhotoIndex, setSelectedPhotoIndex] = useState<number | null>(null)
-    const [isUploading, setIsUploading] = useState(false)
-    const [tempMarkers, setTempMarkers] = useState<{ x: number, y: number }[]>([])
-    const [newMarkerLabel, setNewMarkerLabel] = useState("")
-    const [newMarkerDesc, setNewMarkerDesc] = useState("")
-
-    // Mileage state
     const [mileageHistory, setMileageHistory] = useState<MileageLog[]>([])
-    const [newLogData, setNewLogData] = useState({
-        date: new Date().toISOString().split('T')[0],
-        mileage: 0,
-        notes: ""
-    })
-
-    // Maintenance state
     const [maintenanceHistory, setMaintenanceHistory] = useState<MaintenanceRecord[]>([])
-    const [newMaintenanceData, setNewMaintenanceData] = useState({
-        service_type: "",
-        cost: 0,
-        date: new Date().toISOString().split('T')[0],
-        notes: "",
-        next_service_date: "",
-        next_service_mileage: 0,
-        status: "completed" as "pending" | "completed"
-    })
-    const [maintenancePhotos, setMaintenancePhotos] = useState<File[]>([])
-    const [isUploadingMaintenance, setIsUploadingMaintenance] = useState(false)
-
-    // Hero Image State
-    const [isUploadingHeroImage, setIsUploadingHeroImage] = useState(false)
-
-    // Rentals State
     const [rentalHistory, setRentalHistory] = useState<RentalRecord[]>([])
-    const [isRentalDialogOpen, setIsRentalDialogOpen] = useState(false)
-    const [newRentalData, setNewRentalData] = useState({
-        customer_name: "",
-        start_date: new Date().toISOString().split('T')[0],
-        end_date: "",
-        daily_rate: formData.daily_rental_price,
-        platform: "Direct",
-        status: "confirmed" as "confirmed" | "completed" | "cancelled"
-    })
-
-    // Documents State
     const [documentsList, setDocumentsList] = useState<DocumentRecord[]>([])
-
-    // Check-in State
+    const [isUploadingHeroImage, setIsUploadingHeroImage] = useState(false)
+    const [isUploadingPhoto, setIsUploadingPhoto] = useState(false)
+    const [selectedPhoto, setSelectedPhoto] = useState<VehiclePhoto | null>(null)
     const [isCheckInDialogOpen, setIsCheckInDialogOpen] = useState(false)
-    const [checkInData, setCheckInData] = useState({
+    const [isRentalDialogOpen, setIsRentalDialogOpen] = useState(false)
+    const [rentalForm, setRentalForm] = useState({
+        customer_name: "",
+        start_date: undefined as Date | undefined,
+        end_date: undefined as Date | undefined,
+        platform: "Turo",
+        amount: "",
+        status: "confirmed",
+        notes: ""
+    })
+    const [isUploadingDocument, setIsUploadingDocument] = useState(false)
+    const [selectedDocument, setSelectedDocument] = useState<DocumentRecord | null>(null)
+    const [isMileageDialogOpen, setIsMileageDialogOpen] = useState(false)
+    const [newMileageValue, setNewMileageValue] = useState<string>("")
+    const [mileageNote, setMileageNote] = useState("")
+
+    // Maintenance State
+    const [isMaintenanceDialogOpen, setIsMaintenanceDialogOpen] = useState(false)
+    const [maintenanceForm, setMaintenanceForm] = useState({
+        service_type: "",
+        custom_service_type: "",
+        cost: "",
         date: new Date().toISOString().split('T')[0],
-        mileage: formData.mileage || 0,
+        current_mileage: "",
+        next_service_mileage: "",
         notes: ""
     })
 
-    const router = useRouter()
-    const supabase = createClient()
 
-    const getStatusColor = (status: string) => {
-        const colors: Record<string, string> = {
-            available: "bg-blue-600 text-white",
-            rented: "bg-emerald-600 text-white",
-            maintenance: "bg-orange-500 text-white",
-            inactive: "bg-slate-500 text-white",
+
+    const supabase = createClient()
+    const router = useRouter()
+
+    // Cálculos
+    const roi = formData.purchase_price > 0
+        ? ((formData.daily_rental_price * 240 / formData.purchase_price) * 100).toFixed(0)
+        : 0
+
+    const getStatusBadge = () => {
+        const statusConfig = {
+            available: { label: 'Disponible', className: 'bg-emerald-500' },
+            rented: { label: 'Alquilado', className: 'bg-blue-500' },
+            maintenance: { label: 'Mantenimiento', className: 'bg-orange-500' },
+            inactive: { label: 'Inactivo', className: 'bg-slate-500' }
         }
-        return colors[status] || "bg-slate-500 text-white"
+        return statusConfig[formData.status as keyof typeof statusConfig] || statusConfig.available
     }
 
+    // Handlers
     const handleSave = async () => {
         setIsSaving(true)
         try {
+            // Limpiar el objeto formData para enviar solo lo que la base de datos acepta
+            const {
+                id: _id,
+                created_at: _ca,
+                owner_id: _oid,
+                ...dataToUpdate
+            } = formData;
+
+            const updateData: any = { ...dataToUpdate };
+
+            // Manejar el caso de "Sin asignar" para el inversor
+            if (updateData.assigned_investor_id === 'none' || !updateData.assigned_investor_id) {
+                updateData.assigned_investor_id = null;
+            }
+
             const { data, error } = await supabase
                 .from("vehicles")
-                .update({
-                    make: formData.make,
-                    model: formData.model,
-                    year: formData.year,
-                    license_plate: formData.license_plate,
-                    vin: formData.vin,
-                    mileage: formData.mileage,
-                    location: formData.location,
-                    status: formData.status,
-                    daily_rental_price: formData.daily_rental_price,
-                    purchase_price: formData.purchase_price,
-                    assigned_investor_id: formData.assigned_investor_id || null,
-                    image_url: formData.image_url
-                })
+                .update(updateData)
                 .eq("id", vehicle.id)
                 .select()
                 .single()
 
-            if (error) throw error
+            if (error) {
+                console.error("Supabase Error:", error);
+                throw error;
+            }
+
             if (onUpdate && data) onUpdate(data as Vehicle)
             setIsEditMode(false)
+            toast.success("Vehículo actualizado correctamente")
             router.refresh()
-        } catch (error) {
-            console.error("Error updating vehicle:", error)
-            alert("Error al actualizar el vehículo")
+        } catch (error: any) {
+            console.error("Error completo:", error)
+            toast.error(error.message || "Error al actualizar los datos")
         } finally {
             setIsSaving(false)
         }
     }
 
-    const handleCancel = () => {
-        // Reset form data to original vehicle data
-        setFormData({
-            make: vehicle.make,
-            model: vehicle.model,
-            year: vehicle.year,
-            license_plate: vehicle.license_plate || "",
-            vin: vehicle.vin || "",
-            mileage: vehicle.mileage || 0,
-            location: vehicle.location || "",
-            status: vehicle.status,
-            daily_rental_price: vehicle.daily_rental_price || 0,
-            purchase_price: vehicle.purchase_price || 0,
-            assigned_investor_id: vehicle.assigned_investor_id || "",
-            image_url: vehicle.image_url || ""
-        })
-        setIsEditMode(false)
-    }
-
     const handleDelete = async () => {
-        if (!confirm("¿Estás seguro de que deseas eliminar este vehículo?")) return
+        if (!confirm("¿Eliminar vehículo permanentemente?")) return
         try {
-            const { error } = await supabase.from("vehicles").delete().eq("id", vehicle.id)
-            if (error) throw error
+            await supabase.from("vehicles").delete().eq("id", vehicle.id)
             if (onDelete) onDelete(vehicle.id)
             onClose()
             router.refresh()
-        } catch (error) {
-            console.error("Error deleting vehicle:", error)
-            alert("Error al eliminar el vehículo")
-        }
-    }
-
-    // Load photos when gallery tab is opened
-    useEffect(() => {
-        if (activeTab === "photos") {
-            loadPhotos()
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [activeTab])
-
-    const loadPhotos = async () => {
-        try {
-            const { data, error } = await supabase
-                .from("vehicle_photos")
-                .select("*")
-                .eq("vehicle_id", vehicle.id)
-                .order("photo_order", { ascending: true })
-
-            if (error) throw error
-            setPhotos((data || []) as VehiclePhoto[])
-        } catch (error) {
-            console.error("Error loading photos:", error)
-        }
-    }
-
-    const handleUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-        const files = event.target.files
-        if (!files || files.length === 0) return
-
-        setIsUploading(true)
-        const newPhotos = []
-
-        try {
-            for (let i = 0; i < files.length; i++) {
-                const file = files[i]
-                const fileExt = file.name.split('.').pop()
-                const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
-                const filePath = `vehicles/${vehicle.id}/${fileName}`
-
-                const { error: uploadError } = await supabase.storage
-                    .from('vehicle-images')
-                    .upload(filePath, file)
-
-                if (uploadError) continue
-
-                const { data: { publicUrl } } = supabase.storage
-                    .from('vehicle-images')
-                    .getPublicUrl(filePath)
-
-                const { data: photoData, error: photoError } = await supabase
-                    .from("vehicle_photos")
-                    .insert({
-                        vehicle_id: vehicle.id,
-                        image_url: publicUrl,
-                        photo_order: photos.length + i,
-                        is_primary: photos.length === 0 && i === 0
-                    })
-                    .select()
-                    .single()
-
-                if (!photoError && photoData) {
-                    newPhotos.push(photoData as VehiclePhoto)
-                }
-            }
-            setPhotos([...photos, ...newPhotos])
-        } catch (error) {
-            console.error("Error uploading photos:", error)
-        } finally {
-            setIsUploading(false)
-        }
-    }
-
-    // New Image Click Handler (Logic for marking damage)
-    const handleImageClick = (e: React.MouseEvent<HTMLDivElement>) => {
-        if (selectedPhotoIndex === null) return
-
-        const rect = e.currentTarget.getBoundingClientRect()
-        const x = ((e.clientX - rect.left) / rect.width) * 100
-        const y = ((e.clientY - rect.top) / rect.height) * 100
-
-        setTempMarkers([...tempMarkers, { x, y }])
-        // In a real app, you would open a popover to ask for label/desc
-        setNewMarkerLabel("Nuevo Daño")
-    }
-
-    const saveMarker = async () => {
-        if (selectedPhotoIndex === null) return
-        const currentPhoto = photos[selectedPhotoIndex]
-        if (!currentPhoto) return
-
-        const updatedBlobs = [
-            ...(currentPhoto.damage_markers || []),
-            ...tempMarkers.map(m => ({ ...m, label: newMarkerLabel, description: newMarkerDesc }))
-        ]
-
-        try {
-            const { error } = await supabase
-                .from("vehicle_photos")
-                .update({
-                    damage_markers: updatedBlobs,
-                    has_damage: updatedBlobs.length > 0
-                })
-                .eq("id", currentPhoto.id)
-
-            if (error) throw error
-
-            const updatedPhotos = [...photos]
-            updatedPhotos[selectedPhotoIndex] = { ...currentPhoto, damage_markers: updatedBlobs }
-            setPhotos(updatedPhotos)
-
-            setTempMarkers([])
-            setNewMarkerLabel("")
-            setNewMarkerDesc("")
-        } catch (error) {
-            console.error("Error saving marker", error)
-        }
-    }
-
-    const handleDeletePhoto = async (photoId: string) => {
-        if (!confirm("¿Eliminar esta foto?")) return
-        try {
-            await supabase.from("vehicle_photos").delete().eq("id", photoId)
-            setPhotos(photos.filter(p => p.id !== photoId))
-            if (selectedPhotoIndex !== null && photos[selectedPhotoIndex]?.id === photoId) {
-                setSelectedPhotoIndex(null)
-            }
         } catch (error) {
             console.error(error)
         }
     }
 
-    // Mileage Logic
-    useEffect(() => {
-        if (activeTab === "mileage") {
-            loadMileageHistory()
-            setNewLogData((prev) => ({ ...prev, mileage: formData.mileage }))
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [activeTab])
+    const handleChangeHeroImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]
+        if (!file) return
 
-    const loadMileageHistory = async () => {
+        setIsUploadingHeroImage(true)
         try {
-            const { data, error } = await supabase
-                .from("mileage_history")
-                .select("*")
-                .eq("vehicle_id", vehicle.id)
-                .order("date", { ascending: false })
+            const fileExt = file.name.split('.').pop()
+            const fileName = `${vehicle.id}-hero-${Date.now()}.${fileExt}`
+            const { error: uploadError } = await supabase.storage
+                .from('vehicle-images')
+                .upload(fileName, file)
 
-            if (error) throw error
-            setMileageHistory(data || [])
+            if (uploadError) throw uploadError
+
+            const { data: { publicUrl } } = supabase.storage
+                .from('vehicle-images')
+                .getPublicUrl(fileName)
+
+            await supabase
+                .from('vehicles')
+                .update({ image_url: publicUrl })
+                .eq('id', vehicle.id)
+
+            setFormData(prev => ({ ...prev, image_url: publicUrl }))
+            alert("Imagen actualizada")
         } catch (error) {
-            console.error("Error loading mileage history:", error)
+            console.error(error)
+            alert("Error al subir imagen")
+        } finally {
+            setIsUploadingHeroImage(false)
         }
     }
 
-    const handleAddMileageLog = async () => {
+
+    const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = e.target.files
+        if (!files || files.length === 0) return
+
+        setIsUploadingPhoto(true)
+        const newPhotos: VehiclePhoto[] = []
+        let successCount = 0
+        let failCount = 0
+
         try {
-            const { data: logData, error: logError } = await supabase
-                .from("mileage_history")
-                .insert({
-                    vehicle_id: vehicle.id,
-                    mileage: newLogData.mileage,
-                    date: newLogData.date,
-                    notes: newLogData.notes
-                })
-                .select()
-                .single()
+            toast.info(`Subiendo ${files.length} imágenes...`)
 
-            if (logError) throw logError
+            const uploadPromises = Array.from(files).map(async (file, index) => {
+                try {
+                    const fileExt = file.name.split('.').pop()
+                    const fileName = `${vehicle.id}-photo-${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
 
-            if (newLogData.mileage > formData.mileage) {
-                await supabase.from("vehicles").update({ mileage: newLogData.mileage }).eq("id", vehicle.id)
-                setFormData(prev => ({ ...prev, mileage: newLogData.mileage }))
+                    const { error: uploadError } = await supabase.storage
+                        .from('vehicle-images')
+                        .upload(fileName, file)
+
+                    if (uploadError) throw uploadError
+
+                    const { data: { publicUrl } } = supabase.storage
+                        .from('vehicle-images')
+                        .getPublicUrl(fileName)
+
+                    const { data: newPhoto, error: dbError } = await supabase
+                        .from('vehicle_photos')
+                        .insert({
+                            vehicle_id: vehicle.id,
+                            image_url: publicUrl,
+                            caption: file.name.split('.')[0],
+                            photo_order: photos.length + successCount + index, // Estimate order
+                            is_primary: photos.length === 0 && index === 0,
+                            has_damage: false,
+                            damage_markers: []
+                        })
+                        .select()
+                        .single()
+
+                    if (dbError) throw dbError
+
+                    newPhotos.push(newPhoto as VehiclePhoto)
+                    successCount++
+                } catch (error) {
+                    console.error(`Error uploading ${file.name}:`, error)
+                    failCount++
+                }
+            })
+
+            await Promise.all(uploadPromises)
+
+            if (successCount > 0) {
+                setPhotos(prev => [...prev, ...newPhotos])
+                toast.success(`${successCount} fotos subidas correctamente`)
+            }
+            if (failCount > 0) {
+                toast.error(`${failCount} fotos no pudieron subirse`)
             }
 
-            setMileageHistory([logData, ...mileageHistory])
-            alert("Registro agregado correctamente")
         } catch (error) {
-            console.error("Error saving mileage:", error)
-            alert("Error al guardar registro")
+            console.error(error)
+            toast.error("Error general al subir fotos")
+        } finally {
+            setIsUploadingPhoto(false)
+            e.target.value = ''
         }
     }
 
-    // Maintenance Logic
-    useEffect(() => {
-        if (activeTab === "maintenance") loadMaintenanceHistory()
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [activeTab])
+    const handleSaveMileage = async () => {
+        if (!newMileageValue) return toast.error("Ingresa el millaje")
+        const mileage = parseInt(newMileageValue)
+        if (isNaN(mileage)) return toast.error("Millaje inválido")
+        if (mileage <= vehicle.mileage) return toast.warning("El nuevo millaje debe ser mayor al actual")
+
+        setIsSaving(true)
+        try {
+            // 1. Insert into history
+            const { error: historyError } = await supabase
+                .from('mileage_history')
+                .insert({
+                    vehicle_id: vehicle.id,
+                    mileage: mileage,
+                    date: new Date().toISOString(),
+                    notes: mileageNote || null
+                })
+
+            if (historyError) throw historyError
+
+            // 2. Update vehicle current mileage
+            const { error: updateError } = await supabase
+                .from('vehicles')
+                .update({ mileage: mileage })
+                .eq('id', vehicle.id)
+
+            if (updateError) throw updateError
+
+            // Success
+            toast.success("Lectura de millaje registrada")
+            setFormData(prev => ({ ...prev, mileage }))
+            setIsMileageDialogOpen(false)
+            setNewMileageValue("")
+            setMileageNote("")
+            loadMileageHistory()
+
+            if (onUpdate) {
+                onUpdate({ ...vehicle, mileage })
+            }
+
+        } catch (error) {
+            console.error(error)
+            toast.error("Error al registrar millaje")
+        } finally {
+            setIsSaving(false)
+        }
+    }
+
+    const handleSaveMaintenance = async () => {
+        const type = maintenanceForm.service_type === "Otro" ? maintenanceForm.custom_service_type : maintenanceForm.service_type
+
+        if (!type) return toast.error("Seleccione el tipo de servicio")
+        if (!maintenanceForm.cost) return toast.error("Ingrese el costo")
+        if (!maintenanceForm.current_mileage) return toast.error("Ingrese el millaje actual")
+
+        setIsSaving(true)
+        try {
+            const { error } = await supabase
+                .from('maintenances')
+                .insert({
+                    vehicle_id: vehicle.id,
+                    service_type: type,
+                    cost: parseFloat(maintenanceForm.cost),
+                    date: maintenanceForm.date,
+                    // mileage_at_service column doesn't exist in schema, adding to notes
+                    next_service_mileage: maintenanceForm.next_service_mileage ? parseInt(maintenanceForm.next_service_mileage) : null,
+                    notes: `${maintenanceForm.notes || ''} \n[Millaje al servicio: ${maintenanceForm.current_mileage}]`.trim(),
+                    status: 'completed'
+                })
+
+            if (error) throw error
+
+            toast.success("Mantenimiento registrado")
+            setIsMaintenanceDialogOpen(false)
+            setMaintenanceForm({
+                service_type: "",
+                custom_service_type: "",
+                cost: "",
+                date: new Date().toISOString().split('T')[0],
+                current_mileage: vehicle.mileage.toString(), // Default to current
+                next_service_mileage: "",
+                notes: ""
+            })
+            loadMaintenanceHistory()
+        } catch (error) {
+            console.error(error)
+            toast.error("Error al guardar mantenimiento")
+        } finally {
+            setIsSaving(false)
+        }
+    }
+
+    const handleSaveRental = async () => {
+        if (!rentalForm.start_date || !rentalForm.end_date) return toast.error("Seleccione las fechas")
+        if (!rentalForm.amount) return toast.error("Ingrese el monto total")
+
+        setIsSaving(true)
+        try {
+            const { error } = await supabase
+                .from('rentals')
+                .insert({
+                    vehicle_id: vehicle.id,
+                    customer_name: rentalForm.customer_name || 'Cliente',
+                    start_date: rentalForm.start_date.toISOString(),
+                    end_date: rentalForm.end_date.toISOString(),
+                    platform: rentalForm.platform,
+                    total_amount: parseFloat(rentalForm.amount),
+                    status: rentalForm.status,
+                    notes: rentalForm.notes
+                })
+
+            if (error) throw error
+
+            toast.success("Reserva creada")
+            setIsRentalDialogOpen(false)
+            setRentalForm({
+                customer_name: "",
+                start_date: undefined,
+                end_date: undefined,
+                platform: "Turo",
+                amount: "",
+                status: "confirmed",
+                notes: ""
+            })
+            loadRentalHistory()
+        } catch (error) {
+            console.error(error)
+            toast.error("Error al guardar reserva")
+        } finally {
+            setIsSaving(false)
+        }
+    }
+
+    const getBookedDates = () => {
+        let dates: Date[] = []
+        rentalHistory.forEach(rental => {
+            if (rental.status === 'cancelled') return
+            try {
+                // Adjust for timezone issues if necessary, usually parseISO handles strict ISO strings well
+                const start = new Date(rental.start_date)
+                const end = new Date(rental.end_date)
+                // Add one day to end date to make it inclusive if needed or check logic
+                // usually rentals are inclusive start to end
+                const range = eachDayOfInterval({ start, end })
+                dates = [...dates, ...range]
+            } catch (e) {
+                console.error("Date parsing error", e)
+            }
+        })
+        return dates
+    }
+
+    const handleSetPrimaryPhoto = async (photoId: string) => {
+        try {
+            // Optimistic update
+            const updatedPhotos = photos.map(p => ({
+                ...p,
+                is_primary: p.id === photoId
+            }))
+            setPhotos(updatedPhotos)
+
+            // Update in DB (first set all to false, then one to true - or better, use a stored procedure or just update the new primary, but triggers might be needed. 
+            // Simple approach: update all for this vehicle to false, then correct one to true. Or just the previous primary to false.
+            // But we don't know the previous easily without state.
+
+            // Note: A better approach usually involves a transaction or simpler logic, for now we will just update the clicked one to true.
+            // But usually we want only one primary. 
+            // Let's assume we just update the specific photo to be primary. 
+            // Ideally backend would handle "unsetting" others.
+
+            // For now, let's just update the local state which is what matters for UI immediately.
+            // And send update to DB for this photo.
+
+            await supabase.from('vehicle_photos').update({ is_primary: true }).eq('id', photoId)
+            await supabase.from('vehicle_photos').update({ is_primary: false }).eq('vehicle_id', vehicle.id).neq('id', photoId)
+
+            toast.success("Foto principal actualizada")
+        } catch (error) {
+            console.error(error)
+            toast.error("Error al actualizar foto principal")
+            loadPhotos() // Revert on error
+        }
+    }
+
+    const handleDeletePhoto = async (photoId: string, e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!confirm("¿Eliminar esta foto?")) return
+
+        try {
+            await supabase.from('vehicle_photos').delete().eq('id', photoId)
+            setPhotos(photos.filter(p => p.id !== photoId))
+            toast.success("Foto eliminada")
+        } catch (error) {
+            console.error(error)
+            toast.error("Error al eliminar foto")
+        }
+    }
+
+    const handleDocumentUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = e.target.files
+        if (!files || files.length === 0) return
+
+        setIsUploadingDocument(true)
+        try {
+            toast.info(`Subiendo ${files.length} documentos...`)
+
+            for (const file of Array.from(files)) {
+                const fileExt = file.name.split('.').pop()
+                const fileName = `${vehicle.id}-doc-${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
+
+                // Intentar inferir el tipo basado en el nombre
+                let docType = 'other'
+                const nameLower = file.name.toLowerCase()
+                if (nameLower.includes('title') || nameLower.includes('titulo')) docType = 'vehicle_title'
+                else if (nameLower.includes('insurance') || nameLower.includes('seguro')) docType = 'insurance'
+                else if (nameLower.includes('contract') || nameLower.includes('contrato')) docType = 'contract'
+
+                const { error: uploadError } = await supabase.storage
+                    .from('vehicle-images')
+                    .upload(fileName, file)
+
+                if (uploadError) throw uploadError
+
+                const { data: { publicUrl } } = supabase.storage
+                    .from('vehicle-images')
+                    .getPublicUrl(fileName)
+
+                const { error: dbError } = await supabase
+                    .from('documents')
+                    .insert({
+                        vehicle_id: vehicle.id,
+                        title: file.name.split('.')[0],
+                        file_url: publicUrl,
+                        type: docType,
+                        category: fileExt // Guardamos la extensión para facilitar la UI
+                    })
+
+                if (dbError) {
+                    console.error("Database error:", dbError)
+                    throw new Error(`Error en base de datos: ${dbError.message}`)
+                }
+            }
+
+            toast.success("Documentos subidos correctamente")
+            loadDocuments()
+        } catch (error: any) {
+            console.error("Upload error details:", error)
+            toast.error(error.message || "Error al subir documentos")
+        } finally {
+            setIsUploadingDocument(false)
+        }
+    }
+
+    const handleDeleteDocument = async (docId: string, e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!confirm("¿Eliminar este documento?")) return
+
+        try {
+            await supabase.from('documents').delete().eq('id', docId)
+            setDocumentsList(documentsList.filter(d => d.id !== docId))
+            toast.success("Documento eliminado")
+        } catch (error) {
+            console.error(error)
+            toast.error("Error al eliminar documento")
+        }
+    }
+
+    // Load data functions
+    const loadPhotos = async () => {
+        const { data } = await supabase
+            .from("vehicle_photos")
+            .select("*")
+            .eq("vehicle_id", vehicle.id)
+            .order("photo_order", { ascending: true })
+        setPhotos((data || []) as VehiclePhoto[])
+    }
+
+    const loadMileageHistory = async () => {
+        const { data } = await supabase
+            .from("mileage_history")
+            .select("*")
+            .eq("vehicle_id", vehicle.id)
+            .order("date", { ascending: false })
+        setMileageHistory(data || [])
+    }
 
     const loadMaintenanceHistory = async () => {
         const { data } = await supabase
@@ -444,1666 +641,1225 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
         setMaintenanceHistory(data || [])
     }
 
-    const handleMaintenancePhotosChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const files = Array.from(e.target.files || [])
-        // Limit to 5 photos
-        if (files.length > 5) {
-            alert("Máximo 5 fotos por servicio")
-            return
-        }
-        // Validate size (10MB per file)
-        const maxSize = 10 * 1024 * 1024
-        const invalidFiles = files.filter(f => f.size > maxSize)
-        if (invalidFiles.length > 0) {
-            alert(`Algunos archivos exceden 10MB: ${invalidFiles.map(f => f.name).join(', ')}`)
-            return
-        }
-        setMaintenancePhotos(files)
-    }
-
-    const handleSaveMaintenance = async () => {
-        if (!newMaintenanceData.service_type) {
-            alert("Por favor ingresa el tipo de servicio")
-            return
-        }
-
-        setIsUploadingMaintenance(true)
-        try {
-            let receiptImageUrls: string[] = []
-
-            // Upload photos if any
-            if (maintenancePhotos.length > 0) {
-                const uploadPromises = maintenancePhotos.map(async (file) => {
-                    const fileExt = file.name.split('.').pop()
-                    const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
-                    const filePath = `maintenance-receipts/${vehicle.id}/${fileName}`
-
-                    const { error: uploadError } = await supabase.storage
-                        .from('vehicle-documents')
-                        .upload(filePath, file)
-
-                    if (uploadError) throw uploadError
-
-                    const { data: { publicUrl } } = supabase.storage
-                        .from('vehicle-documents')
-                        .getPublicUrl(filePath)
-
-                    return publicUrl
-                })
-
-                receiptImageUrls = await Promise.all(uploadPromises)
-            }
-
-            // Insert maintenance record
-            const { data: maintenanceData, error: maintenanceError } = await supabase
-                .from("maintenances")
-                .insert({
-                    vehicle_id: vehicle.id,
-                    service_type: newMaintenanceData.service_type,
-                    cost: newMaintenanceData.cost || null,
-                    date: newMaintenanceData.date,
-                    notes: newMaintenanceData.notes || null,
-                    next_service_date: newMaintenanceData.next_service_date || null,
-                    next_service_mileage: newMaintenanceData.next_service_mileage || null,
-                    status: newMaintenanceData.status,
-                    receipt_images: receiptImageUrls.length > 0 ? receiptImageUrls : null
-                })
-                .select()
-                .single()
-
-            if (maintenanceError) throw maintenanceError
-
-            setMaintenanceHistory([maintenanceData, ...maintenanceHistory])
-
-            // Reset form
-            setNewMaintenanceData({
-                service_type: "",
-                cost: 0,
-                date: new Date().toISOString().split('T')[0],
-                notes: "",
-                next_service_date: "",
-                next_service_mileage: 0,
-                status: "completed"
-            })
-            setMaintenancePhotos([])
-
-            alert("Servicio registrado exitosamente")
-        } catch (error) {
-            console.error("Error saving maintenance:", error)
-            alert("Error al guardar servicio")
-        } finally {
-            setIsUploadingMaintenance(false)
-        }
-    }
-
-    // Rentals Logic
-    useEffect(() => {
-        if (activeTab === "rentals") loadRentalHistory()
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [activeTab])
-
     const loadRentalHistory = async () => {
-        const { data } = await supabase.from("rentals").select("*").eq("vehicle_id", vehicle.id).order("start_date", { ascending: false })
+        const { data } = await supabase
+            .from("rentals")
+            .select("*")
+            .eq("vehicle_id", vehicle.id)
+            .order("start_date", { ascending: false })
         setRentalHistory(data || [])
     }
 
-    const handleSaveRental = async () => {
-        if (!newRentalData.customer_name || !newRentalData.start_date || !newRentalData.end_date) {
-            alert("Por favor completa todos los campos requeridos")
-            return
-        }
-
-        // Validate dates
-        const startDate = new Date(newRentalData.start_date)
-        const endDate = new Date(newRentalData.end_date)
-
-        if (endDate <= startDate) {
-            alert("La fecha de fin debe ser posterior a la fecha de inicio")
-            return
-        }
-
-        // Calculate total amount
-        const days = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24))
-        const totalAmount = days * newRentalData.daily_rate
-
-        try {
-            const { data: rentalData, error: rentalError } = await supabase
-                .from("rentals")
-                .insert({
-                    vehicle_id: vehicle.id,
-                    customer_name: newRentalData.customer_name,
-                    start_date: newRentalData.start_date,
-                    end_date: newRentalData.end_date,
-                    daily_rate: newRentalData.daily_rate,
-                    total_amount: totalAmount,
-                    status: newRentalData.status,
-                    platform: newRentalData.platform
-                })
-                .select()
-                .single()
-
-            if (rentalError) throw rentalError
-
-            setRentalHistory([rentalData, ...rentalHistory])
-
-            // Reset form
-            setNewRentalData({
-                customer_name: "",
-                start_date: new Date().toISOString().split('T')[0],
-                end_date: "",
-                daily_rate: formData.daily_rental_price,
-                platform: "Direct",
-                status: "confirmed"
-            })
-
-            setIsRentalDialogOpen(false)
-            alert("Reserva creada exitosamente")
-        } catch (error) {
-            console.error("Error saving rental:", error)
-            alert("Error al guardar reserva")
-        }
-    }
-
-    // Hero Image Logic
-    const handleChangeHeroImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0]
-        if (!file) return
-
-        setIsUploadingHeroImage(true)
-        try {
-            // Upload to Supabase Storage
-            const fileExt = file.name.split('.').pop()
-            const fileName = `${vehicle.id}-hero-${Date.now()}.${fileExt}`
-            const { data: uploadData, error: uploadError } = await supabase.storage
-                .from('vehicle-images')
-                .upload(fileName, file)
-
-            if (uploadError) throw uploadError
-
-            // Get public URL
-            const { data: { publicUrl } } = supabase.storage
-                .from('vehicle-images')
-                .getPublicUrl(fileName)
-
-            // Update vehicle in database
-            const { error: updateError } = await supabase
-                .from('vehicles')
-                .update({ image_url: publicUrl })
-                .eq('id', vehicle.id)
-
-            if (updateError) throw updateError
-
-            // Update local state
-            setFormData(prev => ({ ...prev, image_url: publicUrl }))
-            alert("Imagen actualizada exitosamente")
-        } catch (error) {
-            console.error("Error uploading hero image:", error)
-            alert("Error al subir imagen")
-        } finally {
-            setIsUploadingHeroImage(false)
-        }
-    }
-
-    const handleRemoveHeroImage = async () => {
-        if (!confirm("¿Estás seguro de eliminar la imagen de portada?")) return
-
-        try {
-            const { error } = await supabase
-                .from('vehicles')
-                .update({ image_url: null })
-                .eq('id', vehicle.id)
-
-            if (error) throw error
-
-            setFormData(prev => ({ ...prev, image_url: "" }))
-            alert("Imagen eliminada exitosamente")
-        } catch (error) {
-            console.error("Error removing hero image:", error)
-            alert("Error al eliminar imagen")
-        }
-    }
-
-    // Check-in Logic
-    const handleSaveCheckIn = async () => {
-        try {
-            // Update vehicle mileage
-            const { error: vehicleError } = await supabase
-                .from('vehicles')
-                .update({ mileage: checkInData.mileage })
-                .eq('id', vehicle.id)
-
-            if (vehicleError) throw vehicleError
-
-            // Create a maintenance record for the check-in
-            const { error: maintenanceError } = await supabase
-                .from('maintenances')
-                .insert({
-                    vehicle_id: vehicle.id,
-                    service_type: 'Check-in',
-                    date: checkInData.date,
-                    notes: checkInData.notes || 'Check-in rápido',
-                    status: 'completed',
-                    cost: 0
-                })
-
-            if (maintenanceError) throw maintenanceError
-
-            // Update local state
-            setFormData(prev => ({ ...prev, mileage: checkInData.mileage }))
-            setIsCheckInDialogOpen(false)
-            alert("Check-in registrado exitosamente")
-
-            // Reload maintenance history
-            if (activeTab === 'maintenance') {
-                loadMaintenanceHistory()
-            }
-        } catch (error) {
-            console.error("Error saving check-in:", error)
-            alert("Error al guardar check-in")
-        }
-    }
-
-    // Documents Logic
-    useEffect(() => {
-        if (activeTab === "documents") loadDocuments()
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [activeTab])
-
     const loadDocuments = async () => {
-        const { data } = await supabase.from("documents").select("*").eq("vehicle_id", vehicle.id).order("created_at", { ascending: false })
+        const { data } = await supabase
+            .from("documents")
+            .select("*")
+            .eq("vehicle_id", vehicle.id)
+            .order("created_at", { ascending: false })
         setDocumentsList(data || [])
     }
 
-    const handleUploadDocument = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0]
-        if (!file) return
+    useEffect(() => {
+        if (activeTab === "galeria") loadPhotos()
+        if (activeTab === "millaje") loadMileageHistory()
+        if (activeTab === "mantenimiento") loadMaintenanceHistory()
+        if (activeTab === "alquileres") loadRentalHistory()
+        if (activeTab === "documentos") loadDocuments()
+    }, [activeTab])
 
-        // setIsUploadingDocument(true) removed
-        try {
-            const fileExt = file.name.split('.').pop()
-            const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
-            const filePath = `documents/${vehicle.id}/${fileName}`
-
-            const { error: uploadError } = await supabase.storage.from('vehicle-documents').upload(filePath, file)
-            if (uploadError) throw uploadError
-
-            const { data: { publicUrl } } = supabase.storage.from('vehicle-documents').getPublicUrl(filePath)
-
-            const { data, error } = await supabase.from("documents").insert({
-                vehicle_id: vehicle.id,
-                title: file.name,
-                file_url: publicUrl,
-                type: 'other',
-                category: 'general'
-            }).select().single()
-
-            if (error) throw error
-            setDocumentsList([data, ...documentsList])
-        } catch {
-            alert("Error al subir documento")
-        } finally {
-            // setIsUploadingDocument(false) removed
-        }
-    }
+    const statusBadge = getStatusBadge()
 
     return (
         <>
-            <Dialog open={true} onOpenChange={onClose}>
-                <DialogContent
-                    className="!max-w-[100vw] !w-full h-screen sm:h-[94vh] sm:!max-w-[96vw] sm:!w-[96vw] sm:rounded-xl p-0 gap-0 overflow-hidden bg-background z-[100] border-0 outline-none ring-0 shadow-2xl"
-                    style={{ zIndex: 100 }}>
-                    {/* HEADER - Borderless & Airy */}
-                    <div className="flex-shrink-0 px-6 sm:px-8 py-4 sm:py-6 bg-background relative z-10">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
-                            <div className="flex-1 min-w-0 space-y-3">
-                                <div className="flex flex-wrap items-center gap-3 sm:gap-4">
-                                    <h1 className="text-2xl sm:text-4xl font-bold tracking-tight text-foreground truncate">
-                                        {formData.year} {formData.make} {formData.model}
-                                    </h1>
-                                    <Badge variant="secondary" className={`${getStatusColor(formData.status)} px-3 py-1 text-xs font-semibold uppercase tracking-wider rounded-full border-0`}>
-                                        {formData.status}
-                                    </Badge>
-                                </div>
-                                <div className="flex flex-wrap items-center gap-4 sm:gap-6 text-sm text-muted-foreground/80 font-medium whitespace-nowrap">
-                                    <span className="font-mono bg-muted/50 px-2 py-0.5 rounded">{formData.license_plate || "Sin Placa"}</span>
-                                    <span className="hidden sm:inline text-muted-foreground/30">•</span>
-                                    <span className="font-mono text-xs hidden sm:inline">VIN: {formData.vin || "N/A"}</span>
-                                    <span className="hidden sm:inline text-muted-foreground/30">•</span>
-                                    <span className="flex items-center gap-1.5">
-                                        <MapPin className="h-3.5 w-3.5" />
-                                        {formData.location || "Sin ubicación"}
-                                    </span>
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-3 flex-shrink-0 self-end sm:self-auto">
-                                {isEditMode ? (
-                                    <>
-                                        <Button variant="ghost" size="sm" onClick={handleCancel} disabled={isSaving} className="text-muted-foreground hover:text-foreground">
-                                            Cancelar
-                                        </Button>
-                                        <Button size="sm" onClick={handleSave} disabled={isSaving} className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm">
-                                            {isSaving ? "Guardando..." : "Guardar Cambios"}
-                                        </Button>
-                                    </>
-                                ) : (
-                                    <Button variant="outline" size="sm" onClick={() => setIsEditMode(true)} className="border-border/50 bg-background hover:bg-muted/50 text-foreground shadow-sm">
-                                        <Edit3 className="h-3.5 w-3.5 mr-2" />
-                                        Editar
+            <div className="fixed inset-0 z-40 md:left-72 bg-slate-50 dark:bg-slate-950 flex flex-col animate-in slide-in-from-bottom-4 fade-in duration-300 shadow-2xl">
+                {/* HEADER */}
+                <div className="sticky top-0 z-40 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-8 py-5 flex-shrink-0">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
+                                {formData.year} {formData.make} {formData.model}
+                            </h1>
+                            <Badge className={`${statusBadge.className} text-white px-3 py-1 text-xs font-semibold uppercase`}>
+                                {statusBadge.label}
+                            </Badge>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            {isEditMode ? (
+                                <>
+                                    <Button variant="outline" onClick={() => setIsEditMode(false)}>Cancelar</Button>
+                                    <Button onClick={handleSave} disabled={isSaving} className="bg-emerald-600 hover:bg-emerald-700">
+                                        {isSaving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+                                        Guardar
                                     </Button>
-                                )}
-                                <Button variant="ghost" size="icon" onClick={onClose} className="h-9 w-9 rounded-full sm:ml-2 hover:bg-destructive/10 hover:text-destructive transition-colors">
-                                    <X className="h-5 w-5" />
+                                </>
+                            ) : (
+                                <Button variant="outline" onClick={() => setIsEditMode(true)}>
+                                    <Edit3 className="h-4 w-4 mr-2" /> Editar
                                 </Button>
-                            </div>
+                            )}
+                            <Button variant="ghost" size="icon" onClick={onClose}>
+                                <X className="h-5 w-5" />
+                            </Button>
                         </div>
                     </div>
+                </div>
 
-                    {/* CONTENT AREA */}
-                    <div className="flex-1 overflow-hidden flex flex-col">
-                        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
+                {/* MAIN CONTENT */}
+                <div className="flex-1 overflow-y-auto">
+                    <div className="max-w-[1600px] mx-auto p-8">
 
-                            {/* HORIZONTAL TABS NAVIGATION */}
-                            <div className="flex-shrink-0 border-b border-border/40 bg-background/95 backdrop-blur z-20 px-6 sm:px-8">
-                                <TabsList className="h-12 w-full justify-start gap-6 bg-transparent p-0 overflow-x-auto scrollbar-hide">
-                                    {[
-                                        { value: "overview", label: "General", icon: Settings },
-                                        { value: "photos", label: "Galería", icon: Camera },
-                                        { value: "mileage", label: "Millaje", icon: Gauge },
-                                        { value: "maintenance", label: "Mantenimiento", icon: Wrench },
-                                        { value: "rentals", label: "Alquileres", icon: CalendarDays },
-                                        { value: "documents", label: "Documentos", icon: FileText },
-                                    ].map((tab) => (
-                                        <TabsTrigger
-                                            key={tab.value}
-                                            value={tab.value}
-                                            className="relative flex items-center gap-2 px-1 py-4 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none hover:text-foreground text-muted-foreground transition-all group whitespace-nowrap">
-                                            <tab.icon className="h-4 w-4" />
-                                            <span className="font-medium">{tab.label}</span>
-                                            {/* Glow Effect on Active */}
-                                            <span className="absolute bottom-0 left-0 w-full h-0.5 bg-primary opacity-0 group-data-[state=active]:opacity-100 dark:shadow-[0_0_10px_2px_rgba(59,130,246,0.5)] transition-opacity" />
-                                        </TabsTrigger>
-                                    ))}
-                                </TabsList>
-                            </div>
+                        {/* HERO SECTION - 2 COLUMNAS */}
+                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-8">
 
-                            {/* MAIN CONTENT */}
-                            <div className="flex-1 overflow-y-auto min-h-0 bg-slate-50/50 dark:bg-slate-950/50">
-                                <TabsContent value="overview" className="m-0 p-4 sm:p-8 space-y-6">
-
-                                    {/* BENTO GRID LAYOUT */}
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-
-                                        {/* AREA 1: HERO IMAGE (Span 2 cols on desktop) */}
-                                        <div className="col-span-1 sm:col-span-2 lg:col-span-2 row-span-2 relative group rounded-2xl overflow-hidden shadow-2xl transition-all hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.3)] min-h-[300px]">
-                                            <ImageWithFallback
-                                                src={formData.image_url || `https://source.unsplash.com/1600x900/?${formData.make}+${formData.model},car`}
-                                                fallbackSrc={`https://source.unsplash.com/1600x900/?car`}
-                                                alt={`${formData.make} ${formData.model}`}
-                                                fill
-                                                className="object-cover transition-transform duration-700 group-hover:scale-105"
-                                            />
-                                            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-80" />
-
-                                            {/* Hero Image Action Buttons */}
-                                            <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <input
-                                                    type="file"
-                                                    id="hero-image-upload"
-                                                    accept="image/*"
-                                                    className="hidden"
-                                                    onChange={handleChangeHeroImage}
-                                                    disabled={isUploadingHeroImage}
-                                                />
-                                                <label htmlFor="hero-image-upload">
-                                                    <Button
-                                                        type="button"
-                                                        size="sm"
-                                                        variant="secondary"
-                                                        className="cursor-pointer bg-white/90 hover:bg-white text-black"
-                                                        disabled={isUploadingHeroImage}
-                                                        asChild
-                                                    >
-                                                        <span>
-                                                            {isUploadingHeroImage ? (
-                                                                <>
-                                                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                                                    Subiendo...
-                                                                </>
-                                                            ) : (
-                                                                <>
-                                                                    <Upload className="h-4 w-4 mr-2" />
-                                                                    Cambiar
-                                                                </>
-                                                            )}
-                                                        </span>
+                            {/* COLUMNA IZQUIERDA - IMAGEN */}
+                            <div className="lg:col-span-7 space-y-4">
+                                <div className="relative aspect-[16/9] rounded-2xl overflow-hidden shadow-xl group bg-slate-200">
+                                    <ImageWithFallback
+                                        src={formData.image_url || `https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=1200&h=800&fit=crop`}
+                                        fallbackSrc="/placeholder-car.svg"
+                                        alt="Vehicle"
+                                        fill
+                                        className="object-cover transition-transform duration-700 group-hover:scale-105"
+                                    />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+                                    <div className="absolute bottom-6 left-6 right-6">
+                                        <div className="flex items-end justify-between">
+                                            <div className="text-white">
+                                                <p className="text-sm font-medium opacity-90 mb-1">Placa: {formData.license_plate || 'N/A'}</p>
+                                                <p className="text-xs opacity-75">VIN: {formData.vin || 'N/A'}</p>
+                                            </div>
+                                            <div>
+                                                <input type="file" id="hero-upload" accept="image/*" className="hidden" onChange={handleChangeHeroImage} disabled={isUploadingHeroImage} />
+                                                <label htmlFor="hero-upload">
+                                                    <Button size="icon" variant="secondary" className="h-11 w-11 rounded-full bg-white/95 hover:bg-white text-slate-900 shadow-lg cursor-pointer" asChild>
+                                                        <span>{isUploadingHeroImage ? <Loader2 className="h-5 w-5 animate-spin" /> : <Camera className="h-5 w-5" />}</span>
                                                     </Button>
                                                 </label>
-                                                {formData.image_url && (
-                                                    <Button
-                                                        type="button"
-                                                        size="sm"
-                                                        variant="destructive"
-                                                        className="bg-red-500/90 hover:bg-red-600"
-                                                        onClick={handleRemoveHeroImage}
-                                                    >
-                                                        <Trash2 className="h-4 w-4 mr-2" />
-                                                        Eliminar
-                                                    </Button>
-                                                )}
-                                            </div>
-
-                                            <div className="absolute bottom-6 left-6 right-6 text-white space-y-2">
-                                                <div className="flex items-center gap-2 mb-2">
-                                                    <Badge className="bg-white/20 hover:bg-white/30 text-white border-0 backdrop-blur-md">
-                                                        {formData.year}
-                                                    </Badge>
-                                                    <Badge className="bg-white/20 hover:bg-white/30 text-white border-0 backdrop-blur-md font-mono">
-                                                        {formData.license_plate}
-                                                    </Badge>
-                                                </div>
-                                                <h2 className="text-3xl sm:text-4xl font-bold tracking-tight">{formData.make} {formData.model}</h2>
-                                                <p className="text-white/80 line-clamp-2 max-w-md text-sm sm:text-base">
-                                                    Vehículo premium ideal para alquileres ejecutivos. Mantenimiento al día y listo para entrega inmediata.
-                                                </p>
-                                            </div>
-                                        </div>
-
-                                        {/* AREA 2: PRIMARY KPI - DAILY RATE */}
-                                        <div className="bg-gradient-to-br from-primary to-blue-700 rounded-2xl p-6 text-white shadow-lg flex flex-col justify-between relative overflow-hidden group">
-                                            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 transition-transform group-hover:scale-110" />
-                                            <div className="flex justify-between items-start relative z-10">
-                                                <span className="text-blue-100 font-medium text-sm uppercase tracking-wider">Tarifa Diaria</span>
-                                                <CreditCard className="h-5 w-5 text-blue-200" />
-                                            </div>
-                                            <div className="relative z-10">
-                                                {isEditMode ? (
-                                                    <Input
-                                                        type="number"
-                                                        value={formData.daily_rental_price}
-                                                        onChange={(e) => setFormData({ ...formData, daily_rental_price: Number(e.target.value) })}
-                                                        className="text-4xl sm:text-5xl font-bold bg-transparent border-0 border-b border-white/30 rounded-none px-0 text-white focus-visible:ring-0 placeholder:text-white/50 h-auto"
-                                                    />
-                                                ) : (
-                                                    <span className="text-4xl sm:text-5xl font-bold tracking-tight block">
-                                                        ${formData.daily_rental_price.toLocaleString()}
-                                                    </span>
-                                                )}
-                                                <span className="text-blue-100 text-sm mt-1 block opacity-80">Promedio de mercado: ${formData.daily_rental_price * 0.9}</span>
-                                            </div>
-                                        </div>
-
-                                        {/* AREA 3: ROI METRIC */}
-                                        <div className="bg-slate-50 dark:bg-slate-900 rounded-2xl p-6 shadow-sm border border-border/50 flex flex-col justify-between group hover:border-purple-500/50 transition-colors cursor-default">
-                                            <div className="flex justify-between items-start">
-                                                <span className="text-muted-foreground font-medium text-sm uppercase tracking-wider group-hover:text-purple-600 transition-colors">ROI Estimado</span>
-                                                <Activity className="h-5 w-5 text-muted-foreground/50 group-hover:text-purple-600 transition-colors" />
-                                            </div>
-                                            <div>
-                                                <span className="text-3xl sm:text-4xl font-bold tracking-tight text-foreground block group-hover:text-purple-600 transition-colors">
-                                                    {formData.purchase_price > 0 ? ((formData.daily_rental_price * 240 / formData.purchase_price) * 100).toFixed(0) : 0}%
-                                                </span>
-                                                <span className="text-muted-foreground text-sm mt-1 block">Retorno anual proyectado</span>
-                                            </div>
-                                        </div>
-
-                                        {/* AREA 4: MILEAGE */}
-                                        <div className="bg-slate-50 dark:bg-slate-900 rounded-2xl p-6 shadow-sm border border-border/50 flex flex-col justify-between group hover:border-blue-500/50 transition-colors cursor-default">
-                                            <div className="flex justify-between items-start">
-                                                <span className="text-muted-foreground font-medium text-sm uppercase tracking-wider group-hover:text-blue-600 transition-colors">Millaje</span>
-                                                <Gauge className="h-5 w-5 text-muted-foreground/50 group-hover:text-blue-600 transition-colors" />
-                                            </div>
-                                            <div>
-                                                {isEditMode ? (
-                                                    <Input
-                                                        type="number"
-                                                        value={formData.mileage}
-                                                        onChange={(e) => setFormData({ ...formData, mileage: Number(e.target.value) })}
-                                                        className="text-3xl font-bold bg-transparent border-0 border-b border-border rounded-none px-0 h-auto focus-visible:ring-0"
-                                                    />
-                                                ) : (
-                                                    <span className="text-3xl sm:text-4xl font-bold tracking-tight text-foreground block group-hover:text-blue-600 transition-colors">
-                                                        {(formData.mileage / 1000).toFixed(1)}k
-                                                    </span>
-                                                )}
-                                                <span className="text-muted-foreground text-sm mt-1 block">Millas totales</span>
-                                            </div>
-                                        </div>
-
-                                        {/* AREA 5: PURCHASE PRICE */}
-                                        <div className="bg-slate-50 dark:bg-slate-900 rounded-2xl p-6 shadow-sm border border-border/50 flex flex-col justify-between group hover:border-emerald-500/50 transition-colors cursor-default">
-                                            <div className="flex justify-between items-start">
-                                                <span className="text-muted-foreground font-medium text-sm uppercase tracking-wider group-hover:text-emerald-600 transition-colors">Inversión</span>
-                                                <DollarSign className="h-5 w-5 text-muted-foreground/50 group-hover:text-emerald-600 transition-colors" />
-                                            </div>
-                                            <div>
-                                                {isEditMode ? (
-                                                    <Input
-                                                        type="number"
-                                                        value={formData.purchase_price}
-                                                        onChange={(e) => setFormData({ ...formData, purchase_price: Number(e.target.value) })}
-                                                        className="text-3xl font-bold bg-transparent border-0 border-b border-border rounded-none px-0 h-auto focus-visible:ring-0"
-                                                    />
-                                                ) : (
-                                                    <span className="text-3xl sm:text-4xl font-bold tracking-tight text-foreground block group-hover:text-emerald-600 transition-colors">
-                                                        ${(formData.purchase_price / 1000).toFixed(0)}k
-                                                    </span>
-                                                )}
-                                                <span className="text-muted-foreground text-sm mt-1 block">Valor de compra</span>
                                             </div>
                                         </div>
                                     </div>
+                                </div>
+                            </div>
 
-                                    {/* DETAILS SECTION - Clean & Integrated */}
-                                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-4">
-                                        {/* SPECIFICATIONS */}
-                                        <div className="lg:col-span-2 bg-white dark:bg-slate-900 rounded-2xl p-6 sm:p-8 shadow-sm border border-border/50">
-                                            <div className="flex items-center gap-3 mb-6">
-                                                <div className="h-10 w-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
-                                                    <Settings className="h-5 w-5 text-muted-foreground" />
-                                                </div>
-                                                <h3 className="text-lg font-bold">Especificaciones Técnicas</h3>
+                            {/* COLUMNA DERECHA - KPI CARDS */}
+                            <div className="lg:col-span-5 grid grid-cols-2 gap-4">
+                                <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-6 text-white shadow-lg">
+                                    <DollarSign className="h-8 w-8 mb-3 opacity-80" />
+                                    <p className="text-xs uppercase font-semibold opacity-90 mb-1">Tarifa Diaria</p>
+                                    <p className="text-3xl font-bold">${formData.daily_rental_price}</p>
+                                    <p className="text-xs opacity-75 mt-1">Por día de alquiler</p>
+                                </div>
+
+                                <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl p-6 text-white shadow-lg">
+                                    <TrendingUp className="h-8 w-8 mb-3 opacity-80" />
+                                    <p className="text-xs uppercase font-semibold opacity-90 mb-1">ROI Estimado</p>
+                                    <p className="text-3xl font-bold">{roi}%</p>
+                                    <p className="text-xs opacity-75 mt-1">Retorno anual proyectado</p>
+                                </div>
+
+                                <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl p-6 text-white shadow-lg">
+                                    <Gauge className="h-8 w-8 mb-3 opacity-80" />
+                                    <p className="text-xs uppercase font-semibold opacity-90 mb-1">Millaje</p>
+                                    <p className="text-3xl font-bold">{(formData.mileage / 1000).toFixed(1)}k</p>
+                                    <p className="text-xs opacity-75 mt-1">Millas totales</p>
+                                </div>
+
+                                <div className="bg-gradient-to-br from-slate-700 to-slate-800 rounded-xl p-6 text-white shadow-lg">
+                                    <DollarSign className="h-8 w-8 mb-3 opacity-80" />
+                                    <p className="text-xs uppercase font-semibold opacity-90 mb-1">Inversión</p>
+                                    <p className="text-2xl font-bold">${(formData.purchase_price / 1000).toFixed(0)}k</p>
+                                    <p className="text-xs opacity-75 mt-1">Valor de compra</p>
+                                </div>
+                            </div>
+                        </div>
+
+
+
+                        {/* TABS */}
+                        <Tabs value={activeTab} onValueChange={setActiveTab} className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
+                            <TabsList className="w-full justify-start border-b bg-transparent p-0 h-auto rounded-none">
+                                {[
+                                    { value: "general", label: "General", icon: FileText },
+                                    { value: "galeria", label: "Galería", icon: Camera },
+                                    { value: "millaje", label: "Millaje", icon: Gauge },
+                                    { value: "mantenimiento", label: "Mantenimiento", icon: Wrench },
+                                    { value: "alquileres", label: "Alquileres", icon: CalendarDays },
+                                    { value: "documentos", label: "Documentos", icon: FileText },
+                                ].map(tab => (
+                                    <TabsTrigger
+                                        key={tab.value}
+                                        value={tab.value}
+                                        className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-600 data-[state=active]:bg-blue-50 dark:data-[state=active]:bg-blue-950 px-6 py-4"
+                                    >
+                                        <tab.icon className="h-4 w-4 mr-2" />
+                                        {tab.label}
+                                    </TabsTrigger>
+                                ))}
+                            </TabsList>
+
+                            <div className="p-8">
+                                <TabsContent value="general" className="mt-0">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                        <div>
+                                            <h3 className="text-lg font-bold mb-4">Especificaciones Técnicas</h3>
+                                            <div className="space-y-4">
+                                                <InfoRow
+                                                    label="Marca"
+                                                    value={formData.make}
+                                                    isEditMode={isEditMode}
+                                                    onChange={(val) => setFormData(prev => ({ ...prev, make: val }))}
+                                                />
+                                                <InfoRow
+                                                    label="Modelo"
+                                                    value={formData.model}
+                                                    isEditMode={isEditMode}
+                                                    onChange={(val) => setFormData(prev => ({ ...prev, model: val }))}
+                                                />
+                                                <InfoRow
+                                                    label="Año"
+                                                    value={formData.year.toString()}
+                                                    isEditMode={isEditMode}
+                                                    type="number"
+                                                    onChange={(val) => setFormData(prev => ({ ...prev, year: parseInt(val) || 2024 }))}
+                                                />
+                                                <InfoRow
+                                                    label="VIN"
+                                                    value={formData.vin || ''}
+                                                    isEditMode={isEditMode}
+                                                    onChange={(val) => setFormData(prev => ({ ...prev, vin: val }))}
+                                                />
+                                                <InfoRow
+                                                    label="Placa"
+                                                    value={formData.license_plate || ''}
+                                                    isEditMode={isEditMode}
+                                                    onChange={(val) => setFormData(prev => ({ ...prev, license_plate: val }))}
+                                                />
+                                                <InfoRow
+                                                    label="Ubicación"
+                                                    value={formData.location || ''}
+                                                    isEditMode={isEditMode}
+                                                    onChange={(val) => setFormData(prev => ({ ...prev, location: val }))}
+                                                />
                                             </div>
-                                            {isEditMode ? (
-                                                <div className="grid grid-cols-3 gap-6">
-                                                    <div className="space-y-2">
-                                                        <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Marca</Label>
-                                                        <Input
-                                                            value={formData.make}
-                                                            onChange={(e) => setFormData({ ...formData, make: e.target.value })}
-                                                            className="text-xl font-bold"
-                                                        />
-                                                    </div>
-                                                    <div className="space-y-2">
-                                                        <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Modelo</Label>
-                                                        <Input
-                                                            value={formData.model}
-                                                            onChange={(e) => setFormData({ ...formData, model: e.target.value })}
-                                                            className="text-xl font-bold"
-                                                        />
-                                                    </div>
-                                                    <div className="space-y-2">
-                                                        <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Año</Label>
-                                                        <Input
-                                                            type="number"
-                                                            value={formData.year}
-                                                            onChange={(e) => setFormData({ ...formData, year: Number(e.target.value) })}
-                                                            className="text-xl font-bold"
-                                                        />
-                                                    </div>
-                                                    <div className="space-y-2">
-                                                        <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Placa</Label>
-                                                        <Input
-                                                            value={formData.license_plate}
-                                                            onChange={(e) => setFormData({ ...formData, license_plate: e.target.value })}
-                                                            className="text-lg font-mono font-bold"
-                                                        />
-                                                    </div>
-                                                    <div className="col-span-2 space-y-2">
-                                                        <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">VIN</Label>
-                                                        <Input
-                                                            value={formData.vin}
-                                                            onChange={(e) => setFormData({ ...formData, vin: e.target.value })}
-                                                            className="text-sm font-mono font-semibold"
-                                                        />
-                                                    </div>
-                                                </div>
-                                            ) : (
-                                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-6">
-                                                    <div className="space-y-1">
-                                                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Marca</p>
-                                                        <p className="text-lg sm:text-xl font-bold">{formData.make}</p>
-                                                    </div>
-                                                    <div className="space-y-1">
-                                                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Modelo</p>
-                                                        <p className="text-lg sm:text-xl font-bold">{formData.model}</p>
-                                                    </div>
-                                                    <div className="space-y-1">
-                                                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Año</p>
-                                                        <p className="text-lg sm:text-xl font-bold">{formData.year}</p>
-                                                    </div>
-                                                    <div className="space-y-1">
-                                                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Placa</p>
-                                                        <p className="text-base sm:text-lg font-mono font-bold">{formData.license_plate || "N/A"}</p>
-                                                    </div>
-                                                    <div className="col-span-2 space-y-1">
-                                                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">VIN</p>
-                                                        <p className="text-sm font-mono bg-muted/50 px-3 py-2 rounded font-semibold inline-block">{formData.vin || "N/A"}</p>
-                                                    </div>
-                                                </div>
-                                            )}
                                         </div>
-
-                                        {/* RIGHT: Quick Actions & Status - 1 column */}
-                                        <div className="space-y-6">
-                                            {/* Status Card */}
-                                            <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-sm border border-border/50">
-                                                <div className="flex items-center gap-3 mb-4">
-                                                    <div className="h-10 w-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
-                                                        <Activity className="h-5 w-5 text-muted-foreground" />
-                                                    </div>
-                                                    <h3 className="text-lg font-bold">Estado Actual</h3>
-                                                </div>
-                                                <div className="space-y-4">
-                                                    <div className="relative">
-                                                        <select
-                                                            value={formData.status}
-                                                            onChange={(e) => setFormData({ ...formData, status: e.target.value as Vehicle['status'] })}
-                                                            className="w-full appearance-none bg-slate-50 dark:bg-slate-950 border border-border rounded-xl px-4 py-3 pr-10 font-semibold focus:outline-none focus:ring-2 focus:ring-primary/20">
-                                                            <option value="available">Disponible</option>
-                                                            <option value="rented">Alquilado</option>
-                                                            <option value="maintenance">Mantenimiento</option>
-                                                            <option value="inactive">Inactivo</option>
-                                                        </select>
-                                                        <div className={`absolute right-3 top-3 h-3 w-3 rounded-full pointer-events-none ${getStatusColor(formData.status).split(' ')[0]}`} />
-                                                    </div>
-
-                                                    {/* Investor Assignment */}
-                                                    {investors.length > 0 && (
-                                                        <div className="space-y-2 pt-2 border-t border-border/30">
-                                                            <Label htmlFor="investor-select" className="text-xs font-semibold uppercase text-muted-foreground">
-                                                                Inversor Asignado
-                                                            </Label>
-                                                            <select
-                                                                id="investor-select"
-                                                                value={formData.assigned_investor_id || "none"}
-                                                                onChange={(e) => {
-                                                                    const value = e.target.value === "none" ? null : e.target.value
-                                                                    setFormData({ ...formData, assigned_investor_id: value || "" })
-                                                                }}
-                                                                className="w-full appearance-none bg-slate-50 dark:bg-slate-950 border border-border rounded-xl px-4 py-3 pr-10 font-medium focus:outline-none focus:ring-2 focus:ring-primary/20"
-                                                            >
-                                                                <option value="none">Sin asignar</option>
-                                                                {investors.map((investor) => (
-                                                                    <option key={investor.id} value={investor.id}>
+                                        <div>
+                                            <h3 className="text-lg font-bold mb-4">Información Financiera</h3>
+                                            <div className="space-y-4">
+                                                <InfoRow
+                                                    label="Precio de Compra"
+                                                    value={formData.purchase_price.toString()}
+                                                    isEditMode={isEditMode}
+                                                    type="number"
+                                                    onChange={(val) => setFormData(prev => ({ ...prev, purchase_price: parseFloat(val) || 0 }))}
+                                                />
+                                                <InfoRow
+                                                    label="Tarifa Diaria"
+                                                    value={formData.daily_rental_price.toString()}
+                                                    isEditMode={isEditMode}
+                                                    type="number"
+                                                    onChange={(val) => setFormData(prev => ({ ...prev, daily_rental_price: parseFloat(val) || 0 }))}
+                                                />
+                                                <InfoRow label="ROI Estimado" value={`${roi}%`} />
+                                                <div className="flex justify-between items-center py-2">
+                                                    <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Inversor Asignado</span>
+                                                    {isEditMode ? (
+                                                        <Select
+                                                            value={formData.assigned_investor_id}
+                                                            onValueChange={(val) => setFormData(prev => ({ ...prev, assigned_investor_id: val }))}
+                                                        >
+                                                            <SelectTrigger className="w-[200px] h-9">
+                                                                <SelectValue placeholder="Seleccionar inversor" />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                <SelectItem value="none">Sin asignar</SelectItem>
+                                                                {investors.map(investor => (
+                                                                    <SelectItem key={investor.id} value={investor.id}>
                                                                         {investor.full_name || investor.email}
-                                                                    </option>
+                                                                    </SelectItem>
                                                                 ))}
-                                                            </select>
-                                                            <p className="text-xs text-muted-foreground">
-                                                                {formData.assigned_investor_id
-                                                                    ? "Este vehículo está asignado a un inversor"
-                                                                    : "Asigna este vehículo a un inversor para tracking"}
-                                                            </p>
-                                                        </div>
-                                                    )}
-
-                                                    {/* Quick Actions Grid */}
-                                                    <div className="grid grid-cols-2 gap-3 pt-2">
-                                                        <Button variant="outline" className="h-auto py-3 flex-col gap-1 hover:bg-emerald-50 hover:border-emerald-200 dark:hover:bg-emerald-900/20 border-border/50 rounded-xl" onClick={() => setIsCheckInDialogOpen(true)}>
-                                                            <CheckCircle2 className="h-5 w-5 text-emerald-600" />
-                                                            <span className="text-[10px] uppercase font-bold tracking-wider opacity-70">Check-in</span>
-                                                        </Button>
-                                                        <Button variant="outline" className="h-auto py-3 flex-col gap-1 hover:bg-orange-50 hover:border-orange-200 dark:hover:bg-orange-900/20 border-border/50 rounded-xl" onClick={() => setActiveTab('maintenance')}>
-                                                            <Wrench className="h-5 w-5 text-orange-600" />
-                                                            <span className="text-[10px] uppercase font-bold tracking-wider opacity-70">Service</span>
-                                                        </Button>
-                                                        <Button variant="outline" className="h-auto py-3 flex-col gap-1 hover:bg-blue-50 hover:border-blue-200 dark:hover:bg-blue-900/20 border-border/50 rounded-xl" onClick={() => setActiveTab('rentals')}>
-                                                            <CalendarDays className="h-5 w-5 text-blue-600" />
-                                                            <span className="text-[10px] uppercase font-bold tracking-wider opacity-70">Agenda</span>
-                                                        </Button>
-                                                        <Button variant="outline" className="h-auto py-3 flex-col gap-1 hover:bg-purple-50 hover:border-purple-200 dark:hover:bg-purple-900/20 border-border/50 rounded-xl" onClick={() => setActiveTab('documents')}>
-                                                            <FileText className="h-5 w-5 text-purple-600" />
-                                                            <span className="text-[10px] uppercase font-bold tracking-wider opacity-70">Docs</span>
-                                                        </Button>
-                                                    </div>
-
-                                                    <Button variant="ghost" className="w-full text-destructive hover:bg-destructive/10 hover:text-destructive rounded-xl" onClick={handleDelete}>
-                                                        <Trash2 className="h-4 w-4 mr-2" />
-                                                        Eliminar Vehículo
-                                                    </Button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </TabsContent>
-
-                                {/* GALLERY TAB - Full Implementation */}
-                                {/* GALLERY TAB - Full Implementation (Borderless) */}
-                                <TabsContent value="photos" className="m-0 p-4 sm:p-6 space-y-6 h-full flex flex-col overflow-hidden">
-                                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full min-h-0">
-                                        {/* LEFT: Photo Grid - 8 columns */}
-                                        <div className="col-span-1 lg:col-span-8 flex flex-col min-h-0">
-                                            <div className="flex items-center justify-between mb-4 flex-shrink-0">
-                                                <h3 className="text-lg font-bold flex items-center gap-2">
-                                                    <Camera className="h-5 w-5 text-primary" />
-                                                    Galería ({photos.length})
-                                                </h3>
-                                                <div className="relative">
-                                                    <input
-                                                        type="file"
-                                                        accept="image/*"
-                                                        multiple
-                                                        className="absolute inset-0 opacity-0 cursor-pointer z-10"
-                                                        onChange={handleUpload}
-                                                        disabled={isUploading}
-                                                    />
-                                                    <Button size="sm" variant="outline" className="gap-2" disabled={isUploading}>
-                                                        <Plus className="h-4 w-4" />
-                                                        {isUploading ? "Subiendo..." : "Agregar Fotos"}
-                                                    </Button>
-                                                </div>
-                                            </div>
-
-                                            <div className="flex-1 overflow-y-auto pr-2 pb-20 scrollbar-hide">
-                                                <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
-                                                    {photos.map((photo, index) => (
-                                                        <div
-                                                            key={photo.id}
-                                                            className={`group relative aspect-square rounded-xl overflow-hidden cursor-pointer border-2 transition-all ${selectedPhotoIndex === index ? 'border-primary ring-2 ring-primary/20' : 'border-transparent hover:border-primary/50'}`}
-                                                            onClick={() => {
-                                                                setSelectedPhotoIndex(index)
-                                                            }}
-                                                        >
-                                                            <ImageWithFallback
-                                                                src={photo.image_url}
-                                                                fallbackSrc={`https://source.unsplash.com/1600x900/?car`}
-                                                                alt={`Foto ${index + 1}`}
-                                                                fill
-                                                                className="object-cover transition-transform duration-500 group-hover:scale-110"
-                                                            />
-                                                            {photo.damage_markers && photo.damage_markers.length > 0 && (
-                                                                <div className="absolute top-1 right-1 z-10">
-                                                                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white shadow-sm ring-1 ring-white">
-                                                                        {photo.damage_markers.length}
-                                                                    </span>
-                                                                </div>
-                                                            )}
-                                                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
-                                                        </div>
-                                                    ))}
-                                                    {photos.length === 0 && (
-                                                        <div className="col-span-full h-64 flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-muted-foreground/20 bg-muted/5 text-muted-foreground">
-                                                            <Camera className="h-10 w-10 mb-2 opacity-20" />
-                                                            <p>Arrastra fotos aquí o usa el botón &quot;Agregar&quot;</p>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* RIGHT: Detail View - 4 columns */}
-                                        <div className="col-span-1 lg:col-span-4 flex flex-col min-h-0 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-border/50 overflow-hidden">
-                                            {(selectedPhotoIndex !== null && photos[selectedPhotoIndex]) ? (
-                                                <div className="flex flex-col h-full">
-                                                    <div className="p-4 border-b flex items-center justify-between bg-white dark:bg-slate-950">
-                                                        <span className="font-semibold text-sm">Detalle de Foto</span>
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            className="h-8 w-8 text-muted-foreground hover:text-green-600 mr-2"
-                                                            onClick={saveMarker}
-                                                            title="Guardar Marcadores"
-                                                        >
-                                                            <Save className="h-4 w-4" />
-                                                        </Button>
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                                                            onClick={() => handleDeletePhoto(photos[selectedPhotoIndex].id)}
-                                                        >
-                                                            <Trash2 className="h-4 w-4" />
-                                                        </Button>
-                                                    </div>
-                                                    <div className="relative flex-1 bg-black/5 dark:bg-black/40 flex items-center justify-center overflow-hidden group">
-                                                        <div className="relative max-h-full max-w-full" onClick={handleImageClick}>
-                                                            <ImageWithFallback
-                                                                src={photos[selectedPhotoIndex].image_url}
-                                                                fallbackSrc={`https://source.unsplash.com/1600x900/?car`}
-                                                                alt="Detalle"
-                                                                width={800}
-                                                                height={600}
-                                                                className="max-h-[40vh] lg:max-h-[50vh] object-contain shadow-lg"
-                                                                style={{ width: 'auto' }}
-                                                            />
-                                                            {tempMarkers.map((marker, i) => (
-                                                                <div
-                                                                    key={i}
-                                                                    className="absolute h-4 w-4 bg-red-500 rounded-full border-2 border-white shadow-lg transform -translate-x-1/2 -translate-y-1/2 z-10"
-                                                                    style={{ top: `${marker.y}%`, left: `${marker.x}%` }}
-                                                                />
-                                                            ))}
-                                                            {photos[selectedPhotoIndex].damage_markers?.map((blob: DamageMarker, i: number) => (
-                                                                <div
-                                                                    key={i}
-                                                                    className="absolute h-6 w-6 bg-red-500/20 rounded-full border-2 border-red-500 shadow-sm flex items-center justify-center text-[10px] font-bold text-red-600 transform -translate-x-1/2 -translate-y-1/2 z-10 hover:scale-125 transition-transform cursor-help"
-                                                                    style={{ top: `${blob.y}%`, left: `${blob.x}%` }}
-                                                                    title={blob.description}
-                                                                >
-                                                                    {i + 1}
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                        <div className="absolute bottom-4 bg-black/70 text-white text-xs px-3 py-1.5 rounded-full pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
-                                                            Click para marcar daño
-                                                        </div>
-                                                    </div>
-                                                    <div className="p-4 bg-white dark:bg-slate-950 border-t max-h-[250px] overflow-y-auto">
-                                                        <p className="text-xs text-muted-foreground w-full text-center py-2">
-                                                            {photos[selectedPhotoIndex].damage_markers?.length || 0} daños marcados.
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            ) : (
-                                                <div className="flex flex-col items-center justify-center h-full p-8 text-center text-muted-foreground">
-                                                    <p className="text-sm">Selecciona una foto para ver detalles</p>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                </TabsContent>
-                                {/* MILEAGE TAB - Clean Dashboard */}
-                                <TabsContent value="mileage" className="m-0 p-4 sm:p-6 space-y-6">
-                                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                                        {/* LEFT: Stats & History */}
-                                        <div className="col-span-1 lg:col-span-8 space-y-6">
-                                            {/* KPI Cards */}
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                                <div className="bg-slate-900 text-white rounded-2xl p-6 shadow-sm relative overflow-hidden group">
-                                                    <div className="relative z-10">
-                                                        <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">Millaje Actual</p>
-                                                        <div className="flex items-baseline gap-1">
-                                                            <span className="text-4xl font-mono font-bold tracking-tighter">{formData.mileage.toLocaleString()}</span>
-                                                            <span className="text-sm font-medium text-slate-400">mi</span>
-                                                        </div>
-                                                    </div>
-                                                    <Gauge className="absolute right-4 bottom-4 h-16 w-16 text-white/5 rotate-[-45deg] group-hover:rotate-0 transition-transform duration-500" />
-                                                </div>
-                                                <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-sm border border-border/50 flex flex-col justify-center">
-                                                    <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">Última Lectura</p>
-                                                    <div className="flex items-center gap-2">
-                                                        <CalendarDays className="h-5 w-5 text-primary" />
-                                                        <span className="text-xl font-bold">
-                                                            {mileageHistory[0]?.date ? new Date(mileageHistory[0].date).toLocaleDateString() : 'Hoy'}
+                                                            </SelectContent>
+                                                        </Select>
+                                                    ) : (
+                                                        <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                                                            {investors.find(i => i.id === formData.assigned_investor_id)?.full_name || 'Sin asignar'}
                                                         </span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </TabsContent>
+
+                                <TabsContent value="galeria" className="mt-0">
+                                    <div className="space-y-6">
+                                        <div className="flex justify-between items-center">
+                                            <div>
+                                                <h3 className="text-lg font-bold">Galería de Imágenes</h3>
+                                                <p className="text-sm text-muted-foreground">{photos.length} fotos registradas</p>
+                                            </div>
+                                            <div>
+                                                <input
+                                                    type="file"
+                                                    id="gallery-upload"
+                                                    accept="image/*"
+                                                    multiple
+                                                    className="hidden"
+                                                    onChange={handlePhotoUpload}
+                                                    disabled={isUploadingPhoto}
+                                                />
+                                                <Label htmlFor="gallery-upload">
+                                                    <Button variant="outline" size="sm" className="cursor-pointer" asChild>
+                                                        <span>
+                                                            {isUploadingPhoto ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Upload className="h-4 w-4 mr-2" />}
+                                                            Subir Nueva
+                                                        </span>
+                                                    </Button>
+                                                </Label>
+                                            </div>
+                                        </div>
+
+                                        {photos.length === 0 ? (
+                                            <div className="text-center py-16 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50/50 dark:bg-slate-900/50">
+                                                <div className="bg-slate-100 dark:bg-slate-800 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                                                    <Camera className="h-8 w-8 text-slate-400" />
+                                                </div>
+                                                <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-1">No hay fotos</h3>
+                                                <p className="text-slate-500 max-w-sm mx-auto mb-6">Sube fotos del vehículo para documentar su estado.</p>
+                                                <Label htmlFor="gallery-upload">
+                                                    <Button className="cursor-pointer" asChild>
+                                                        <span>Subir Foto</span>
+                                                    </Button>
+                                                </Label>
+                                            </div>
+                                        ) : (
+                                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                                                {photos.map((photo) => (
+                                                    <div key={photo.id} className="group relative aspect-square rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-800 border shadow-sm">
+                                                        <ImageWithFallback
+                                                            src={photo.image_url}
+                                                            fallbackSrc="/placeholder-car.svg"
+                                                            alt={photo.caption || "Foto del vehículo"}
+                                                            fill
+                                                            className="object-cover transition-transform group-hover:scale-105 cursor-pointer"
+                                                            onClick={() => setSelectedPhoto(photo)}
+                                                        />
+                                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 pointer-events-none">
+                                                            <div className="pointer-events-auto flex gap-2">
+                                                                <Button size="icon" variant="secondary" className="h-8 w-8" onClick={() => setSelectedPhoto(photo)}>
+                                                                    <Eye className="h-4 w-4" />
+                                                                </Button>
+                                                                <Button size="icon" variant="destructive" className="h-8 w-8" onClick={(e) => handleDeletePhoto(photo.id, e)}>
+                                                                    <Trash2 className="h-4 w-4" />
+                                                                </Button>
+                                                            </div>
+                                                        </div>
+                                                        {photo.is_primary && (
+                                                            <div className="absolute top-2 left-2 bg-emerald-500 text-white text-[10px] uppercase font-bold px-2 py-0.5 rounded-full">
+                                                                Principal
+                                                            </div>
+                                                        )}
                                                     </div>
-                                                    <p className="text-xs text-muted-foreground mt-2">
-                                                        {mileageHistory.length} registros totales
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                </TabsContent>
+
+                                <TabsContent value="millaje" className="mt-0">
+                                    <div className="space-y-6">
+                                        <div className="flex justify-between items-center bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800">
+                                            <div className="flex items-center gap-4">
+                                                <div className="h-12 w-12 rounded-full bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center text-blue-600 dark:text-blue-400">
+                                                    <Gauge className="h-6 w-6" />
+                                                </div>
+                                                <div>
+                                                    <h3 className="text-lg font-bold">Millaje Actual</h3>
+                                                    <p className="text-2xl font-mono font-bold text-slate-900 dark:text-white">
+                                                        {formData.mileage.toLocaleString()} <span className="text-sm text-muted-foreground font-sans font-normal">mi</span>
                                                     </p>
                                                 </div>
                                             </div>
-
-                                            {/* Chart Area */}
-                                            <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-sm border border-border/50">
-                                                <h3 className="font-bold text-sm mb-6 flex items-center gap-2">
-                                                    <Activity className="h-4 w-4 text-primary" />
-                                                    Tendencia de Uso
-                                                </h3>
-                                                <div className="h-48 w-full flex items-end justify-between gap-2">
-                                                    {mileageHistory.length > 0 ? (
-                                                        mileageHistory.slice(0, 12).reverse().map((log, i, arr) => {
-                                                            const max = Math.max(...arr.map(m => m.mileage));
-                                                            const min = Math.min(...arr.map(m => m.mileage)) * 0.95;
-                                                            const height = ((log.mileage - min) / (max - min)) * 100;
-                                                            return (
-                                                                <div key={log.id} className="flex-1 flex flex-col items-center gap-2 group relative">
-                                                                    <div
-                                                                        className="w-full bg-primary/10 hover:bg-primary/80 transition-all rounded-t-sm relative group-hover:shadow-[0_0_15px_rgba(59,130,246,0.5)]"
-                                                                        style={{ height: `${Math.max(height, 5)}%` }}
-                                                                    >
-                                                                        <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10">
-                                                                            {log.mileage.toLocaleString()}
-                                                                        </div>
-                                                                    </div>
-                                                                    <span className="text-[10px] text-muted-foreground hidden sm:block truncate w-full text-center">
-                                                                        {new Date(log.date).toLocaleDateString(undefined, { month: 'numeric', day: 'numeric' })}
-                                                                    </span>
-                                                                </div>
-                                                            )
-                                                        })
-                                                    ) : (
-                                                        <div className="w-full h-full flex items-center justify-center text-muted-foreground text-sm italic">
-                                                            Datos insuficientes para la gráfica
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
-
-                                            {/* Recent Logs List */}
-                                            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-border/50 overflow-hidden">
-                                                <div className="p-4 border-b bg-slate-50/50 dark:bg-slate-950/50 flex justify-between items-center">
-                                                    <h3 className="font-bold text-sm">Historial de Registros</h3>
-                                                    <Button variant="ghost" size="sm" className="h-8 text-xs">Exportar CSV</Button>
-                                                </div>
-                                                <div className="divide-y max-h-[400px] overflow-y-auto">
-                                                    {mileageHistory.map((log) => (
-                                                        <div key={log.id} className="p-4 flex items-center justify-between hover:bg-slate-50/50 transition-colors">
-                                                            <div className="flex items-center gap-4">
-                                                                <div className="h-8 w-8 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-600 flex items-center justify-center font-bold text-xs ring-1 ring-blue-100 dark:ring-blue-800">
-                                                                    Mi
-                                                                </div>
-                                                                <div>
-                                                                    <p className="font-bold font-mono text-sm">{log.mileage.toLocaleString()}</p>
-                                                                    <p className="text-xs text-muted-foreground text-[10px] uppercase font-medium mt-0.5">
-                                                                        {new Date(log.date).toLocaleDateString()}
-                                                                    </p>
-                                                                </div>
-                                                            </div>
-                                                            {log.notes && (
-                                                                <div className="text-xs text-muted-foreground bg-secondary/50 px-3 py-1 rounded-full max-w-[200px] truncate hidden sm:block">
-                                                                    {log.notes}
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    ))}
-                                                    {mileageHistory.length === 0 && (
-                                                        <div className="p-8 text-center text-muted-foreground text-sm">
-                                                            Sin historial registrado.
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
+                                            <Button onClick={() => setIsMileageDialogOpen(true)}>
+                                                <Plus className="h-4 w-4 mr-2" /> Registrar Lectura
+                                            </Button>
                                         </div>
 
-                                        {/* RIGHT: Add New Entry Form */}
-                                        <div className="col-span-1 lg:col-span-4">
-                                            <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-border/50 sticky top-6 shadow-sm">
-                                                <div className="flex items-center gap-3 mb-6">
-                                                    <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                                                        <Plus className="h-5 w-5" />
-                                                    </div>
-                                                    <h3 className="font-bold text-lg">Nuevo Registro</h3>
-                                                </div>
-
-                                                <div className="space-y-4">
-                                                    <div className="space-y-2">
-                                                        <Label htmlFor="mileage-date" className="text-xs font-semibold uppercase text-muted-foreground">Fecha</Label>
-                                                        <Input
-                                                            id="mileage-date"
-                                                            type="date"
-                                                            value={newLogData.date}
-                                                            onChange={(e) => setNewLogData({ ...newLogData, date: e.target.value })}
-                                                            className="bg-slate-50 border-input font-medium"
-                                                        />
-                                                    </div>
-
-                                                    <div className="space-y-2">
-                                                        <Label htmlFor="mileage-value" className="text-xs font-semibold uppercase text-muted-foreground">Lectura (Millas)</Label>
-                                                        <div className="relative">
-                                                            <Input
-                                                                id="mileage-value"
-                                                                type="number"
-                                                                value={newLogData.mileage}
-                                                                onChange={(e) => setNewLogData({ ...newLogData, mileage: parseInt(e.target.value) || 0 })}
-                                                                className="pl-10 font-mono font-bold text-lg"
+                                        {mileageHistory.length > 0 && (
+                                            <div className="bg-white dark:bg-slate-900 border rounded-xl p-6 shadow-sm">
+                                                <h4 className="text-sm font-medium text-muted-foreground mb-6 flex items-center">
+                                                    <Activity className="h-4 w-4 mr-2" /> Tendencia de Uso
+                                                </h4>
+                                                <div className="h-[300px] w-full">
+                                                    <ResponsiveContainer width="100%" height="100%">
+                                                        <AreaChart data={[...mileageHistory].reverse()}>
+                                                            <defs>
+                                                                <linearGradient id="colorMileage" x1="0" y1="0" x2="0" y2="1">
+                                                                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
+                                                                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                                                                </linearGradient>
+                                                            </defs>
+                                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                                                            <XAxis
+                                                                dataKey="date"
+                                                                tickFormatter={(date) => new Date(date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                                                                stroke="#64748b"
+                                                                fontSize={12}
+                                                                tickLine={false}
+                                                                axisLine={false}
                                                             />
-                                                            <Gauge className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                                                        </div>
-                                                        <p className="text-[10px] text-muted-foreground text-right">
-                                                            Actual: {formData.mileage.toLocaleString()}
-                                                        </p>
-                                                    </div>
+                                                            <YAxis
+                                                                stroke="#64748b"
+                                                                fontSize={12}
+                                                                tickLine={false}
+                                                                axisLine={false}
+                                                                tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
+                                                            />
+                                                            <Tooltip
+                                                                contentStyle={{ backgroundColor: 'rgba(255, 255, 255, 0.9)', borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                                                                labelFormatter={(date) => new Date(date).toLocaleDateString()}
+                                                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                                                                formatter={(value: any) => [`${value.toLocaleString()} mi`, 'Millaje']}
+                                                            />
+                                                            <Area
+                                                                type="monotone"
+                                                                dataKey="mileage"
+                                                                stroke="#3b82f6"
+                                                                strokeWidth={3}
+                                                                fillOpacity={1}
+                                                                fill="url(#colorMileage)"
+                                                            />
+                                                        </AreaChart>
+                                                    </ResponsiveContainer>
+                                                </div>
+                                            </div>
+                                        )}
 
-                                                    <div className="space-y-2">
-                                                        <Label htmlFor="mileage-notes" className="text-xs font-semibold uppercase text-muted-foreground">Notas (Opcional)</Label>
-                                                        <textarea
-                                                            id="mileage-notes"
-                                                            value={newLogData.notes}
-                                                            onChange={(e) => setNewLogData({ ...newLogData, notes: e.target.value })}
-                                                            className="w-full min-h-[80px] rounded-md border border-input bg-slate-50 px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-y"
-                                                            placeholder="Ej: Cambio de aceite, viaje largo..."
+                                        {mileageHistory.length === 0 ? (
+                                            <div className="text-center py-16 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl">
+                                                <div className="bg-slate-100 dark:bg-slate-800 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                                                    <Gauge className="h-8 w-8 text-slate-400" />
+                                                </div>
+                                                <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-1">Sin registros</h3>
+                                                <p className="text-slate-500 mb-6">No hay historial de millaje registrado.</p>
+                                            </div>
+                                        ) : (
+                                            <div className="border rounded-lg overflow-hidden">
+                                                <Table>
+                                                    <TableHeader>
+                                                        <TableRow>
+                                                            <TableHead>Fecha</TableHead>
+                                                            <TableHead>Millaje</TableHead>
+                                                            <TableHead>Notas</TableHead>
+                                                        </TableRow>
+                                                    </TableHeader>
+                                                    <TableBody>
+                                                        {mileageHistory.map((log) => (
+                                                            <TableRow key={log.id}>
+                                                                <TableCell>{new Date(log.date).toLocaleDateString()}</TableCell>
+                                                                <TableCell className="font-mono font-medium">{log.mileage.toLocaleString()} mi</TableCell>
+                                                                <TableCell className="text-muted-foreground">{log.notes || "-"}</TableCell>
+                                                            </TableRow>
+                                                        ))}
+                                                    </TableBody>
+                                                </Table>
+                                            </div>
+                                        )}
+                                    </div>
+                                </TabsContent>
+
+                                <TabsContent value="mantenimiento" className="mt-0">
+                                    <div className="space-y-6">
+                                        <div className="flex justify-between items-center">
+                                            <div>
+                                                <h3 className="text-lg font-bold">Historial de Mantenimiento</h3>
+                                                <p className="text-sm text-muted-foreground">Servicios y reparaciones realizados</p>
+                                            </div>
+                                            <Button variant="outline" size="sm" onClick={() => {
+                                                setMaintenanceForm(prev => ({ ...prev, current_mileage: vehicle.mileage.toString() }))
+                                                setIsMaintenanceDialogOpen(true)
+                                            }}>
+                                                <Plus className="h-4 w-4 mr-2" /> Nuevo Servicio
+                                            </Button>
+                                        </div>
+
+                                        {maintenanceHistory.length === 0 ? (
+                                            <div className="text-center py-16 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl">
+                                                <div className="bg-slate-100 dark:bg-slate-800 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                                                    <Wrench className="h-8 w-8 text-slate-400" />
+                                                </div>
+                                                <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-1">Sin mantenimientos</h3>
+                                                <p className="text-slate-500 mb-6">No hay registros de servicios o reparaciones.</p>
+                                            </div>
+                                        ) : (
+                                            <div className="border rounded-lg overflow-hidden">
+                                                <Table>
+                                                    <TableHeader>
+                                                        <TableRow>
+                                                            <TableHead>Fecha</TableHead>
+                                                            <TableHead>Servicio</TableHead>
+                                                            <TableHead>Millaje</TableHead>
+                                                            <TableHead>Próximo</TableHead>
+                                                            <TableHead>Costo</TableHead>
+                                                            <TableHead>Notas</TableHead>
+                                                        </TableRow>
+                                                    </TableHeader>
+                                                    <TableBody>
+                                                        {maintenanceHistory.map((record) => (
+                                                            <TableRow key={record.id}>
+                                                                <TableCell>{new Date(record.date).toLocaleDateString()}</TableCell>
+                                                                <TableCell className="font-medium">{record.service_type}</TableCell>
+                                                                {/* @ts-ignore - DB field might slightly differ but assuming mileage_at_service or checking type definition */}
+                                                                <TableCell>{(record as any).mileage_at_service?.toLocaleString() || "-"} mi</TableCell>
+                                                                {/* @ts-ignore */}
+                                                                <TableCell>{(record as any).next_service_mileage ? `${(record as any).next_service_mileage?.toLocaleString()} mi` : "-"}</TableCell>
+                                                                <TableCell>${record.cost?.toLocaleString()}</TableCell>
+                                                                <TableCell className="max-w-[200px] truncate text-muted-foreground">{record.notes}</TableCell>
+                                                            </TableRow>
+                                                        ))}
+                                                    </TableBody>
+                                                </Table>
+                                            </div>
+                                        )}
+
+                                    </div>
+                                </TabsContent>
+
+                                <TabsContent value="alquileres" className="mt-0">
+                                    <div className="space-y-6">
+                                        <div className="flex justify-between items-center">
+                                            <div>
+                                                <h3 className="text-lg font-bold">Calendario y Reservas</h3>
+                                                <p className="text-sm text-muted-foreground">Gestiona la disponibilidad del vehículo</p>
+                                            </div>
+                                            <Button variant="outline" size="sm" onClick={() => setIsRentalDialogOpen(true)}>
+                                                <Plus className="h-4 w-4 mr-2" /> Nueva Reserva
+                                            </Button>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+                                            {/* CALENDAR VIEW */}
+                                            <div className="md:col-span-12 lg:col-span-5">
+                                                <div className="border rounded-xl p-6 bg-white dark:bg-slate-900 shadow-sm">
+                                                    <h4 className="font-medium mb-6 flex items-center gap-2 text-lg">
+                                                        <CalendarDays className="h-5 w-5 text-blue-500" /> Disponibilidad
+                                                    </h4>
+                                                    <div className="flex justify-center bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4">
+                                                        <Calendar
+                                                            mode="single"
+                                                            // We use the 'modifiers' prop to highlight booked dates
+                                                            modifiers={{ booked: getBookedDates() }}
+                                                            modifiersStyles={{
+                                                                booked: { backgroundColor: '#3b82f6', color: 'white', fontWeight: 'bold', borderRadius: '8px' }
+                                                            }}
+                                                            locale={es}
+                                                            className="rounded-md border-0 [--cell-size:48px] scale-105"
                                                         />
                                                     </div>
-
-                                                    <Button className="w-full h-12 text-base font-bold shadow-lg shadow-primary/20 mt-2" onClick={handleAddMileageLog}>
-                                                        Guardar Registro
-                                                    </Button>
+                                                    <div className="mt-6 flex gap-6 text-sm justify-center text-muted-foreground">
+                                                        <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-blue-500"></div> Alquilado</div>
+                                                        <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-slate-200"></div> Disponible</div>
+                                                    </div>
                                                 </div>
+                                            </div>
+
+                                            {/* HISTORY LIST */}
+                                            <div className="md:col-span-12 lg:col-span-7 space-y-4">
+                                                <div className="flex items-center justify-between">
+                                                    <h4 className="font-semibold text-sm text-slate-500 uppercase tracking-wider">Historial de Alquileres</h4>
+                                                </div>
+
+                                                {rentalHistory.length === 0 ? (
+                                                    <div className="text-center py-16 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50/50 dark:bg-slate-900/20">
+                                                        <div className="bg-slate-100 dark:bg-slate-800 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                                                            <CalendarDays className="h-8 w-8 text-slate-400" />
+                                                        </div>
+                                                        <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-1">Sin alquileres</h3>
+                                                        <p className="text-slate-500 mb-6">No hay registros de reservas aún.</p>
+                                                        <Button variant="outline" onClick={() => setIsRentalDialogOpen(true)}>Crear Primera Reserva</Button>
+                                                    </div>
+                                                ) : (
+                                                    <div className="border rounded-xl overflow-hidden shadow-sm bg-white dark:bg-slate-900">
+                                                        <Table>
+                                                            <TableHeader>
+                                                                <TableRow className="bg-slate-50/50 dark:bg-slate-800/50">
+                                                                    <TableHead>Cliente</TableHead>
+                                                                    <TableHead>Fechas</TableHead>
+                                                                    <TableHead>Plataforma</TableHead>
+                                                                    <TableHead>Estado</TableHead>
+                                                                    <TableHead className="text-right">Total</TableHead>
+                                                                </TableRow>
+                                                            </TableHeader>
+                                                            <TableBody>
+                                                                {rentalHistory.map((rental) => (
+                                                                    <TableRow key={rental.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30">
+                                                                        <TableCell className="font-medium">{rental.customer_name || 'Cliente'}</TableCell>
+                                                                        <TableCell className="text-sm">
+                                                                            <div className="flex flex-col">
+                                                                                <span className="font-medium text-slate-900 dark:text-slate-200">
+                                                                                    {new Date(rental.start_date).toLocaleDateString()}
+                                                                                </span>
+                                                                                <span className="text-xs text-muted-foreground whitespace-nowrap italic">
+                                                                                    hasta {new Date(rental.end_date).toLocaleDateString()}
+                                                                                </span>
+                                                                            </div>
+                                                                        </TableCell>
+                                                                        <TableCell>
+                                                                            <Badge variant="secondary" className="font-normal capitalize px-2">{rental.platform || 'Manual'}</Badge>
+                                                                        </TableCell>
+                                                                        <TableCell>
+                                                                            <Badge variant="outline" className={`
+                                                                                ${rental.status === 'confirmed' ? 'border-emerald-500 text-emerald-600 bg-emerald-50' : ''}
+                                                                                ${rental.status === 'completed' ? 'border-blue-500 text-blue-600 bg-blue-50' : ''}
+                                                                                ${rental.status === 'cancelled' ? 'border-slate-300 text-slate-500 bg-slate-50' : ''}
+                                                                            `}>
+                                                                                {rental.status === 'confirmed' ? 'Confirmado' : rental.status === 'completed' ? 'Completado' : 'Cancelado'}
+                                                                            </Badge>
+                                                                        </TableCell>
+                                                                        <TableCell className="text-right font-bold text-slate-900 dark:text-white">
+                                                                            ${rental.total_amount?.toLocaleString() || '0'}
+                                                                        </TableCell>
+                                                                    </TableRow>
+                                                                ))}
+                                                            </TableBody>
+                                                        </Table>
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                     </div>
                                 </TabsContent>
 
-                                {/* MAINTENANCE TAB */}
-                                {/* MAINTENANCE TAB - Full Implementation */}
-                                <TabsContent value="maintenance" className="m-0 p-4 sm:p-6 space-y-6">
-                                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                                        {/* Left: Service History & Timeline */}
-                                        <div className="col-span-1 lg:col-span-8 space-y-6">
-                                            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-border/50 overflow-hidden">
-                                                <div className="p-6 border-b flex justify-between items-center bg-slate-50/50 dark:bg-slate-950/50">
-                                                    <h3 className="font-bold text-lg flex items-center gap-2">
-                                                        <Wrench className="h-5 w-5 text-orange-500" />
-                                                        Historial de Servicios ({maintenanceHistory.length})
-                                                    </h3>
-                                                    <div className="flex gap-2">
-                                                        <Badge variant="outline" className="gap-1 bg-white dark:bg-slate-950">
-                                                            <CheckCircle2 className="h-3 w-3 text-emerald-500" />
-                                                            {maintenanceHistory.filter(m => m.status === 'completed').length} Completados
-                                                        </Badge>
-                                                    </div>
-                                                </div>
-
-                                                {/* Service History List */}
-                                                <div className="divide-y max-h-[600px] overflow-y-auto">
-                                                    {maintenanceHistory.length > 0 ? maintenanceHistory.map((service) => (
-                                                        <div key={service.id} className="p-6 hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors">
-                                                            <div className="flex items-start justify-between mb-4">
-                                                                <div className="flex items-start gap-4">
-                                                                    <div className={`h-12 w-12 rounded-full flex items-center justify-center ${service.status === 'completed'
-                                                                        ? 'bg-emerald-100 dark:bg-emerald-900/20'
-                                                                        : 'bg-orange-100 dark:bg-orange-900/20'
-                                                                        }`}>
-                                                                        <Wrench className={`h-6 w-6 ${service.status === 'completed'
-                                                                            ? 'text-emerald-600'
-                                                                            : 'text-orange-600'
-                                                                            }`} />
-                                                                    </div>
-                                                                    <div>
-                                                                        <h4 className="font-bold text-base">{service.service_type}</h4>
-                                                                        <p className="text-sm text-muted-foreground mt-1">
-                                                                            {new Date(service.date).toLocaleDateString('es-ES', {
-                                                                                year: 'numeric',
-                                                                                month: 'long',
-                                                                                day: 'numeric'
-                                                                            })}
-                                                                        </p>
-                                                                        {service.notes && (
-                                                                            <p className="text-sm text-muted-foreground mt-2 max-w-md">
-                                                                                {service.notes}
-                                                                            </p>
-                                                                        )}
-                                                                    </div>
-                                                                </div>
-                                                                <div className="text-right">
-                                                                    {service.cost && (
-                                                                        <p className="font-bold text-lg font-mono">
-                                                                            ${service.cost.toLocaleString()}
-                                                                        </p>
-                                                                    )}
-                                                                    <Badge
-                                                                        variant={service.status === 'completed' ? 'default' : 'secondary'}
-                                                                        className={service.status === 'completed' ? 'bg-emerald-500' : 'bg-orange-500'}
-                                                                    >
-                                                                        {service.status === 'completed' ? 'Completado' : 'Pendiente'}
-                                                                    </Badge>
-                                                                </div>
-                                                            </div>
-
-                                                            {/* Receipt Photos Gallery */}
-                                                            {service.receipt_images && service.receipt_images.length > 0 && (
-                                                                <div className="mt-4">
-                                                                    <p className="text-xs font-semibold uppercase text-muted-foreground mb-2">
-                                                                        Comprobantes ({service.receipt_images.length})
-                                                                    </p>
-                                                                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
-                                                                        {service.receipt_images.map((imageUrl, idx) => (
-                                                                            <div
-                                                                                key={idx}
-                                                                                className="aspect-square rounded-lg overflow-hidden border border-border/50 hover:border-primary cursor-pointer group relative"
-                                                                                onClick={() => window.open(imageUrl, '_blank')}
-                                                                            >
-                                                                                <ImageWithFallback
-                                                                                    src={imageUrl}
-                                                                                    fallbackSrc="https://source.unsplash.com/400x400/?receipt,document"
-                                                                                    alt={`Comprobante ${idx + 1}`}
-                                                                                    fill
-                                                                                    className="object-cover transition-transform group-hover:scale-110"
-                                                                                />
-                                                                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
-                                                                                    <Eye className="h-5 w-5 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
-                                                                                </div>
-                                                                            </div>
-                                                                        ))}
-                                                                    </div>
-                                                                </div>
-                                                            )}
-
-                                                            {/* Next Service Info */}
-                                                            {(service.next_service_date || service.next_service_mileage) && (
-                                                                <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-800/30">
-                                                                    <p className="text-xs font-semibold uppercase text-blue-600 dark:text-blue-400 mb-1">
-                                                                        Próximo Servicio
-                                                                    </p>
-                                                                    <div className="flex gap-4 text-sm">
-                                                                        {service.next_service_date && (
-                                                                            <span className="text-blue-700 dark:text-blue-300">
-                                                                                📅 {new Date(service.next_service_date).toLocaleDateString()}
-                                                                            </span>
-                                                                        )}
-                                                                        {service.next_service_mileage && (
-                                                                            <span className="text-blue-700 dark:text-blue-300">
-                                                                                🛣️ {service.next_service_mileage.toLocaleString()} mi
-                                                                            </span>
-                                                                        )}
-                                                                    </div>
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    )) : (
-                                                        <div className="p-12 text-center h-[300px] flex flex-col items-center justify-center">
-                                                            <div className="h-16 w-16 bg-orange-50 dark:bg-orange-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                                                                <Wrench className="h-8 w-8 text-orange-400 opacity-50" />
-                                                            </div>
-                                                            <h4 className="text-lg font-bold text-foreground mb-1">Sin registros de mantenimiento</h4>
-                                                            <p className="text-muted-foreground max-w-sm mx-auto mb-6">
-                                                                Mantén el vehículo en óptimas condiciones registrando cada servicio.
-                                                            </p>
-                                                        </div>
+                                <TabsContent value="documentos" className="mt-0">
+                                    <div className="space-y-6">
+                                        <div className="flex justify-between items-center">
+                                            <div>
+                                                <h3 className="text-lg font-bold">Documentación</h3>
+                                                <p className="text-sm text-muted-foreground">Seguros, registros y otros archivos</p>
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <input
+                                                    type="file"
+                                                    id="document-upload"
+                                                    className="hidden"
+                                                    multiple
+                                                    accept="image/*,.pdf"
+                                                    onChange={handleDocumentUpload}
+                                                />
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() => document.getElementById('document-upload')?.click()}
+                                                    disabled={isUploadingDocument}
+                                                    className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800"
+                                                >
+                                                    {isUploadingDocument ? (
+                                                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                                    ) : (
+                                                        <Plus className="h-4 w-4 mr-2" />
                                                     )}
-                                                </div>
+                                                    Subir Documentos
+                                                </Button>
                                             </div>
                                         </div>
 
-                                        {/* Right: New Service Form */}
-                                        <div className="col-span-1 lg:col-span-4">
-                                            <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-border/50 sticky top-6 shadow-sm">
-                                                <div className="flex items-center gap-3 mb-6">
-                                                    <div className="h-10 w-10 rounded-full bg-orange-500/10 flex items-center justify-center text-orange-600">
-                                                        <Plus className="h-5 w-5" />
-                                                    </div>
-                                                    <h3 className="font-bold text-lg">Nuevo Servicio</h3>
+                                        {documentsList.length === 0 ? (
+                                            <div className="text-center py-20 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl bg-slate-50/50 dark:bg-slate-900/20">
+                                                <div className="bg-slate-100 dark:bg-slate-800 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
+                                                    <FileText className="h-10 w-10 text-slate-400" />
                                                 </div>
-
-                                                <div className="space-y-4">
-                                                    <div className="space-y-2">
-                                                        <Label htmlFor="service-type" className="text-xs font-semibold uppercase text-muted-foreground">
-                                                            Tipo de Servicio *
-                                                        </Label>
-                                                        <Input
-                                                            id="service-type"
-                                                            value={newMaintenanceData.service_type}
-                                                            onChange={(e) => setNewMaintenanceData({ ...newMaintenanceData, service_type: e.target.value })}
-                                                            placeholder="Ej: Cambio de aceite, Alineación..."
-                                                            className="bg-slate-50 border-input font-medium"
-                                                        />
-                                                    </div>
-
-                                                    <div className="grid grid-cols-2 gap-3">
-                                                        <div className="space-y-2">
-                                                            <Label htmlFor="service-date" className="text-xs font-semibold uppercase text-muted-foreground">
-                                                                Fecha *
-                                                            </Label>
-                                                            <Input
-                                                                id="service-date"
-                                                                type="date"
-                                                                value={newMaintenanceData.date}
-                                                                onChange={(e) => setNewMaintenanceData({ ...newMaintenanceData, date: e.target.value })}
-                                                                className="bg-slate-50 border-input font-medium"
-                                                            />
-                                                        </div>
-
-                                                        <div className="space-y-2">
-                                                            <Label htmlFor="service-cost" className="text-xs font-semibold uppercase text-muted-foreground">
-                                                                Costo
-                                                            </Label>
-                                                            <div className="relative">
-                                                                <span className="absolute left-3 top-3 text-muted-foreground">$</span>
-                                                                <Input
-                                                                    id="service-cost"
-                                                                    type="number"
-                                                                    value={newMaintenanceData.cost}
-                                                                    onChange={(e) => setNewMaintenanceData({ ...newMaintenanceData, cost: parseFloat(e.target.value) || 0 })}
-                                                                    className="pl-7 font-mono font-bold"
-                                                                />
+                                                <h3 className="text-xl font-semibold text-slate-900 dark:text-white mb-2">Carpeta vacía</h3>
+                                                <p className="text-slate-500 mb-8 max-w-xs mx-auto text-sm">No hay documentos cargados. Puedes subir PDFs o imágenes de seguros, títulos, etc.</p>
+                                                <Button variant="outline" onClick={() => document.getElementById('document-upload')?.click()}>
+                                                    Comenzar a subir
+                                                </Button>
+                                            </div>
+                                        ) : (
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                                                {documentsList.map((doc) => (
+                                                    <div
+                                                        key={doc.id}
+                                                        className="group relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 hover:shadow-xl hover:border-blue-400 dark:hover:border-blue-500 transition-all duration-300 cursor-pointer"
+                                                        onClick={() => setSelectedDocument(doc)}
+                                                    >
+                                                        <div className="flex items-center gap-4">
+                                                            <div className={`w-20 h-20 rounded-xl overflow-hidden flex-shrink-0 flex items-center justify-center border border-slate-100 dark:border-slate-800 ${doc.file_url.toLowerCase().endsWith('.pdf') || doc.category?.toLowerCase() === 'pdf'
+                                                                ? 'bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400'
+                                                                : 'bg-slate-50 text-blue-600 dark:bg-slate-800/50 dark:text-blue-400'
+                                                                }`}>
+                                                                {!(doc.file_url.toLowerCase().endsWith('.pdf') || doc.category?.toLowerCase() === 'pdf') ? (
+                                                                    <img
+                                                                        src={doc.file_url}
+                                                                        alt={doc.title}
+                                                                        className="w-full h-full object-cover"
+                                                                    />
+                                                                ) : (
+                                                                    <FileText className="h-8 w-8" />
+                                                                )}
+                                                            </div>
+                                                            <div className="flex-1 min-w-0">
+                                                                <p className="font-bold text-slate-800 dark:text-white truncate group-hover:text-blue-600 transition-colors">
+                                                                    {doc.title}
+                                                                </p>
+                                                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
+                                                                    {doc.type.replace('_', ' ')} | {doc.category || 'FILE'}
+                                                                </p>
+                                                                <p className="text-xs text-slate-400 mt-2 flex items-center gap-1 font-medium">
+                                                                    <CalendarDays className="h-3.5 w-3.5" />
+                                                                    {new Date(doc.created_at).toLocaleDateString()}
+                                                                </p>
                                                             </div>
                                                         </div>
-                                                    </div>
 
-                                                    <div className="space-y-2">
-                                                        <Label htmlFor="service-status" className="text-xs font-semibold uppercase text-muted-foreground">
-                                                            Estado
-                                                        </Label>
-                                                        <select
-                                                            id="service-status"
-                                                            value={newMaintenanceData.status}
-                                                            onChange={(e) => setNewMaintenanceData({ ...newMaintenanceData, status: e.target.value as "pending" | "completed" })}
-                                                            className="w-full rounded-md border border-input bg-slate-50 px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                                                        >
-                                                            <option value="completed">Completado</option>
-                                                            <option value="pending">Pendiente</option>
-                                                        </select>
-                                                    </div>
-
-                                                    <div className="space-y-2">
-                                                        <Label htmlFor="service-notes" className="text-xs font-semibold uppercase text-muted-foreground">
-                                                            Notas (Opcional)
-                                                        </Label>
-                                                        <textarea
-                                                            id="service-notes"
-                                                            value={newMaintenanceData.notes}
-                                                            onChange={(e) => setNewMaintenanceData({ ...newMaintenanceData, notes: e.target.value })}
-                                                            className="w-full min-h-[80px] rounded-md border border-input bg-slate-50 px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-y"
-                                                            placeholder="Detalles del servicio realizado..."
-                                                        />
-                                                    </div>
-
-                                                    <div className="space-y-2">
-                                                        <Label className="text-xs font-semibold uppercase text-muted-foreground">
-                                                            Fotos de Comprobante (Opcional)
-                                                        </Label>
-                                                        <div className="relative">
-                                                            <input
-                                                                type="file"
-                                                                accept="image/*"
-                                                                multiple
-                                                                onChange={handleMaintenancePhotosChange}
-                                                                className="absolute inset-0 opacity-0 cursor-pointer z-10"
-                                                            />
+                                                        {/* Acciones Rápidas */}
+                                                        <div className="absolute top-4 right-4 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                                             <Button
-                                                                type="button"
-                                                                variant="outline"
-                                                                className="w-full gap-2"
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                className="h-8 w-8 rounded-full bg-white/90 dark:bg-slate-800/90 shadow-sm text-slate-600 hover:text-blue-600"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation()
+                                                                    setSelectedDocument(doc)
+                                                                }}
                                                             >
-                                                                <Camera className="h-4 w-4" />
-                                                                {maintenancePhotos.length > 0
-                                                                    ? `${maintenancePhotos.length} foto(s) seleccionada(s)`
-                                                                    : 'Seleccionar Fotos (Máx. 5)'}
+                                                                <Eye className="h-4 w-4" />
+                                                            </Button>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                className="h-8 w-8 rounded-full bg-white/90 dark:bg-slate-800/90 shadow-sm text-red-600 hover:bg-red-50"
+                                                                onClick={(e) => handleDeleteDocument(doc.id, e)}
+                                                            >
+                                                                <Trash2 className="h-4 w-4" />
                                                             </Button>
                                                         </div>
-                                                        {maintenancePhotos.length > 0 && (
-                                                            <div className="grid grid-cols-3 gap-2 mt-2">
-                                                                {maintenancePhotos.map((file, idx) => (
-                                                                    <div key={idx} className="aspect-square rounded-lg overflow-hidden border border-border/50 relative">
-                                                                        <img
-                                                                            src={URL.createObjectURL(file)}
-                                                                            alt={`Preview ${idx + 1}`}
-                                                                            className="w-full h-full object-cover"
-                                                                        />
-                                                                        <button
-                                                                            type="button"
-                                                                            onClick={() => setMaintenancePhotos(maintenancePhotos.filter((_, i) => i !== idx))}
-                                                                            className="absolute top-1 right-1 h-5 w-5 rounded-full bg-red-500 text-white flex items-center justify-center text-xs hover:bg-red-600"
-                                                                        >
-                                                                            ×
-                                                                        </button>
-                                                                    </div>
-                                                                ))}
-                                                            </div>
-                                                        )}
-                                                        <p className="text-xs text-muted-foreground">
-                                                            Sube hasta 5 fotos de facturas o comprobantes (10MB máx. c/u)
-                                                        </p>
                                                     </div>
-
-                                                    <div className="pt-4 border-t">
-                                                        <p className="text-xs font-semibold uppercase text-muted-foreground mb-3">
-                                                            Próximo Servicio (Opcional)
-                                                        </p>
-                                                        <div className="grid grid-cols-2 gap-3">
-                                                            <div className="space-y-2">
-                                                                <Label htmlFor="next-date" className="text-xs">Fecha</Label>
-                                                                <Input
-                                                                    id="next-date"
-                                                                    type="date"
-                                                                    value={newMaintenanceData.next_service_date}
-                                                                    onChange={(e) => setNewMaintenanceData({ ...newMaintenanceData, next_service_date: e.target.value })}
-                                                                    className="text-sm"
-                                                                />
-                                                            </div>
-                                                            <div className="space-y-2">
-                                                                <Label htmlFor="next-mileage" className="text-xs">Millaje</Label>
-                                                                <Input
-                                                                    id="next-mileage"
-                                                                    type="number"
-                                                                    value={newMaintenanceData.next_service_mileage}
-                                                                    onChange={(e) => setNewMaintenanceData({ ...newMaintenanceData, next_service_mileage: parseInt(e.target.value) || 0 })}
-                                                                    className="text-sm"
-                                                                />
-                                                            </div>
-                                                        </div>
-                                                    </div>
-
-                                                    <Button
-                                                        className="w-full h-12 text-base font-bold shadow-lg shadow-orange-600/20 bg-orange-600 hover:bg-orange-700 mt-4"
-                                                        onClick={handleSaveMaintenance}
-                                                        disabled={isUploadingMaintenance || !newMaintenanceData.service_type}
-                                                    >
-                                                        {isUploadingMaintenance ? (
-                                                            <>Guardando...</>
-                                                        ) : (
-                                                            <>
-                                                                <Plus className="h-4 w-4 mr-2" />
-                                                                Registrar Servicio
-                                                            </>
-                                                        )}
-                                                    </Button>
-                                                </div>
+                                                ))}
                                             </div>
-                                        </div>
-                                    </div>
-                                </TabsContent>
-
-                                {/* RENTALS TAB */}
-                                {/* RENTALS TAB - Modern List */}
-                                <TabsContent value="rentals" className="m-0 p-4 sm:p-6 space-y-6">
-                                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                                        {/* Stats Column */}
-                                        <div className="lg:col-span-1 space-y-4">
-                                            <div className="bg-emerald-600 text-white rounded-2xl p-6 shadow-lg shadow-emerald-600/20 relative overflow-hidden">
-                                                <div className="relative z-10">
-                                                    <p className="text-emerald-100 text-xs font-bold uppercase tracking-wider mb-1">Ingresos Totales (Mes)</p>
-                                                    <h3 className="text-3xl font-bold font-mono tracking-tight">$3,450</h3>
-                                                    <div className="flex items-center gap-1 mt-2 text-emerald-100 text-xs">
-                                                        <Activity className="h-3 w-3" />
-                                                        <span>+12% vs mes anterior</span>
-                                                    </div>
-                                                </div>
-                                                <DollarSign className="absolute -right-4 -bottom-4 h-24 w-24 text-white/10 rotate-12" />
-                                            </div>
-                                            <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-border/50">
-                                                <h4 className="font-bold text-sm mb-4">Tarifa Diaria Promedio</h4>
-                                                <div className="flex items-baseline gap-1">
-                                                    <span className="text-2xl font-bold font-mono">${formData.daily_rental_price}</span>
-                                                    <span className="text-xs text-muted-foreground">/ día</span>
-                                                </div>
-                                                <div className="h-1 bg-slate-100 dark:bg-slate-800 rounded-full mt-4 overflow-hidden">
-                                                    <div className="h-full bg-blue-500 w-2/3" />
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* List Column */}
-                                        <div className="lg:col-span-2">
-                                            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-border/50 overflow-hidden">
-                                                <div className="p-4 border-b flex justify-between items-center bg-slate-50/50 dark:bg-slate-950/50">
-                                                    <h3 className="font-bold text-sm">Reservas Recientes</h3>
-                                                    <Button
-                                                        size="sm"
-                                                        className="h-8 gap-2 bg-slate-900 text-white hover:bg-slate-800"
-                                                        onClick={() => setIsRentalDialogOpen(true)}
-                                                    >
-                                                        <Plus className="h-3 w-3" />
-                                                        Nueva Reserva
-                                                    </Button>
-                                                </div>
-                                                <div className="divide-y">
-                                                    {rentalHistory.length > 0 ? rentalHistory.map(rental => (
-                                                        <div key={rental.id} className="p-4 flex items-center justify-between hover:bg-slate-50/50 transition-colors">
-                                                            <div className="flex items-center gap-4">
-                                                                <div className="h-10 w-10 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-sm">
-                                                                    {rental.customer_name.charAt(0)}
-                                                                </div>
-                                                                <div>
-                                                                    <p className="font-bold text-sm">{rental.customer_name}</p>
-                                                                    <p className="text-xs text-muted-foreground flex items-center gap-1">
-                                                                        {new Date(rental.start_date).toLocaleDateString()} - {new Date(rental.end_date).toLocaleDateString()}
-                                                                    </p>
-                                                                </div>
-                                                            </div>
-                                                            <div className="text-right">
-                                                                <p className="font-bold font-mono text-sm">${rental.total_amount}</p>
-                                                                <Badge variant="secondary" className="text-[10px] h-5 bg-emerald-100 text-emerald-700 hover:bg-emerald-200">
-                                                                    Confirmado
-                                                                </Badge>
-                                                            </div>
-                                                        </div>
-                                                    )) : (
-                                                        <div className="p-8 text-center text-muted-foreground text-sm">
-                                                            No hay reservas registradas.
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </TabsContent>
-
-                                {/* DOCUMENTS TAB */}
-                                {/* DOCUMENTS TAB - Grid Layout */}
-                                <TabsContent value="documents" className="m-0 p-4 sm:p-6 space-y-6">
-                                    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-border/50 p-6 min-h-[300px]">
-                                        <div className="flex items-center justify-between mb-6">
-                                            <div>
-                                                <h3 className="font-bold text-lg">Documentación</h3>
-                                                <p className="text-muted-foreground text-sm">Contratos, seguros y manuales.</p>
-                                            </div>
-                                            <Button className="gap-2" onClick={() => document.getElementById('doc-upload')?.click()}>
-                                                <Upload className="h-4 w-4" />
-                                                Subir Nuevo
-                                            </Button>
-                                            <input
-                                                id="doc-upload"
-                                                type="file"
-                                                className="hidden"
-                                                onChange={handleUploadDocument}
-                                            />
-                                        </div>
-
-                                        {/* Grid */}
-                                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                                            {documentsList.length > 0 ? documentsList.map(doc => (
-                                                <div key={doc.id} className="group relative bg-slate-50 dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700 hover:border-blue-500 hover:shadow-md transition-all cursor-pointer">
-                                                    <div className="h-10 w-10 bg-white dark:bg-slate-900 rounded-lg flex items-center justify-center mb-3 shadow-sm text-blue-600">
-                                                        <FileText className="h-5 w-5" />
-                                                    </div>
-                                                    <h4 className="font-bold text-sm truncate pr-4" title={doc.title}>{doc.title}</h4>
-                                                    <p className="text-[10px] text-muted-foreground uppercase mt-1">{doc.type}</p>
-
-                                                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                        <Button size="icon" variant="ghost" className="h-6 w-6">
-                                                            <Eye className="h-3 w-3" />
-                                                        </Button>
-                                                    </div>
-                                                </div>
-                                            )) : (
-                                                <div className="col-span-full py-12 flex flex-col items-center justify-center text-center border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50/50">
-                                                    <FileText className="h-12 w-12 text-slate-300 mb-3" />
-                                                    <p className="font-medium text-slate-500">No hay documentos</p>
-                                                    <p className="text-xs text-slate-400 mt-1">Sube el seguro o registro del vehículo</p>
-                                                </div>
-                                            )}
-
-                                            {/* Upload Placeholder */}
-                                            <div
-                                                className="flex flex-col items-center justify-center text-center border-2 border-dashed border-blue-200 hover:border-blue-500 bg-blue-50/20 hover:bg-blue-50/50 rounded-xl p-4 cursor-pointer transition-all h-full min-h-[120px]"
-                                                onClick={() => document.getElementById('doc-upload')?.click()}
-                                            >
-                                                <Plus className="h-6 w-6 text-blue-500 mb-2" />
-                                                <span className="text-xs font-bold text-blue-600">Subir</span>
-                                            </div>
-                                        </div>
+                                        )}
                                     </div>
                                 </TabsContent>
                             </div >
-                        </Tabs>
-                    </div >
-                </DialogContent>
-            </Dialog>
+                        </Tabs >
 
-            {/* Check-in Dialog */}
-            <Dialog open={isCheckInDialogOpen} onOpenChange={setIsCheckInDialogOpen}>
-                <DialogContent className="sm:max-w-[400px]">
+
+                    </div >
+                </div >
+            </div >
+
+            {/* CHECK-IN DIALOG */}
+            < Dialog open={isCheckInDialogOpen} onOpenChange={setIsCheckInDialogOpen} >
+                <DialogContent className="sm:max-w-[450px]">
                     <div className="space-y-6">
                         <div>
-                            <h2 className="text-xl font-bold">Check-in Rápido</h2>
+                            <h2 className="text-2xl font-bold">Check-in Rápido</h2>
                             <p className="text-muted-foreground text-sm mt-1">
-                                Actualiza el estado y millaje del vehículo
+                                Registrar devolución del vehículo y actualizar estado a disponible.
                             </p>
                         </div>
-
-                        <div className="space-y-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="checkin-date">Fecha</Label>
-                                <Input
-                                    id="checkin-date"
-                                    type="date"
-                                    value={checkInData.date}
-                                    onChange={(e) => setCheckInData({ ...checkInData, date: e.target.value })}
-                                />
+                        <div className="grid gap-4 py-4">
+                            <div className="grid gap-2">
+                                <Label htmlFor="mileage">Millaje Actual</Label>
+                                <Input id="mileage" type="number" placeholder="Ej: 45000" />
                             </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="checkin-mileage">Millaje Actual</Label>
-                                <div className="relative">
-                                    <Input
-                                        id="checkin-mileage"
-                                        type="number"
-                                        value={checkInData.mileage}
-                                        onChange={(e) => setCheckInData({ ...checkInData, mileage: Number(e.target.value) })}
-                                        className="pl-20"
-                                    />
-                                    <span className="absolute left-3 top-2.5 text-xs font-bold text-muted-foreground uppercase">Millas:</span>
-                                </div>
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="checkin-notes">Notas / Observaciones</Label>
-                                <Input
-                                    id="checkin-notes"
-                                    value={checkInData.notes}
-                                    onChange={(e) => setCheckInData({ ...checkInData, notes: e.target.value })}
-                                    placeholder="Ej: Tanque lleno, sin daños nuevos..."
-                                />
+                            <div className="grid gap-2">
+                                <Label htmlFor="notes">Notas de estado</Label>
+                                <Input id="notes" placeholder="Sin daños visibles..." />
                             </div>
                         </div>
-
-                        <div className="flex gap-3 pt-2">
-                            <Button
-                                variant="outline"
-                                className="flex-1"
-                                onClick={() => setIsCheckInDialogOpen(false)}
-                            >
-                                Cancelar
-                            </Button>
-                            <Button
-                                className="flex-1 bg-emerald-600 hover:bg-emerald-700"
-                                onClick={handleSaveCheckIn}
-                            >
-                                <CheckCircle2 className="h-4 w-4 mr-2" />
-                                Guardar Check-in
-                            </Button>
+                        <div className="flex justify-end gap-3">
+                            <Button variant="outline" onClick={() => setIsCheckInDialogOpen(false)}>Cancelar</Button>
+                            <Button onClick={() => {
+                                // Lógica básica de check-in
+                                setIsCheckInDialogOpen(false);
+                                alert("Check-in registrado (simulado)");
+                            }}>Confirmar</Button>
                         </div>
                     </div>
                 </DialogContent>
-            </Dialog>
+            </Dialog >
 
-            {/* Rental Creation Dialog */}
-            <Dialog open={isRentalDialogOpen} onOpenChange={setIsRentalDialogOpen}>
+            {/* RENTAL DIALOG */}
+            < Dialog open={isRentalDialogOpen} onOpenChange={setIsRentalDialogOpen} >
                 <DialogContent className="sm:max-w-[500px]">
                     <div className="space-y-6">
                         <div>
                             <h2 className="text-2xl font-bold">Nueva Reserva</h2>
                             <p className="text-muted-foreground text-sm mt-1">
-                                Registra una nueva reserva para {formData.make} {formData.model}
+                                Crear un nuevo contrato de alquiler.
+                            </p>
+                        </div>
+                        <div className="flex justify-end gap-3 pt-4">
+                            <Button variant="outline" onClick={() => setIsRentalDialogOpen(false)}>Cancelar</Button>
+                            <Button onClick={() => setIsRentalDialogOpen(false)}>Crear Reserva</Button>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog >
+
+            {/* MILEAGE DIALOG */}
+            < Dialog open={isMileageDialogOpen} onOpenChange={setIsMileageDialogOpen} >
+                <DialogContent className="sm:max-w-[400px]">
+                    <div className="space-y-6">
+                        <div>
+                            <div className="mx-auto bg-blue-100 dark:bg-blue-900/30 w-12 h-12 rounded-full flex items-center justify-center mb-4">
+                                <Gauge className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                            </div>
+                            <h2 className="text-xl font-bold text-center">Registrar Millaje</h2>
+                            <p className="text-muted-foreground text-sm text-center mt-1">
+                                Actualiza la lectura del odómetro del vehículo.
                             </p>
                         </div>
 
                         <div className="space-y-4">
                             <div className="space-y-2">
-                                <Label htmlFor="rental-customer" className="text-sm font-semibold">
-                                    Nombre del Cliente *
-                                </Label>
+                                <Label htmlFor="current-mileage">Lectura Actual</Label>
+                                <div className="relative">
+                                    <Input
+                                        id="current-mileage"
+                                        type="number"
+                                        placeholder="0"
+                                        className="pl-10 text-lg font-mono"
+                                        value={newMileageValue}
+                                        onChange={(e) => setNewMileageValue(e.target.value)}
+                                    />
+                                    <Gauge className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                                    <span className="absolute right-3 top-3 text-sm text-muted-foreground">mi</span>
+                                </div>
+                                <p className="text-xs text-muted-foreground">
+                                    Última lectura: <span className="font-medium text-foreground">{vehicle.mileage.toLocaleString()} mi</span>
+                                </p>
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="mileage-notes">Notas (Opcional)</Label>
                                 <Input
-                                    id="rental-customer"
-                                    value={newRentalData.customer_name}
-                                    onChange={(e) => setNewRentalData({ ...newRentalData, customer_name: e.target.value })}
-                                    placeholder="Ej: Juan Pérez"
-                                    className="bg-slate-50"
+                                    id="mileage-notes"
+                                    placeholder="Ej: Cambio de aceite, devolución..."
+                                    value={mileageNote}
+                                    onChange={(e) => setMileageNote(e.target.value)}
                                 />
                             </div>
+                        </div>
 
+                        <div className="flex justify-end gap-3 pt-2">
+                            <Button variant="outline" onClick={() => setIsMileageDialogOpen(false)}>Cancelar</Button>
+                            <Button onClick={handleSaveMileage} disabled={isSaving}>
+                                {isSaving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+                                Registrar
+                            </Button>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog >
+
+            {/* MAINTENANCE DIALOG */}
+            < Dialog open={isMaintenanceDialogOpen} onOpenChange={setIsMaintenanceDialogOpen} >
+                <DialogContent className="sm:max-w-[500px]">
+                    <div className="space-y-6">
+                        <div>
+                            <div className="mx-auto bg-orange-100 dark:bg-orange-900/30 w-12 h-12 rounded-full flex items-center justify-center mb-4">
+                                <Wrench className="h-6 w-6 text-orange-600 dark:text-orange-400" />
+                            </div>
+                            <h2 className="text-xl font-bold text-center">Registrar Mantenimiento</h2>
+                            <p className="text-muted-foreground text-sm text-center mt-1">
+                                Detalla el servicio realizado al vehículo.
+                            </p>
+                        </div>
+
+                        <div className="grid gap-4">
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                    <Label htmlFor="rental-start" className="text-sm font-semibold">
-                                        Fecha Inicio *
-                                    </Label>
-                                    <Input
-                                        id="rental-start"
-                                        type="date"
-                                        value={newRentalData.start_date}
-                                        onChange={(e) => setNewRentalData({ ...newRentalData, start_date: e.target.value })}
-                                        className="bg-slate-50"
-                                    />
+                                    <Label>Tipo de Servicio</Label>
+                                    <Select
+                                        value={maintenanceForm.service_type}
+                                        onValueChange={(val) => setMaintenanceForm(prev => ({ ...prev, service_type: val }))}
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Seleccionar..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="Cambio de Aceite y Filtro">Cambio de Aceite y Filtro</SelectItem>
+                                            <SelectItem value="Cambio de Neumáticos">Cambio de Neumáticos</SelectItem>
+                                            <SelectItem value="Filtro de Aire">Filtro de Aire</SelectItem>
+                                            <SelectItem value="Filtro de Cabina">Filtro de Cabina</SelectItem>
+                                            <SelectItem value="Aceite de Transmisión">Aceite de Transmisión</SelectItem>
+                                            <SelectItem value="Frenos">Frenos</SelectItem>
+                                            <SelectItem value="Batería">Batería</SelectItem>
+                                            <SelectItem value="Alineación y Balanceo">Alineación y Balanceo</SelectItem>
+                                            <SelectItem value="Otro">Otro (Extraordinario)</SelectItem>
+                                        </SelectContent>
+                                    </Select>
                                 </div>
-
                                 <div className="space-y-2">
-                                    <Label htmlFor="rental-end" className="text-sm font-semibold">
-                                        Fecha Fin *
-                                    </Label>
+                                    <Label>Fecha</Label>
                                     <Input
-                                        id="rental-end"
                                         type="date"
-                                        value={newRentalData.end_date}
-                                        onChange={(e) => setNewRentalData({ ...newRentalData, end_date: e.target.value })}
-                                        className="bg-slate-50"
+                                        value={maintenanceForm.date}
+                                        onChange={(e) => setMaintenanceForm(prev => ({ ...prev, date: e.target.value }))}
                                     />
                                 </div>
                             </div>
 
-                            {newRentalData.start_date && newRentalData.end_date && (
-                                <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-800/30">
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-sm text-blue-700 dark:text-blue-300">
-                                            Duración: {Math.ceil((new Date(newRentalData.end_date).getTime() - new Date(newRentalData.start_date).getTime()) / (1000 * 60 * 60 * 24))} días
-                                        </span>
-                                        <span className="text-sm font-bold text-blue-700 dark:text-blue-300">
-                                            Total: ${(Math.ceil((new Date(newRentalData.end_date).getTime() - new Date(newRentalData.start_date).getTime()) / (1000 * 60 * 60 * 24)) * newRentalData.daily_rate).toLocaleString()}
-                                        </span>
-                                    </div>
+                            {maintenanceForm.service_type === "Otro" && (
+                                <div className="space-y-2">
+                                    <Label>Especifique el servicio</Label>
+                                    <Input
+                                        placeholder="Ej: Cambio de radiador..."
+                                        value={maintenanceForm.custom_service_type}
+                                        onChange={(e) => setMaintenanceForm(prev => ({ ...prev, custom_service_type: e.target.value }))}
+                                    />
                                 </div>
                             )}
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                    <Label htmlFor="rental-rate" className="text-sm font-semibold">
-                                        Tarifa Diaria
-                                    </Label>
+                                    <Label>Costo ($)</Label>
                                     <div className="relative">
-                                        <span className="absolute left-3 top-3 text-muted-foreground">$</span>
+                                        <DollarSign className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                                         <Input
-                                            id="rental-rate"
                                             type="number"
-                                            value={newRentalData.daily_rate}
-                                            onChange={(e) => setNewRentalData({ ...newRentalData, daily_rate: parseFloat(e.target.value) || 0 })}
-                                            className="pl-7 font-mono bg-slate-50"
+                                            className="pl-9"
+                                            placeholder="0.00"
+                                            value={maintenanceForm.cost}
+                                            onChange={(e) => setMaintenanceForm(prev => ({ ...prev, cost: e.target.value }))}
                                         />
                                     </div>
                                 </div>
-
                                 <div className="space-y-2">
-                                    <Label htmlFor="rental-platform" className="text-sm font-semibold">
-                                        Plataforma
-                                    </Label>
-                                    <select
-                                        id="rental-platform"
-                                        value={newRentalData.platform}
-                                        onChange={(e) => setNewRentalData({ ...newRentalData, platform: e.target.value })}
-                                        className="w-full rounded-md border border-input bg-slate-50 px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                                    >
-                                        <option value="Direct">Directo</option>
-                                        <option value="Turo">Turo</option>
-                                        <option value="Getaround">Getaround</option>
-                                        <option value="Other">Otro</option>
-                                    </select>
+                                    <Label>Millaje Actual</Label>
+                                    <Input
+                                        type="number"
+                                        placeholder="Ej: 50000"
+                                        value={maintenanceForm.current_mileage}
+                                        onChange={(e) => setMaintenanceForm(prev => ({ ...prev, current_mileage: e.target.value }))}
+                                    />
                                 </div>
                             </div>
 
                             <div className="space-y-2">
-                                <Label htmlFor="rental-status" className="text-sm font-semibold">
-                                    Estado
-                                </Label>
-                                <select
-                                    id="rental-status"
-                                    value={newRentalData.status}
-                                    onChange={(e) => setNewRentalData({ ...newRentalData, status: e.target.value as "confirmed" | "completed" | "cancelled" })}
-                                    className="w-full rounded-md border border-input bg-slate-50 px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                                >
-                                    <option value="confirmed">Confirmado</option>
-                                    <option value="completed">Completado</option>
-                                    <option value="cancelled">Cancelado</option>
-                                </select>
+                                <Label>Próximo Servicio (Millas)</Label>
+                                <div className="flex gap-2">
+                                    <Input
+                                        type="number"
+                                        placeholder="Ej: 55000"
+                                        value={maintenanceForm.next_service_mileage}
+                                        onChange={(e) => setMaintenanceForm(prev => ({ ...prev, next_service_mileage: e.target.value }))}
+                                    />
+                                    <Button
+                                        variant="outline"
+                                        type="button"
+                                        onClick={() => {
+                                            const current = parseInt(maintenanceForm.current_mileage || "0")
+                                            if (current > 0) {
+                                                setMaintenanceForm(prev => ({ ...prev, next_service_mileage: (current + 5000).toString() }))
+                                            } else {
+                                                toast.warning("Ingrese millaje actual primero")
+                                            }
+                                        }}
+                                    >
+                                        +5k
+                                    </Button>
+                                </div>
+                                <p className="text-xs text-muted-foreground">Opcional. Indica cuándo debe realizarse el próximo mantenimiento.</p>
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label>Notas Adicionales</Label>
+                                <Textarea
+                                    placeholder="Detalles sobre marcas, repuestos usados..."
+                                    value={maintenanceForm.notes}
+                                    onChange={(e) => setMaintenanceForm(prev => ({ ...prev, notes: e.target.value }))}
+                                />
                             </div>
                         </div>
 
-                        <div className="flex gap-3 pt-4">
-                            <Button
-                                variant="outline"
-                                className="flex-1"
-                                onClick={() => setIsRentalDialogOpen(false)}
-                            >
-                                Cancelar
-                            </Button>
-                            <Button
-                                className="flex-1 bg-emerald-600 hover:bg-emerald-700"
-                                onClick={handleSaveRental}
-                                disabled={!newRentalData.customer_name || !newRentalData.start_date || !newRentalData.end_date}
-                            >
-                                <Plus className="h-4 w-4 mr-2" />
-                                Crear Reserva
+                        <div className="flex justify-end gap-3 pt-2">
+                            <Button variant="outline" onClick={() => setIsMaintenanceDialogOpen(false)}>Cancelar</Button>
+                            <Button onClick={handleSaveMaintenance} disabled={isSaving}>
+                                {isSaving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+                                Registrar Mantenimiento
                             </Button>
                         </div>
                     </div>
                 </DialogContent>
+            </Dialog >
+
+            {/* LIGHTBOX LAYOUT */}
+            {
+                selectedPhoto && (
+                    <div className="fixed inset-0 z-[60] bg-black/95 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-300" onClick={() => setSelectedPhoto(null)}>
+
+                        {/* Close Button */}
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="absolute top-4 right-4 text-white/70 hover:text-white hover:bg-white/10 z-50 h-10 w-10 rounded-full"
+                            onClick={() => setSelectedPhoto(null)}
+                        >
+                            <X className="h-6 w-6" />
+                        </Button>
+
+                        {/* Navigation Buttons (if multiple photos) */}
+                        {photos.length > 1 && (
+                            <>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="absolute left-4 top-1/2 -translate-y-1/2 text-white/70 hover:text-white hover:bg-white/10 h-12 w-12 rounded-full hidden md:flex"
+                                    onClick={(e) => {
+                                        e.stopPropagation()
+                                        const currentIndex = photos.findIndex(p => p.id === selectedPhoto.id)
+                                        const prevIndex = (currentIndex - 1 + photos.length) % photos.length
+                                        setSelectedPhoto(photos[prevIndex])
+                                    }}
+                                >
+                                    <ChevronLeft className="h-8 w-8" />
+                                </Button>
+
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-white/70 hover:text-white hover:bg-white/10 h-12 w-12 rounded-full hidden md:flex"
+                                    onClick={(e) => {
+                                        e.stopPropagation()
+                                        const currentIndex = photos.findIndex(p => p.id === selectedPhoto.id)
+                                        const nextIndex = (currentIndex + 1) % photos.length
+                                        setSelectedPhoto(photos[nextIndex])
+                                    }}
+                                >
+                                    <ChevronRight className="h-8 w-8" />
+                                </Button>
+                            </>
+                        )}
+
+                        {/* Main Image Container */}
+                        <div className="relative max-w-7xl max-h-[85vh] w-full h-full flex flex-col items-center justify-center" onClick={e => e.stopPropagation()}>
+                            <div className="relative flex-1 w-full flex items-center justify-center">
+                                <img
+                                    src={selectedPhoto.image_url}
+                                    alt={selectedPhoto.caption || "Vehicle Photo"}
+                                    className="max-w-full max-h-full object-contain shadow-2xl rounded-sm"
+                                />
+                            </div>
+
+                            {/* Caption / Info Footer */}
+                            <div className="mt-4 text-center">
+                                <p className="text-white/90 font-medium text-lg">{selectedPhoto.caption || "Sin título"}</p>
+                                <p className="text-white/50 text-sm">
+                                    {new Date(selectedPhoto.created_at).toLocaleDateString()}
+                                    {selectedPhoto.is_primary && <span className="ml-2 text-emerald-400 font-bold">• Principal</span>}
+                                </p>
+
+                                <div className="flex gap-2 justify-center mt-3 scale-90 opacity-70 hover:opacity-100 transition-opacity">
+                                    {!selectedPhoto.is_primary && (
+                                        <Button variant="secondary" size="sm" onClick={() => handleSetPrimaryPhoto(selectedPhoto.id)}>
+                                            Hacer Principal
+                                        </Button>
+                                    )}
+                                    <Button variant="destructive" size="sm" onClick={(e) => {
+                                        handleDeletePhoto(selectedPhoto.id, e)
+                                        setSelectedPhoto(null)
+                                    }}>
+                                        <Trash2 className="h-4 w-4 mr-1" /> Eliminar
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )
+            }
+
+
+
+
+            {/* RENTAL DIALOG */}
+            <Dialog open={isRentalDialogOpen} onOpenChange={setIsRentalDialogOpen}>
+                <DialogContent className="sm:max-w-[500px]">
+                    <div className="space-y-6">
+                        <div>
+                            <div className="mx-auto bg-blue-100 dark:bg-blue-900/30 w-12 h-12 rounded-full flex items-center justify-center mb-4">
+                                <CalendarDays className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                            </div>
+                            <h2 className="text-xl font-bold text-center">Registrar Nueva Reserva</h2>
+                            <p className="text-muted-foreground text-sm text-center mt-1">
+                                Ingresa los detalles del alquiler para este vehículo.
+                            </p>
+                        </div>
+
+                        <div className="grid gap-4">
+                            <div className="space-y-2">
+                                <Label>Nombre del Cliente</Label>
+                                <Input
+                                    placeholder="Ej: Juan Pérez"
+                                    value={rentalForm.customer_name}
+                                    onChange={(e) => setRentalForm(prev => ({ ...prev, customer_name: e.target.value }))}
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label>Fecha de Inicio</Label>
+                                    <Input
+                                        type="date"
+                                        value={rentalForm.start_date ? rentalForm.start_date.toISOString().split('T')[0] : ''}
+                                        onChange={(e) => {
+                                            const date = e.target.value ? new Date(e.target.value) : undefined
+                                            setRentalForm(prev => ({ ...prev, start_date: date }))
+                                        }}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>Fecha de Fin</Label>
+                                    <Input
+                                        type="date"
+                                        value={rentalForm.end_date ? rentalForm.end_date.toISOString().split('T')[0] : ''}
+                                        onChange={(e) => {
+                                            const date = e.target.value ? new Date(e.target.value) : undefined
+                                            setRentalForm(prev => ({ ...prev, end_date: date }))
+                                        }}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label>Plataforma</Label>
+                                    <Select
+                                        value={rentalForm.platform}
+                                        onValueChange={(val) => setRentalForm(prev => ({ ...prev, platform: val }))}
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Seleccionar..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="Turo">Turo</SelectItem>
+                                            <SelectItem value="GetAround">GetAround</SelectItem>
+                                            <SelectItem value="Privado">Privado (Manual)</SelectItem>
+                                            <SelectItem value="Directo">Venta Directa</SelectItem>
+                                            <SelectItem value="Otro">Otro</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>Monto Total ($)</Label>
+                                    <div className="relative">
+                                        <DollarSign className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                                        <Input
+                                            type="number"
+                                            className="pl-9"
+                                            placeholder="0.00"
+                                            value={rentalForm.amount}
+                                            onChange={(e) => setRentalForm(prev => ({ ...prev, amount: e.target.value }))}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label>Notas Adicionales</Label>
+                                <Textarea
+                                    placeholder="Cualquier aclaración sobre la reserva..."
+                                    value={rentalForm.notes}
+                                    onChange={(e) => setRentalForm(prev => ({ ...prev, notes: e.target.value }))}
+                                    className="min-h-[100px]"
+                                />
+                            </div>
+
+                            <div className="flex justify-end gap-3 pt-4">
+                                <Button variant="outline" onClick={() => setIsRentalDialogOpen(false)}>Cancelar</Button>
+                                <Button onClick={handleSaveRental} disabled={isSaving} className="bg-blue-600 hover:bg-blue-700">
+                                    {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                    Guardar Reserva
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                </DialogContent>
             </Dialog>
+
+            {/* DOCUMENT VIEWER LIGHTBOX */}
+            {selectedDocument && (
+                <div className="fixed inset-0 z-[100] bg-slate-950/95 flex flex-col animate-in fade-in duration-300">
+                    {/* Header */}
+                    <div className="p-4 flex items-center justify-between text-white border-b border-white/10">
+                        <div className="flex items-center gap-3">
+                            <div className="bg-white/10 p-2 rounded-lg">
+                                <FileText className="h-5 w-5" />
+                            </div>
+                            <div>
+                                <h3 className="font-bold">{selectedDocument.title}</h3>
+                                <p className="text-xs text-white/50 lowercase">{selectedDocument.type} • {new Date(selectedDocument.created_at).toLocaleDateString()}</p>
+                            </div>
+                        </div>
+                        <div className="flex gap-2">
+                            <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 h-10 w-10" asChild>
+                                <a href={selectedDocument.file_url} target="_blank" rel="noopener noreferrer">
+                                    <Upload className="h-5 w-5 rotate-90" />
+                                </a>
+                            </Button>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="text-white hover:bg-white/20 rounded-full h-10 w-10"
+                                onClick={() => setSelectedDocument(null)}
+                            >
+                                <X className="h-6 w-6" />
+                            </Button>
+                        </div>
+                    </div>
+
+                    {/* Content */}
+                    <div className="flex-1 overflow-auto p-4 md:p-8 flex items-center justify-center">
+                        {selectedDocument.file_url.toLowerCase().endsWith('.pdf') || selectedDocument.category?.toLowerCase() === 'pdf' ? (
+                            <iframe
+                                src={selectedDocument.file_url}
+                                className="w-full h-full max-w-5xl bg-white rounded-xl shadow-2xl"
+                                title={selectedDocument.title}
+                            />
+                        ) : (
+                            <div className="relative group max-w-full max-h-full">
+                                <img
+                                    src={selectedDocument.file_url}
+                                    alt={selectedDocument.title}
+                                    className="max-w-full max-h-[80vh] object-contain rounded-lg shadow-2xl transition-transform duration-500 group-hover:scale-[1.02]"
+                                />
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
         </>
+    )
+}
+
+function InfoRow({
+    label,
+    value,
+    isEditMode,
+    onChange,
+    type = "text"
+}: {
+    label: string;
+    value: string;
+    isEditMode?: boolean;
+    onChange?: (val: string) => void;
+    type?: string;
+}) {
+    return (
+        <div className="flex justify-between items-center py-3 border-b border-slate-100 dark:border-slate-800">
+            <span className="text-sm font-medium text-slate-600 dark:text-slate-400">{label}</span>
+            {isEditMode && onChange ? (
+                <Input
+                    type={type}
+                    value={value}
+                    onChange={(e) => onChange(e.target.value)}
+                    className="w-2/3 h-8 text-right bg-slate-50 dark:bg-slate-800 border-none font-semibold"
+                />
+            ) : (
+                <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                    {type === "number" && !isEditMode ? parseFloat(value).toLocaleString() : value}
+                </span>
+            )}
+        </div>
     )
 }

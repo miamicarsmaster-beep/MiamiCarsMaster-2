@@ -17,12 +17,19 @@ export default async function InvestorDashboardPage() {
     // Auth is already handled by middleware - if we're here, user is authenticated
     const { data: { user } } = await supabase.auth.getUser()
 
+    if (!user) {
+        redirect('/login')
+    }
+
     // Get investor profile (user is guaranteed to exist by middleware)
     const { data: profile } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', user!.id)
+        .eq('id', user.id)
         .single()
+
+    // Initial fallback if profile is missing (race condition or trigger failure)
+    const displayName = profile?.full_name || user.email || "Inversor"
 
     // Optional: redirect to correct dashboard if wrong role
     if (profile?.role === 'admin') {
@@ -30,7 +37,7 @@ export default async function InvestorDashboardPage() {
     }
 
     // Get investor's vehicles
-    const vehicles = await getVehiclesByInvestor(user!.id)
+    const vehicles = await getVehiclesByInvestor(user.id)
 
     // Calculate stats
     const totalVehicles = vehicles.length
@@ -64,7 +71,7 @@ export default async function InvestorDashboardPage() {
             <div className="flex items-center justify-between space-y-2">
                 <div>
                     <h2 className="text-3xl font-bold tracking-tight">
-                        Bienvenido, {profile.full_name || profile.email}
+                        Bienvenido, {displayName}
                     </h2>
                     <p className="text-muted-foreground">Aquí está el estado actual de tu flota.</p>
                 </div>

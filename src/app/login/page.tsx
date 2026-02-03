@@ -51,21 +51,23 @@ export default function LoginPage() {
                 throw new Error(errorDetails)
             }
 
-            if (!profile) {
-                throw new Error('No se encontró el perfil del usuario')
-            }
-
-            // Set redirecting state to show success message
-            console.log('Login successful, redirecting based on role:', profile.role)
+            // Start redirection process
+            console.log('Login successful. Profile role:', profile?.role)
             setIsRedirecting(true)
 
-            // Small delay to show the success message
+            // Wait a moment for cookies to set
             await new Promise(resolve => setTimeout(resolve, 500))
 
-            // Use window.location.replace to force a full page reload and clear any stale state
-            // This ensures cookies are properly sent with the next request
-            const targetUrl = profile.role === 'admin' ? '/dashboard/admin' : '/dashboard/investor'
-            window.location.replace(targetUrl)
+            // Default to investor if no role found (robustness for broken profiles)
+            // If profile is null, we assume it's an investor (fallback)
+            const role = profile?.role || 'investor'
+
+            // Use window.location.href for a hard navigation which ensures middleware re-runs
+            if (role === 'admin') {
+                window.location.href = '/dashboard/admin'
+            } else {
+                window.location.href = '/dashboard/investor'
+            }
 
             // Keep loading state true while redirecting - don't set to false
         } catch (err: unknown) {

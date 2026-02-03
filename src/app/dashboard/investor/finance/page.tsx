@@ -41,6 +41,13 @@ export default async function InvestorFinancePage() {
         redirect('/dashboard/admin/finance')
     }
 
+    // Safety check for missing profile
+    if (!profile) {
+        // Just continue, but user might see empty data. 
+        // We could redirect to main dashboard to show the "Welcome" fallback, 
+        // but it's better to just let them see empty finances.
+    }
+
     // Get investor's vehicles
     const vehicles = await getVehiclesByInvestor(user!.id)
     const vehicleIds = vehicles.map(v => v.id)

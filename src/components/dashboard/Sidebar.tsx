@@ -44,6 +44,12 @@ const adminRoutes = [
         href: "/dashboard/admin/documents",
         color: "text-orange-700",
     },
+    {
+        label: "Configuración",
+        icon: Settings,
+        href: "/dashboard/admin/settings",
+        color: "text-gray-500",
+    },
 ]
 
 const investorRoutes = [
