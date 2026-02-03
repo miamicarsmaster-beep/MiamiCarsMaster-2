@@ -1,4 +1,5 @@
 import Link from "next/link"
+import Image from "next/image"
 
 export function Footer() {
     return (
@@ -6,9 +7,14 @@ export function Footer() {
             <div className="container mx-auto px-4">
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
                     <div className="col-span-1 md:col-span-2">
-                        <span className="text-2xl font-bold tracking-tighter">
-                            MIAMI<span className="text-primary">CARS</span>
-                        </span>
+                        <div className="relative w-80 h-24 mb-6 brightness-0 invert">
+                            <Image
+                                src="/logo.png"
+                                alt="Miami Cars Investments"
+                                fill
+                                className="object-contain object-left"
+                            />
+                        </div>
                         <p className="mt-4 text-muted-foreground/60 max-w-sm">
                             Plataforma tecnológica líder en gestión de inversiones de renta de vehículos en Florida.
                         </p>

@@ -8,9 +8,8 @@ import {
     Users,
     Car,
     FileText,
-    Settings,
     LogOut,
-    BadgeDollarSign
+    BadgeDollarSign,
 } from "lucide-react"
 
 const adminRoutes = [
@@ -18,31 +17,26 @@ const adminRoutes = [
         label: "Panel General",
         icon: LayoutDashboard,
         href: "/dashboard/admin",
-        color: "text-sky-500",
     },
     {
         label: "Inversores",
         icon: Users,
         href: "/dashboard/admin/investors",
-        color: "text-violet-500",
     },
     {
         label: "Flota de Autos",
         icon: Car,
         href: "/dashboard/admin/vehicles",
-        color: "text-pink-700",
     },
     {
         label: "Finanzas & Gastos",
         icon: BadgeDollarSign,
         href: "/dashboard/admin/finance",
-        color: "text-emerald-500",
     },
     {
         label: "Documentos",
         icon: FileText,
         href: "/dashboard/admin/documents",
-        color: "text-orange-700",
     },
 ]
 
@@ -51,21 +45,20 @@ const investorRoutes = [
         label: "Mis Autos",
         icon: Car,
         href: "/dashboard/investor",
-        color: "text-sky-500",
     },
     {
         label: "Mis Finanzas",
         icon: BadgeDollarSign,
         href: "/dashboard/investor/finance",
-        color: "text-emerald-500",
     },
     {
         label: "Documentos",
         icon: FileText,
         href: "/dashboard/investor/documents",
-        color: "text-orange-700",
     },
 ]
+
+import Image from "next/image"
 
 export function Sidebar() {
     const pathname = usePathname()
@@ -73,55 +66,67 @@ export function Sidebar() {
     const routes = isAdmin ? adminRoutes : investorRoutes
 
     return (
-        <div className="space-y-4 py-4 flex flex-col h-full bg-sidebar text-sidebar-foreground border-r border-sidebar-border">
-            <div className="px-3 py-2 flex-1">
-                <Link href="/" className="flex items-center pl-3 mb-14">
-                    <div className="relative w-8 h-8 mr-4">
-                        {/* Logo placeholder */}
-                        <div className="absolute inset-0 bg-gradient-to-tr from-primary to-blue-600 rounded-lg animate-pulse opacity-75 blur-sm" />
-                        <div className="relative bg-background rounded-lg w-full h-full flex items-center justify-center">
-                            <span className="text-primary font-bold text-xs">MC</span>
-                        </div>
+        <div className="flex flex-col h-full bg-sidebar/50 backdrop-blur-xl text-sidebar-foreground border-r border-sidebar-border/50">
+            <div className="px-6 py-10 flex-1">
+                <Link href="/" className="flex items-center gap-3 mb-10 group px-0">
+                    <div className="relative w-full h-24">
+                        <Image
+                            src="/logo.png"
+                            alt="Miami Cars Investments"
+                            fill
+                            className="object-contain object-left"
+                            priority
+                        />
                     </div>
-                    <h1 className="text-2xl font-bold">
-                        Miami<span className="text-primary">Cars</span>
-                    </h1>
                 </Link>
-                <div className="space-y-1">
-                    {routes.map((route) => (
-                        <Link
-                            key={route.href}
-                            href={route.href}
-                            prefetch={false}
-                            className={cn(
-                                "text-sm group flex p-3 w-full justify-start font-medium cursor-pointer hover:bg-sidebar-accent hover:text-sidebar-accent-foreground rounded-lg transition",
-                                pathname === route.href ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-muted-foreground"
-                            )}
-                        >
-                            <div className="flex items-center flex-1">
-                                <route.icon className={cn("h-5 w-5 mr-3", route.color)} />
-                                {route.label}
-                            </div>
-                        </Link>
-                    ))}
+
+                <div className="space-y-2">
+                    {routes.map((route) => {
+                        const active = pathname === route.href
+                        return (
+                            <Link
+                                key={route.href}
+                                href={route.href}
+                                prefetch={false}
+                                className={cn(
+                                    "text-base group flex p-4.5 w-full justify-start font-bold cursor-pointer rounded-[1.25rem] transition-all duration-500",
+                                    active
+                                        ? "bg-primary/10 text-primary border-r-[6px] border-primary shadow-[0_10px_30px_rgba(var(--primary),0.1)] scale-[1.02]"
+                                        : "text-muted-foreground hover:bg-sidebar-accent hover:text-slate-900 dark:hover:text-white hover:translate-x-1"
+                                )}
+                            >
+                                <div className="flex items-center flex-1 py-1">
+                                    <route.icon className={cn(
+                                        "h-6 w-6 mr-4 transition-all duration-500",
+                                        active ? "text-primary scale-110" : "text-muted-foreground group-hover:text-primary"
+                                    )} />
+                                    <span className="tracking-tight">{route.label}</span>
+                                </div>
+                            </Link>
+                        )
+                    })}
                 </div>
             </div>
-            <div className="px-3">
-                <div className="bg-sidebar-accent/50 rounded-xl p-4 mb-4 border border-sidebar-border">
-                    <div className="flex items-center gap-2 mb-2">
-                        <div className="h-2 w-2 rounded-full bg-emerald-500"></div>
-                        <span className="text-xs text-muted-foreground">Sistema Operativo</span>
+
+            <div className="p-6 mt-auto">
+                <div className="bg-gradient-to-br from-sidebar-accent/50 to-transparent rounded-[1.5rem] p-6 mb-6 border border-sidebar-border/30 relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 w-20 h-20 bg-primary/5 -mr-10 -mt-10 rounded-full blur-2xl group-hover:bg-primary/10 transition-colors" />
+                    <div className="flex items-center gap-2 mb-3">
+                        <div className="h-2 w-2 rounded-full bg-primary animate-pulse shadow-[0_0_8px_rgba(var(--primary),0.8)]"></div>
+                        <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground italic">Sistema Master</span>
                     </div>
-                    <p className="text-xs font-medium">v1.0.0 Stable</p>
+                    <p className="text-sm font-black text-foreground">v2.0 Premium Ops</p>
+                    <p className="text-xs text-muted-foreground mt-1 font-bold">Conexión Segura v4.0</p>
                 </div>
+
                 <Link
                     href="/api/auth/logout"
                     prefetch={false}
-                    className="text-sm group flex p-3 w-full justify-start font-medium cursor-pointer hover:bg-sidebar-accent hover:text-sidebar-accent-foreground rounded-lg transition text-muted-foreground"
+                    className="text-base group flex p-5 w-full justify-start font-black cursor-pointer hover:bg-red-500/10 hover:text-red-500 rounded-[1.25rem] transition-all duration-300 text-muted-foreground/70"
                 >
                     <div className="flex items-center flex-1">
-                        <LogOut className="h-5 w-5 mr-3 text-red-500" />
-                        Cerrar Sesión
+                        <LogOut className="h-6 w-6 mr-4 text-red-500/50 group-hover:text-red-500 transition-all duration-500 group-hover:rotate-12" />
+                        <span className="tracking-tight uppercase text-sm">Cerrar Sesión</span>
                     </div>
                 </Link>
             </div>

@@ -1,5 +1,7 @@
 "use client"
 
+import { cn } from "@/lib/utils"
+
 import "@/styles/dialog-fix.css"
 import { useState, useEffect } from "react"
 import { Vehicle } from "@/types/database"
@@ -13,8 +15,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea"
 import {
     Camera, Gauge, MapPin, Wrench, X, CalendarDays, CheckCircle2, Edit3, Save,
-    DollarSign, Trash2, Plus, FileText, Loader2, TrendingUp, AlertCircle, Upload, Eye, ChevronLeft, ChevronRight, Activity, Image as ImageIcon
+    DollarSign, Trash2, Plus, FileText, Loader2, TrendingUp, AlertCircle, Upload, Eye, ChevronLeft, ChevronRight, Activity, Image as ImageIcon, FileBadge, FileBox, ChevronDown
 } from "lucide-react"
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
 import { ImageWithFallback } from "@/components/ui/image-with-fallback"
@@ -85,6 +93,8 @@ interface MaintenanceRecord {
     next_service_mileage: number | null
     status: 'pending' | 'completed'
     receipt_images: string[] | null
+    mileage_at_service?: number | null
+    display_notes?: string
     created_at: string
 }
 
@@ -124,7 +134,7 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
         status: vehicle.status,
         daily_rental_price: vehicle.daily_rental_price || 0,
         purchase_price: vehicle.purchase_price || 0,
-        assigned_investor_id: vehicle.assigned_investor_id || "",
+        assigned_investor_id: vehicle.assigned_investor_id || "none",
         image_url: vehicle.image_url || ""
     })
 
@@ -179,12 +189,35 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
 
     const getStatusBadge = () => {
         const statusConfig = {
-            available: { label: 'Disponible', className: 'bg-emerald-500' },
-            rented: { label: 'Alquilado', className: 'bg-blue-500' },
-            maintenance: { label: 'Mantenimiento', className: 'bg-orange-500' },
-            inactive: { label: 'Inactivo', className: 'bg-slate-500' }
+            available: { label: 'Disponible', className: 'bg-emerald-500 hover:bg-emerald-600' },
+            rented: { label: 'Alquilado', className: 'bg-blue-500 hover:bg-blue-600' },
+            maintenance: { label: 'Mantenimiento', className: 'bg-orange-500 hover:bg-orange-600' },
+            inactive: { label: 'Inactivo', className: 'bg-slate-500 hover:bg-slate-600' }
         }
         return statusConfig[formData.status as keyof typeof statusConfig] || statusConfig.available
+    }
+
+    const handleQuickStatusUpdate = async (newStatus: Vehicle["status"]) => {
+        if (newStatus === formData.status) return
+
+        setIsSaving(true)
+        try {
+            const { error } = await supabase
+                .from("vehicles")
+                .update({ status: newStatus })
+                .eq("id", vehicle.id)
+
+            if (error) throw error
+
+            setFormData(prev => ({ ...prev, status: newStatus }))
+            toast.success(`Estado actualizado a ${newStatus.toUpperCase()}`)
+            router.refresh()
+        } catch (error) {
+            console.error("Error updating status:", error)
+            toast.error("Error al actualizar el estado")
+        } finally {
+            setIsSaving(false)
+        }
     }
 
     // Handlers
@@ -209,7 +242,10 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                 .from("vehicles")
                 .update(updateData)
                 .eq("id", vehicle.id)
-                .select()
+                .select(`
+                    *,
+                    assigned_investor:profiles!assigned_investor_id(id, full_name, email)
+                `)
                 .single()
 
             if (error) {
@@ -420,12 +456,13 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                 receiptUrls = [publicUrl]
             }
 
+            const cost = parseFloat(maintenanceForm.cost)
             const { error } = await supabase
                 .from('maintenances')
                 .insert({
                     vehicle_id: vehicle.id,
                     service_type: type,
-                    cost: parseFloat(maintenanceForm.cost),
+                    cost: cost,
                     date: maintenanceForm.date,
                     next_service_mileage: maintenanceForm.next_service_mileage ? parseInt(maintenanceForm.next_service_mileage) : null,
                     notes: `${maintenanceForm.notes || ''} \n[Millaje al servicio: ${maintenanceForm.current_mileage}]`.trim(),
@@ -435,7 +472,24 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
 
             if (error) throw error
 
+            // Si hay un costo, registrarlo en financial_records
+            if (cost > 0) {
+                const { error: finError } = await supabase
+                    .from('financial_records')
+                    .insert({
+                        vehicle_id: vehicle.id,
+                        type: 'expense',
+                        category: type,
+                        amount: cost,
+                        date: maintenanceForm.date,
+                        description: `MANTENIMIENTO: ${type}`.toUpperCase(),
+                        proof_image_url: receiptUrls.length > 0 ? receiptUrls[0] : null
+                    })
+                if (finError) console.error("Error al registrar gasto financiero:", finError)
+            }
+
             toast.success("Mantenimiento registrado")
+            router.refresh()
             setIsMaintenanceDialogOpen(false)
             setMaintenanceReceipt(null)
             setMaintenanceForm({
@@ -462,6 +516,7 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
 
         setIsSaving(true)
         try {
+            const amount = parseFloat(rentalForm.amount)
             const { error } = await supabase
                 .from('rentals')
                 .insert({
@@ -470,14 +525,30 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                     start_date: rentalForm.start_date.toISOString(),
                     end_date: rentalForm.end_date.toISOString(),
                     platform: rentalForm.platform,
-                    total_amount: parseFloat(rentalForm.amount),
+                    total_amount: amount,
                     status: rentalForm.status,
                     notes: rentalForm.notes
                 })
 
             if (error) throw error
 
+            // Registrar ingreso en financial_records
+            if (amount > 0) {
+                const { error: finError } = await supabase
+                    .from('financial_records')
+                    .insert({
+                        vehicle_id: vehicle.id,
+                        type: 'income',
+                        category: 'Renta',
+                        amount: amount,
+                        date: new Date().toISOString().split('T')[0],
+                        description: `RENTA: ${rentalForm.customer_name || 'CLIENTE'} (${rentalForm.platform})`.toUpperCase()
+                    })
+                if (finError) console.error("Error al registrar ingreso financiero:", finError)
+            }
+
             toast.success("Reserva creada")
+            router.refresh()
             setIsRentalDialogOpen(false)
             setRentalForm({
                 customer_name: "",
@@ -654,12 +725,47 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
     }
 
     const loadMaintenanceHistory = async () => {
-        const { data } = await supabase
-            .from("maintenances")
-            .select("*")
-            .eq("vehicle_id", vehicle.id)
-            .order("date", { ascending: false })
-        setMaintenanceHistory(data || [])
+        try {
+            const { data, error } = await supabase
+                .from("maintenances")
+                .select("*")
+                .eq("vehicle_id", vehicle.id)
+                .order("date", { ascending: false })
+
+            if (error) throw error
+
+            const processedData = (data || []).map(record => {
+                let mileage = (record as any).mileage_at_service
+                if (!mileage && record.notes) {
+                    const match = record.notes.match(/\[Millaje al servicio: (\d+)\]/)
+                    if (match) mileage = parseInt(match[1])
+                }
+
+                return {
+                    ...record,
+                    mileage_at_service: mileage,
+                    display_notes: record.notes?.replace(/\[Millaje al servicio: \d+\]/, '').trim()
+                }
+            })
+            setMaintenanceHistory(processedData)
+        } catch (error) {
+            console.error("Error loading maintenance history:", error)
+            toast.error("Error al cargar historial de mantenimiento")
+        }
+    }
+
+    const handleDeleteMaintenance = async (maintId: string) => {
+        if (!confirm("¿Eliminar este registro de mantenimiento?")) return
+
+        try {
+            const { error } = await supabase.from('maintenances').delete().eq('id', maintId)
+            if (error) throw error
+            setMaintenanceHistory(maintenanceHistory.filter(m => m.id !== maintId))
+            toast.success("Registro eliminado")
+        } catch (error) {
+            console.error(error)
+            toast.error("Error al eliminar mantenimiento")
+        }
     }
 
     const loadRentalHistory = async () => {
@@ -692,34 +798,85 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
 
     return (
         <>
-            <div className="fixed inset-0 z-40 md:left-72 bg-slate-50 dark:bg-slate-950 flex flex-col animate-in slide-in-from-bottom-4 fade-in duration-300 shadow-2xl">
+            <div className="fixed inset-0 z-40 md:left-80 bg-slate-50 dark:bg-slate-950 flex flex-col animate-in slide-in-from-bottom-4 fade-in duration-300 shadow-2xl">
                 {/* HEADER */}
-                <div className="sticky top-0 z-40 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-8 py-5 flex-shrink-0">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
-                                {formData.year} {formData.make} {formData.model}
-                            </h1>
-                            <Badge className={`${statusBadge.className} text-white px-3 py-1 text-xs font-semibold uppercase`}>
-                                {statusBadge.label}
-                            </Badge>
+                <div className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/40 px-6 md:px-10 py-4 md:py-6 flex-shrink-0">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div className="flex items-center gap-4 md:gap-6">
+                            <div className="flex flex-col">
+                                <h1 className="text-xl md:text-3xl font-black italic tracking-tighter uppercase leading-none">
+                                    {formData.make} <span className="text-primary">{formData.model}</span>
+                                </h1>
+                                <p className="text-[10px] md:text-sm font-bold text-muted-foreground uppercase tracking-[0.2em] md:tracking-[0.3em] mt-2">
+                                    Expediente Técnico {formData.year} • {formData.license_plate || 'SIN MATRÍCULA'}
+                                </p>
+                            </div>
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button
+                                        variant="ghost"
+                                        disabled={isSaving}
+                                        className={`h-auto p-0 rounded-full border-0 shadow-lg transition-transform hover:scale-105 active:scale-95 ${statusBadge.className}`}
+                                    >
+                                        <Badge className="bg-transparent hover:bg-transparent text-white px-3 md:px-4 py-1.5 text-[10px] md:text-xs font-black uppercase tracking-widest flex items-center gap-2 border-0">
+                                            {isSaving ? (
+                                                <Loader2 className="h-3 w-3 animate-spin" />
+                                            ) : (
+                                                <>
+                                                    {statusBadge.label}
+                                                    <ChevronDown className="h-3 w-3 opacity-50" />
+                                                </>
+                                            )}
+                                        </Badge>
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="start" className="glass-card border-primary/20 rounded-2xl p-2 min-w-[160px] animate-in slide-in-from-top-2 duration-300 z-[100]">
+                                    {[
+                                        { value: "available", label: "DISPONIBLE", color: "bg-emerald-500" },
+                                        { value: "rented", label: "ALQUILADO", color: "bg-blue-500" },
+                                        { value: "maintenance", label: "MANTENIMIENTO", color: "bg-orange-500" },
+                                        { value: "inactive", label: "INACTIVO", color: "bg-slate-500" },
+                                    ].map((s) => (
+                                        <DropdownMenuItem
+                                            key={s.value}
+                                            onClick={() => handleQuickStatusUpdate(s.value as Vehicle["status"])}
+                                            className={`rounded-xl px-4 py-3 text-xs font-black tracking-widest uppercase cursor-pointer mb-1 last:mb-0 transition-colors
+                                                ${formData.status === s.value ? 'bg-primary/10 text-primary' : 'hover:bg-primary/5'}`}
+                                        >
+                                            <div className="flex items-center justify-between w-full">
+                                                <div className="flex items-center gap-3">
+                                                    <div className={`h-2 w-2 rounded-full ${s.color}`} />
+                                                    {s.label}
+                                                </div>
+                                                {formData.status === s.value && <CheckCircle2 className="h-4 w-4 text-primary" />}
+                                            </div>
+                                        </DropdownMenuItem>
+                                    ))}
+                                </DropdownMenuContent>
+                            </DropdownMenu>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 md:gap-4 ml-auto md:ml-0">
                             {isEditMode ? (
                                 <>
-                                    <Button variant="outline" onClick={() => setIsEditMode(false)}>Cancelar</Button>
-                                    <Button onClick={handleSave} disabled={isSaving} className="bg-emerald-600 hover:bg-emerald-700">
-                                        {isSaving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
-                                        Guardar
+                                    <Button variant="outline" size="lg" onClick={() => setIsEditMode(false)} className="rounded-2xl font-bold uppercase text-xs tracking-widest h-12 px-6">Cancelar</Button>
+                                    <Button size="lg" onClick={handleSave} disabled={isSaving} className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-black uppercase text-xs tracking-[0.15em] h-12 px-10 shadow-2xl shadow-emerald-500/40 border-0 transition-all hover:scale-[1.02] active:scale-95">
+                                        {isSaving ? <Loader2 className="h-5 w-5 mr-3 animate-spin" /> : <Save className="h-5 w-5 mr-3" />}
+                                        Actualizar Activo
                                     </Button>
                                 </>
                             ) : (
-                                <Button variant="outline" onClick={() => setIsEditMode(true)}>
-                                    <Edit3 className="h-4 w-4 mr-2" /> Editar
+                                <Button
+                                    size="lg"
+                                    onClick={() => setIsEditMode(true)}
+                                    className="rounded-2xl border-2 border-primary bg-primary text-white hover:bg-primary/90 font-black uppercase text-xs tracking-[0.15em] h-12 px-10 shadow-2xl shadow-primary/40 transition-all hover:scale-[1.02] active:scale-95 group/editbtn"
+                                >
+                                    <Edit3 className="h-5 w-5 mr-3 group-hover:rotate-12 transition-transform" />
+                                    EDITAR VEHÍCULO
                                 </Button>
                             )}
-                            <Button variant="ghost" size="icon" onClick={onClose}>
-                                <X className="h-5 w-5" />
+                            <div className="w-[1px] h-8 bg-border/40 mx-1 md:mx-2 hidden md:block" />
+                            <Button variant="ghost" size="icon" onClick={onClose} className="h-10 w-10 md:h-12 md:w-12 rounded-xl md:rounded-2xl hover:bg-red-500/10 hover:text-red-500 transition-all group">
+                                <X className="h-5 w-5 md:h-6 md:w-6 group-hover:rotate-90 transition-transform duration-300" />
                             </Button>
                         </div>
                     </div>
@@ -727,7 +884,7 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
 
                 {/* MAIN CONTENT */}
                 <div className="flex-1 overflow-y-auto">
-                    <div className="max-w-[1600px] mx-auto p-8">
+                    <div className="max-w-[1600px] mx-auto p-4 md:p-8">
 
                         {/* HERO SECTION - 2 COLUMNAS */}
                         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-8">
@@ -766,30 +923,30 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                             <div className="lg:col-span-5 grid grid-cols-2 gap-4">
                                 <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-6 text-white shadow-lg">
                                     <DollarSign className="h-8 w-8 mb-3 opacity-80" />
-                                    <p className="text-xs uppercase font-semibold opacity-90 mb-1">Tarifa Diaria</p>
+                                    <p className="text-sm uppercase font-black opacity-90 mb-1">Tarifa Diaria</p>
                                     <p className="text-3xl font-bold">${formData.daily_rental_price}</p>
-                                    <p className="text-xs opacity-75 mt-1">Por día de alquiler</p>
+                                    <p className="text-sm opacity-75 mt-1">Por día de alquiler</p>
                                 </div>
 
                                 <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl p-6 text-white shadow-lg">
                                     <TrendingUp className="h-8 w-8 mb-3 opacity-80" />
-                                    <p className="text-xs uppercase font-semibold opacity-90 mb-1">ROI Estimado</p>
+                                    <p className="text-sm uppercase font-black opacity-90 mb-1">ROI Estimado</p>
                                     <p className="text-3xl font-bold">{roi}%</p>
-                                    <p className="text-xs opacity-75 mt-1">Retorno anual proyectado</p>
+                                    <p className="text-sm opacity-75 mt-1">Retorno anual proyectado</p>
                                 </div>
 
                                 <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl p-6 text-white shadow-lg">
                                     <Gauge className="h-8 w-8 mb-3 opacity-80" />
-                                    <p className="text-xs uppercase font-semibold opacity-90 mb-1">Millaje</p>
+                                    <p className="text-sm uppercase font-black opacity-90 mb-1">Millaje</p>
                                     <p className="text-3xl font-bold">{(formData.mileage / 1000).toFixed(1)}k</p>
-                                    <p className="text-xs opacity-75 mt-1">Millas totales</p>
+                                    <p className="text-sm opacity-75 mt-1">Millas totales</p>
                                 </div>
 
                                 <div className="bg-gradient-to-br from-slate-700 to-slate-800 rounded-xl p-6 text-white shadow-lg">
                                     <DollarSign className="h-8 w-8 mb-3 opacity-80" />
-                                    <p className="text-xs uppercase font-semibold opacity-90 mb-1">Inversión</p>
+                                    <p className="text-sm uppercase font-black opacity-90 mb-1">Inversión</p>
                                     <p className="text-2xl font-bold">${(formData.purchase_price / 1000).toFixed(0)}k</p>
-                                    <p className="text-xs opacity-75 mt-1">Valor de compra</p>
+                                    <p className="text-sm opacity-75 mt-1">Valor de compra</p>
                                 </div>
                             </div>
                         </div>
@@ -797,33 +954,36 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
 
 
                         {/* TABS */}
-                        <Tabs value={activeTab} onValueChange={setActiveTab} className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
-                            <TabsList className="w-full justify-start border-b bg-transparent p-0 h-auto rounded-none">
+                        <Tabs value={activeTab} onValueChange={setActiveTab} className="glass-card shadow-2xl overflow-hidden mt-8">
+                            <TabsList className="w-full justify-start border-b border-border/40 bg-sidebar-accent/10 p-0 h-auto rounded-none flex-nowrap overflow-x-auto no-scrollbar">
                                 {[
-                                    { value: "general", label: "General", icon: FileText },
-                                    { value: "galeria", label: "Galería", icon: Camera },
-                                    { value: "millaje", label: "Millaje", icon: Gauge },
-                                    { value: "mantenimiento", label: "Mantenimiento", icon: Wrench },
-                                    { value: "alquileres", label: "Alquileres", icon: CalendarDays },
-                                    { value: "documentos", label: "Documentos", icon: FileText },
+                                    { id: "general", label: "General", icon: FileText },
+                                    { id: "galeria", label: "Galería", icon: Camera },
+                                    { id: "millaje", label: "Millaje", icon: Gauge },
+                                    { id: "mantenimiento", label: "Mantenimiento", icon: Wrench },
+                                    { id: "alquileres", label: "Alquileres", icon: CalendarDays },
+                                    { id: "documentos", label: "Documentos", icon: FileText },
                                 ].map(tab => (
                                     <TabsTrigger
-                                        key={tab.value}
-                                        value={tab.value}
-                                        className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-600 data-[state=active]:bg-blue-50 dark:data-[state=active]:bg-blue-950 px-6 py-4"
+                                        key={tab.id}
+                                        value={tab.id}
+                                        className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary transition-all px-6 md:px-8 py-4 md:py-6 text-xs md:text-sm font-bold uppercase tracking-widest whitespace-nowrap flex items-center gap-2"
                                     >
-                                        <tab.icon className="h-4 w-4 mr-2" />
+                                        <tab.icon className="h-4 w-4 hidden sm:block" />
                                         {tab.label}
                                     </TabsTrigger>
                                 ))}
                             </TabsList>
 
-                            <div className="p-8">
-                                <TabsContent value="general" className="mt-0">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                        <div>
-                                            <h3 className="text-lg font-bold mb-4">Especificaciones Técnicas</h3>
-                                            <div className="space-y-4">
+                            <div className="p-6 md:p-10">
+                                <TabsContent value="general" className="mt-0 outline-none">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+                                        <div className="space-y-6">
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <div className="h-1 w-6 bg-primary rounded-full"></div>
+                                                <h3 className="text-base font-black uppercase tracking-widest">Especificaciones Técnicas</h3>
+                                            </div>
+                                            <div className="space-y-1">
                                                 <InfoRow
                                                     label="Marca"
                                                     value={formData.make}
@@ -844,65 +1004,74 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                                                     onChange={(val) => setFormData(prev => ({ ...prev, year: parseInt(val) || 2024 }))}
                                                 />
                                                 <InfoRow
-                                                    label="VIN"
+                                                    label="VIN / Serial"
                                                     value={formData.vin || ''}
                                                     isEditMode={isEditMode}
                                                     onChange={(val) => setFormData(prev => ({ ...prev, vin: val }))}
                                                 />
                                                 <InfoRow
-                                                    label="Placa"
+                                                    label="Matrícula"
                                                     value={formData.license_plate || ''}
                                                     isEditMode={isEditMode}
                                                     onChange={(val) => setFormData(prev => ({ ...prev, license_plate: val }))}
                                                 />
                                                 <InfoRow
-                                                    label="Ubicación"
+                                                    label="Localización"
                                                     value={formData.location || ''}
                                                     isEditMode={isEditMode}
                                                     onChange={(val) => setFormData(prev => ({ ...prev, location: val }))}
                                                 />
                                             </div>
                                         </div>
-                                        <div>
-                                            <h3 className="text-lg font-bold mb-4">Información Financiera</h3>
-                                            <div className="space-y-4">
+                                        <div className="space-y-6">
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <div className="h-1 w-6 bg-primary rounded-full"></div>
+                                                <h3 className="text-sm font-black uppercase tracking-widest">Inversión & Rendimiento</h3>
+                                            </div>
+                                            <div className="space-y-1">
                                                 <InfoRow
-                                                    label="Precio de Compra"
-                                                    value={formData.purchase_price.toString()}
+                                                    label="Precio Compra"
+                                                    value={formData.purchase_price.toLocaleString()}
                                                     isEditMode={isEditMode}
                                                     type="number"
                                                     onChange={(val) => setFormData(prev => ({ ...prev, purchase_price: parseFloat(val) || 0 }))}
+                                                    prefix="$"
                                                 />
                                                 <InfoRow
-                                                    label="Tarifa Diaria"
-                                                    value={formData.daily_rental_price.toString()}
+                                                    label="Precio Día"
+                                                    value={formData.daily_rental_price.toLocaleString()}
                                                     isEditMode={isEditMode}
                                                     type="number"
                                                     onChange={(val) => setFormData(prev => ({ ...prev, daily_rental_price: parseFloat(val) || 0 }))}
+                                                    prefix="$"
                                                 />
-                                                <InfoRow label="ROI Estimado" value={`${roi}%`} />
-                                                <div className="flex justify-between items-center py-2">
-                                                    <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Inversor Asignado</span>
+                                                <InfoRow label="ROI Estimado" value={`${roi}%`} className="text-primary font-black" />
+                                                <div className="flex justify-between items-center py-4 border-b border-border/30">
+                                                    <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Inversor Socio</span>
                                                     {isEditMode ? (
                                                         <Select
-                                                            value={formData.assigned_investor_id}
+                                                            value={formData.assigned_investor_id || "none"}
                                                             onValueChange={(val) => setFormData(prev => ({ ...prev, assigned_investor_id: val }))}
                                                         >
-                                                            <SelectTrigger className="w-[200px] h-9">
+                                                            <SelectTrigger className="w-[200px] h-10 border-primary/20 bg-primary/5 rounded-xl">
                                                                 <SelectValue placeholder="Seleccionar inversor" />
                                                             </SelectTrigger>
-                                                            <SelectContent>
+                                                            <SelectContent className="z-[500] bg-white dark:bg-slate-900 border-primary/20 shadow-2xl">
                                                                 <SelectItem value="none">Sin asignar</SelectItem>
-                                                                {investors.map(investor => (
-                                                                    <SelectItem key={investor.id} value={investor.id}>
-                                                                        {investor.full_name || investor.email}
-                                                                    </SelectItem>
-                                                                ))}
+                                                                {investors && investors.length > 0 ? (
+                                                                    investors.map(investor => (
+                                                                        <SelectItem key={investor.id} value={investor.id}>
+                                                                            {investor.full_name || investor.email}
+                                                                        </SelectItem>
+                                                                    ))
+                                                                ) : (
+                                                                    <SelectItem value="none" disabled>No hay inversores disponibles</SelectItem>
+                                                                )}
                                                             </SelectContent>
                                                         </Select>
                                                     ) : (
-                                                        <span className="text-sm font-semibold text-slate-900 dark:text-white">
-                                                            {investors.find(i => i.id === formData.assigned_investor_id)?.full_name || 'Sin asignar'}
+                                                        <span className="text-sm font-black italic tracking-tight">
+                                                            {investors.find(i => i.id === formData.assigned_investor_id)?.full_name || 'PENDIENTE ASIGNACIÓN'}
                                                         </span>
                                                     )}
                                                 </div>
@@ -911,12 +1080,12 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                                     </div>
                                 </TabsContent>
 
-                                <TabsContent value="galeria" className="mt-0">
-                                    <div className="space-y-6">
-                                        <div className="flex justify-between items-center">
-                                            <div>
-                                                <h3 className="text-lg font-bold">Galería de Imágenes</h3>
-                                                <p className="text-sm text-muted-foreground">{photos.length} fotos registradas</p>
+                                <TabsContent value="galeria" className="mt-0 outline-none">
+                                    <div className="space-y-10">
+                                        <div className="flex justify-between items-end px-2">
+                                            <div className="flex flex-col gap-1">
+                                                <h3 className="text-2xl font-black italic tracking-tight">Galería <span className="text-primary">Multimedia</span></h3>
+                                                <p className="text-xs text-muted-foreground font-bold uppercase tracking-wider">{photos.length} Archivos Visuales</p>
                                             </div>
                                             <div>
                                                 <input
@@ -929,10 +1098,10 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                                                     disabled={isUploadingPhoto}
                                                 />
                                                 <Label htmlFor="gallery-upload">
-                                                    <Button variant="outline" size="sm" className="cursor-pointer" asChild>
+                                                    <Button variant="outline" size="lg" className="h-12 border-primary/20 bg-primary/5 hover:bg-primary hover:text-primary-foreground transition-all rounded-xl cursor-pointer" asChild>
                                                         <span>
-                                                            {isUploadingPhoto ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Upload className="h-4 w-4 mr-2" />}
-                                                            Subir Nueva
+                                                            {isUploadingPhoto ? <Loader2 className="h-5 w-5 mr-3 animate-spin" /> : <Upload className="h-5 w-5 mr-3" />}
+                                                            Gestionar Archivos
                                                         </span>
                                                     </Button>
                                                 </Label>
@@ -940,43 +1109,51 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                                         </div>
 
                                         {photos.length === 0 ? (
-                                            <div className="text-center py-16 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50/50 dark:bg-slate-900/50">
-                                                <div className="bg-slate-100 dark:bg-slate-800 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                                                    <Camera className="h-8 w-8 text-slate-400" />
+                                            <div className="text-center py-24 glass-card rounded-3xl border-dashed border-primary/20 bg-primary/2 group hover:bg-primary/5 transition-colors">
+                                                <div className="bg-primary/10 w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform">
+                                                    <Camera className="h-10 w-10 text-primary" />
                                                 </div>
-                                                <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-1">No hay fotos</h3>
-                                                <p className="text-slate-500 max-w-sm mx-auto mb-6">Sube fotos del vehículo para documentar su estado.</p>
+                                                <h3 className="text-xl font-black uppercase tracking-widest mb-2">Sin Contenido Visual</h3>
+                                                <p className="text-muted-foreground max-w-sm mx-auto mb-8 font-medium">Documenta el estado impecable del vehículo subiendo fotografías de alta resolución.</p>
                                                 <Label htmlFor="gallery-upload">
-                                                    <Button className="cursor-pointer" asChild>
-                                                        <span>Subir Foto</span>
+                                                    <Button className="h-12 px-8 rounded-xl shadow-xl shadow-primary/20 cursor-pointer" asChild>
+                                                        <span>Iniciar Carga</span>
                                                     </Button>
                                                 </Label>
                                             </div>
                                         ) : (
-                                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                                                 {photos.map((photo) => (
-                                                    <div key={photo.id} className="group relative aspect-square rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-800 border shadow-sm">
+                                                    <div key={photo.id} className="group relative aspect-[4/5] rounded-2xl overflow-hidden bg-sidebar-accent/30 border border-border/30 shadow-xl transition-all hover:-translate-y-1">
                                                         <ImageWithFallback
                                                             src={photo.image_url}
                                                             fallbackSrc="/placeholder-car.svg"
                                                             alt={photo.caption || "Foto del vehículo"}
                                                             fill
-                                                            className="object-cover transition-transform group-hover:scale-105 cursor-pointer"
+                                                            className="object-cover transition-transform duration-700 group-hover:scale-110 cursor-pointer"
                                                             onClick={() => setSelectedPhoto(photo)}
                                                         />
-                                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 pointer-events-none">
-                                                            <div className="pointer-events-auto flex gap-2">
-                                                                <Button size="icon" variant="secondary" className="h-8 w-8" onClick={() => setSelectedPhoto(photo)}>
-                                                                    <Eye className="h-4 w-4" />
-                                                                </Button>
-                                                                <Button size="icon" variant="destructive" className="h-8 w-8" onClick={(e) => handleDeletePhoto(photo.id, e)}>
-                                                                    <Trash2 className="h-4 w-4" />
-                                                                </Button>
-                                                            </div>
+                                                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-center p-6 gap-3">
+                                                            <Button
+                                                                size="icon"
+                                                                variant="secondary"
+                                                                className="h-10 w-10 rounded-xl glass hover:bg-white hover:text-black transition-all"
+                                                                onClick={() => setSelectedPhoto(photo)}
+                                                            >
+                                                                <Eye className="h-5 w-5" />
+                                                            </Button>
+                                                            <Button
+                                                                size="icon"
+                                                                variant="destructive"
+                                                                className="h-10 w-10 rounded-xl shadow-lg"
+                                                                onClick={(e) => handleDeletePhoto(photo.id, e)}
+                                                            >
+                                                                <Trash2 className="h-5 w-5" />
+                                                            </Button>
                                                         </div>
                                                         {photo.is_primary && (
-                                                            <div className="absolute top-2 left-2 bg-emerald-500 text-white text-[10px] uppercase font-bold px-2 py-0.5 rounded-full">
-                                                                Principal
+                                                            <div className="absolute top-4 left-4 cyber-gradient text-white text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full shadow-lg">
+                                                                Primary
                                                             </div>
                                                         )}
                                                     </div>
@@ -986,40 +1163,50 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                                     </div>
                                 </TabsContent>
 
-                                <TabsContent value="millaje" className="mt-0">
-                                    <div className="space-y-6">
-                                        <div className="flex justify-between items-center bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800">
-                                            <div className="flex items-center gap-4">
-                                                <div className="h-12 w-12 rounded-full bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center text-blue-600 dark:text-blue-400">
-                                                    <Gauge className="h-6 w-6" />
+                                <TabsContent value="millaje" className="mt-0 outline-none">
+                                    <div className="space-y-10">
+                                        <div className="glass-card p-10 bg-gradient-to-br from-primary/5 to-transparent relative overflow-hidden group">
+                                            <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 -mr-32 -mt-32 rounded-full blur-3xl group-hover:bg-primary/10 transition-colors" />
+                                            <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-8">
+                                                <div className="flex items-center gap-8">
+                                                    <div className="h-20 w-20 rounded-2xl cyber-gradient flex items-center justify-center text-primary-foreground shadow-xl shadow-primary/20 rotate-3 group-hover:rotate-0 transition-transform duration-500">
+                                                        <Gauge className="h-10 w-10" />
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-xs font-black uppercase tracking-[0.2em] text-primary mb-2">Kilometraje Registrado</p>
+                                                        <div className="flex items-baseline gap-2">
+                                                            <span className="text-5xl font-black italic tracking-tighter text-glow">
+                                                                {formData.mileage.toLocaleString()}
+                                                            </span>
+                                                            <span className="text-lg font-bold text-muted-foreground uppercase tracking-wider">mi</span>
+                                                        </div>
+                                                    </div>
                                                 </div>
-                                                <div>
-                                                    <h3 className="text-lg font-bold">Millaje Actual</h3>
-                                                    <p className="text-2xl font-mono font-bold text-slate-900 dark:text-white">
-                                                        {formData.mileage.toLocaleString()} <span className="text-sm text-muted-foreground font-sans font-normal">mi</span>
-                                                    </p>
-                                                </div>
+                                                <Button
+                                                    onClick={() => setIsMileageDialogOpen(true)}
+                                                    size="lg"
+                                                    className="h-14 px-8 rounded-xl shadow-xl shadow-primary/20 font-black uppercase tracking-widest text-xs italic"
+                                                >
+                                                    <Plus className="h-5 w-5 mr-3" /> Registrar Lectura
+                                                </Button>
                                             </div>
-                                            <Button onClick={() => setIsMileageDialogOpen(true)}>
-                                                <Plus className="h-4 w-4 mr-2" /> Registrar Lectura
-                                            </Button>
                                         </div>
 
                                         {mileageHistory.length > 0 && (
-                                            <div className="bg-white dark:bg-slate-900 border rounded-xl p-6 shadow-sm">
-                                                <h4 className="text-sm font-medium text-muted-foreground mb-6 flex items-center">
-                                                    <Activity className="h-4 w-4 mr-2" /> Tendencia de Uso
+                                            <div className="glass-card p-8 border-l-4 border-l-primary/40">
+                                                <h4 className="text-sm font-black uppercase tracking-widest mb-10 flex items-center gap-3">
+                                                    <Activity className="h-5 w-5 text-primary" /> Tendencia de Uso <span className="text-muted-foreground opacity-50 font-medium tracking-normal text-xs">(Analítica Temporal)</span>
                                                 </h4>
-                                                <div className="h-[300px] w-full">
+                                                <div className="h-[350px] w-full">
                                                     <ResponsiveContainer width="100%" height="100%">
                                                         <AreaChart data={[...mileageHistory].reverse()}>
                                                             <defs>
                                                                 <linearGradient id="colorMileage" x1="0" y1="0" x2="0" y2="1">
-                                                                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
-                                                                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                                                                    <stop offset="5%" stopColor="oklch(0.8 0.18 185)" stopOpacity={0.4} />
+                                                                    <stop offset="95%" stopColor="oklch(0.8 0.18 185)" stopOpacity={0} />
                                                                 </linearGradient>
                                                             </defs>
-                                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="oklch(1 0 0 / 8%)" />
                                                             <XAxis
                                                                 dataKey="date"
                                                                 tickFormatter={(date) => new Date(date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
@@ -1044,8 +1231,8 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                                                             <Area
                                                                 type="monotone"
                                                                 dataKey="mileage"
-                                                                stroke="#3b82f6"
-                                                                strokeWidth={3}
+                                                                stroke="oklch(0.8 0.18 185)"
+                                                                strokeWidth={4}
                                                                 fillOpacity={1}
                                                                 fill="url(#colorMileage)"
                                                             />
@@ -1056,98 +1243,34 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                                         )}
 
                                         {mileageHistory.length === 0 ? (
-                                            <div className="text-center py-16 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl">
-                                                <div className="bg-slate-100 dark:bg-slate-800 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                                                    <Gauge className="h-8 w-8 text-slate-400" />
+                                            <div className="text-center py-24 glass-card border-dashed border-primary/20 bg-primary/2 group hover:bg-primary/5 transition-colors">
+                                                <div className="bg-primary/10 w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform">
+                                                    <Gauge className="h-10 w-10 text-primary" />
                                                 </div>
-                                                <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-1">Sin registros</h3>
-                                                <p className="text-slate-500 mb-6">No hay historial de millaje registrado.</p>
+                                                <h3 className="text-xl font-black uppercase tracking-widest mb-2">Sin métricas de uso</h3>
+                                                <p className="text-muted-foreground max-w-sm mx-auto font-medium">No se han registrado lecturas de odómetro para este activo.</p>
                                             </div>
                                         ) : (
-                                            <div className="border rounded-lg overflow-hidden">
+                                            <div className="glass-card overflow-hidden">
                                                 <Table>
-                                                    <TableHeader>
-                                                        <TableRow>
-                                                            <TableHead>Fecha</TableHead>
-                                                            <TableHead>Millaje</TableHead>
-                                                            <TableHead>Notas</TableHead>
+                                                    <TableHeader className="bg-sidebar-accent/30">
+                                                        <TableRow className="hover:bg-transparent border-border/40">
+                                                            <TableHead className="font-bold uppercase text-[10px] tracking-widest py-4">Fecha</TableHead>
+                                                            <TableHead className="font-bold uppercase text-[10px] tracking-widest py-4">Odómetro</TableHead>
+                                                            <TableHead className="font-bold uppercase text-[10px] tracking-widest py-4">Observaciones</TableHead>
                                                         </TableRow>
                                                     </TableHeader>
                                                     <TableBody>
                                                         {mileageHistory.map((log) => (
-                                                            <TableRow key={log.id}>
-                                                                <TableCell>{new Date(log.date).toLocaleDateString()}</TableCell>
-                                                                <TableCell className="font-mono font-medium">{log.mileage.toLocaleString()} mi</TableCell>
-                                                                <TableCell className="text-muted-foreground">{log.notes || "-"}</TableCell>
-                                                            </TableRow>
-                                                        ))}
-                                                    </TableBody>
-                                                </Table>
-                                            </div>
-                                        )}
-                                    </div>
-                                </TabsContent>
-
-                                <TabsContent value="mantenimiento" className="mt-0">
-                                    <div className="space-y-6">
-                                        <div className="flex justify-between items-center">
-                                            <div>
-                                                <h3 className="text-lg font-bold">Historial de Mantenimiento</h3>
-                                                <p className="text-sm text-muted-foreground">Servicios y reparaciones realizados</p>
-                                            </div>
-                                            <Button variant="outline" size="sm" onClick={() => {
-                                                setMaintenanceForm(prev => ({ ...prev, current_mileage: vehicle.mileage.toString() }))
-                                                setIsMaintenanceDialogOpen(true)
-                                            }}>
-                                                <Plus className="h-4 w-4 mr-2" /> Nuevo Servicio
-                                            </Button>
-                                        </div>
-
-                                        {maintenanceHistory.length === 0 ? (
-                                            <div className="text-center py-16 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl">
-                                                <div className="bg-slate-100 dark:bg-slate-800 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                                                    <Wrench className="h-8 w-8 text-slate-400" />
-                                                </div>
-                                                <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-1">Sin mantenimientos</h3>
-                                                <p className="text-slate-500 mb-6">No hay registros de servicios o reparaciones.</p>
-                                            </div>
-                                        ) : (
-                                            <div className="border rounded-lg overflow-hidden">
-                                                <Table>
-                                                    <TableHeader>
-                                                        <TableRow>
-                                                            <TableHead>Fecha</TableHead>
-                                                            <TableHead>Servicio</TableHead>
-                                                            <TableHead>Millaje</TableHead>
-                                                            <TableHead>Próximo</TableHead>
-                                                            <TableHead>Costo</TableHead>
-                                                            <TableHead>Notas</TableHead>
-                                                            <TableHead className="text-right w-[50px]"></TableHead>
-                                                        </TableRow>
-                                                    </TableHeader>
-                                                    <TableBody>
-                                                        {maintenanceHistory.map((record) => (
-                                                            <TableRow key={record.id}>
-                                                                <TableCell>{new Date(record.date).toLocaleDateString()}</TableCell>
-                                                                <TableCell className="font-medium">{record.service_type}</TableCell>
-                                                                {/* @ts-ignore - DB field might slightly differ but assuming mileage_at_service or checking type definition */}
-                                                                <TableCell>{(record as any).mileage_at_service?.toLocaleString() || "-"} mi</TableCell>
-                                                                {/* @ts-ignore */}
-                                                                <TableCell>{(record as any).next_service_mileage ? `${(record as any).next_service_mileage?.toLocaleString()} mi` : "-"}</TableCell>
-                                                                <TableCell>${record.cost?.toLocaleString()}</TableCell>
-                                                                <TableCell className="max-w-[200px] truncate text-muted-foreground">{record.notes}</TableCell>
-                                                                <TableCell className="text-right">
-                                                                    {record.receipt_images && record.receipt_images.length > 0 && (
-                                                                        <Button
-                                                                            variant="ghost"
-                                                                            size="icon"
-                                                                            className="h-8 w-8 text-blue-500 hover:text-blue-600 hover:bg-blue-50"
-                                                                            onClick={() => window.open(record.receipt_images![0], '_blank')}
-                                                                            title="Ver comprobante"
-                                                                        >
-                                                                            <ImageIcon className="h-4 w-4" />
-                                                                        </Button>
-                                                                    )}
+                                                            <TableRow key={log.id} className="group hover:bg-primary/5 border-border/20 transition-all">
+                                                                <TableCell className="py-4 text-xs font-bold uppercase opacity-60">
+                                                                    {new Date(log.date).toLocaleDateString()}
+                                                                </TableCell>
+                                                                <TableCell className="font-black italic text-base tracking-tight py-4">
+                                                                    {log.mileage.toLocaleString()} mi
+                                                                </TableCell>
+                                                                <TableCell className="text-muted-foreground italic text-xs py-4">
+                                                                    {log.notes || "—"}
                                                                 </TableCell>
                                                             </TableRow>
                                                         ))}
@@ -1155,103 +1278,222 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                                                 </Table>
                                             </div>
                                         )}
-
                                     </div>
                                 </TabsContent>
 
-                                <TabsContent value="alquileres" className="mt-0">
-                                    <div className="space-y-6">
-                                        <div className="flex justify-between items-center">
-                                            <div>
-                                                <h3 className="text-lg font-bold">Calendario y Reservas</h3>
-                                                <p className="text-sm text-muted-foreground">Gestiona la disponibilidad del vehículo</p>
+                                <TabsContent value="mantenimiento" className="mt-0 outline-none">
+                                    <div className="space-y-10">
+                                        <div className="flex justify-between items-end px-2">
+                                            <div className="flex flex-col gap-1">
+                                                <h3 className="text-2xl font-black italic tracking-tight uppercase">Historial de <span className="text-primary">Servicio</span></h3>
+                                                <p className="text-xs text-muted-foreground font-bold uppercase tracking-wider">Log de mantenimientos técnicos</p>
                                             </div>
-                                            <Button variant="outline" size="sm" onClick={() => setIsRentalDialogOpen(true)}>
-                                                <Plus className="h-4 w-4 mr-2" /> Nueva Reserva
+                                            <Button
+                                                variant="outline"
+                                                size="lg"
+                                                className="h-12 border-primary/20 bg-primary/5 hover:bg-primary hover:text-primary-foreground transition-all rounded-xl"
+                                                onClick={() => {
+                                                    setMaintenanceForm(prev => ({ ...prev, current_mileage: vehicle.mileage.toString() }))
+                                                    setIsMaintenanceDialogOpen(true)
+                                                }}
+                                            >
+                                                <Plus className="h-5 w-5 mr-3" /> Registrar Servicio
                                             </Button>
                                         </div>
 
-                                        <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+                                        {maintenanceHistory.length === 0 ? (
+                                            <div className="text-center py-24 glass-card border-dashed border-primary/20 bg-primary/2 group hover:bg-primary/5 transition-colors">
+                                                <div className="bg-primary/10 w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform">
+                                                    <Wrench className="h-10 w-10 text-primary" />
+                                                </div>
+                                                <h3 className="text-xl font-black uppercase tracking-widest mb-2">Sin actividad técnica</h3>
+                                                <p className="text-muted-foreground max-w-sm mx-auto font-medium">Este activo no registra intervenciones mecánicas o preventivas aún.</p>
+                                            </div>
+                                        ) : (
+                                            <div className="glass-card overflow-hidden">
+                                                <Table>
+                                                    <TableHeader className="bg-sidebar-accent/30">
+                                                        <TableRow className="hover:bg-transparent border-border/40">
+                                                            <TableHead className="font-bold uppercase text-[10px] tracking-widest py-4">Fecha</TableHead>
+                                                            <TableHead className="font-bold uppercase text-[10px] tracking-widest py-4">Tipo de Servicio</TableHead>
+                                                            <TableHead className="font-bold uppercase text-[10px] tracking-widest py-4">Carga Operativa</TableHead>
+                                                            <TableHead className="font-bold uppercase text-[10px] tracking-widest py-4">Inversión</TableHead>
+                                                            <TableHead className="text-right font-bold uppercase text-[10px] tracking-widest py-4 px-6">Acciones</TableHead>
+                                                        </TableRow>
+                                                    </TableHeader>
+                                                    <TableBody>
+                                                        {maintenanceHistory.map((record) => (
+                                                            <TableRow key={record.id} className="group hover:bg-primary/5 border-border/20 transition-all">
+                                                                <TableCell className="py-5 text-xs font-bold uppercase opacity-60">
+                                                                    {new Date(record.date).toLocaleDateString()}
+                                                                </TableCell>
+                                                                <TableCell className="py-5">
+                                                                    <div className="flex flex-col">
+                                                                        <span className="font-black italic text-sm tracking-tight group-hover:text-primary transition-colors uppercase">
+                                                                            {record.service_type}
+                                                                        </span>
+                                                                        <span className="text-[10px] font-bold text-muted-foreground tracking-widest opacity-60 truncate max-w-[200px]">
+                                                                            {record.display_notes || record.notes || "Servicio estándar sin incidencias"}
+                                                                        </span>
+                                                                    </div>
+                                                                </TableCell>
+                                                                <TableCell className="py-5">
+                                                                    <div className="flex flex-col">
+                                                                        <span className="font-black italic text-sm tracking-tighter opacity-80 uppercase text-primary">
+                                                                            {record.mileage_at_service?.toLocaleString() || "-"} MI
+                                                                        </span>
+                                                                        {record.next_service_mileage && (
+                                                                            <span className="text-[9px] font-black text-muted-foreground uppercase tracking-tighter">Next @ {record.next_service_mileage.toLocaleString()}</span>
+                                                                        )}
+                                                                    </div>
+                                                                </TableCell>
+                                                                <TableCell className="py-5">
+                                                                    <span className="font-black italic text-sm tracking-tighter text-glow text-primary">${record.cost?.toLocaleString()}</span>
+                                                                </TableCell>
+                                                                <TableCell className="text-right px-6 py-5">
+                                                                    <div className="flex justify-end gap-2">
+                                                                        {record.receipt_images && record.receipt_images.length > 0 && (
+                                                                            <Button
+                                                                                variant="ghost"
+                                                                                size="icon"
+                                                                                className="h-9 w-9 rounded-xl bg-primary/5 text-primary hover:bg-primary hover:text-primary-foreground transition-all"
+                                                                                onClick={() => window.open(record.receipt_images![0], '_blank')}
+                                                                            >
+                                                                                <FileText className="h-4 w-4" />
+                                                                            </Button>
+                                                                        )}
+                                                                        <Button
+                                                                            variant="ghost"
+                                                                            size="icon"
+                                                                            className="h-9 w-9 rounded-xl hover:bg-red-500/10 hover:text-red-500 transition-colors"
+                                                                            onClick={() => handleDeleteMaintenance(record.id)}
+                                                                        >
+                                                                            <Trash2 className="h-4 w-4" />
+                                                                        </Button>
+                                                                    </div>
+                                                                </TableCell>
+                                                            </TableRow>
+                                                        ))}
+                                                    </TableBody>
+                                                </Table>
+                                            </div>
+                                        )}
+                                    </div>
+                                </TabsContent>
+
+                                <TabsContent value="alquileres" className="mt-0 outline-none">
+                                    <div className="space-y-10">
+                                        <div className="flex justify-between items-end px-2">
+                                            <div className="flex flex-col gap-1">
+                                                <h3 className="text-2xl font-black italic tracking-tight uppercase">Calendario <span className="text-primary">& Operaciones</span></h3>
+                                                <p className="text-xs text-muted-foreground font-bold uppercase tracking-wider">Flujo de reservas y disponibilidad</p>
+                                            </div>
+                                            <Button
+                                                variant="outline"
+                                                size="lg"
+                                                className="h-12 border-primary/20 bg-primary/5 hover:bg-primary hover:text-primary-foreground transition-all rounded-xl shadow-lg shadow-primary/5"
+                                                onClick={() => setIsRentalDialogOpen(true)}
+                                            >
+                                                <Plus className="h-5 w-5 mr-3" /> Nueva Reserva
+                                            </Button>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
                                             {/* CALENDAR VIEW */}
                                             <div className="md:col-span-12 lg:col-span-5">
-                                                <div className="border rounded-xl p-6 bg-white dark:bg-slate-900 shadow-sm">
-                                                    <h4 className="font-medium mb-6 flex items-center gap-2 text-lg">
-                                                        <CalendarDays className="h-5 w-5 text-blue-500" /> Disponibilidad
+                                                <div className="glass-card p-8 bg-gradient-to-b from-primary/5 to-transparent relative overflow-hidden group border-border/40">
+                                                    <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-3xl -mr-16 -mt-16" />
+                                                    <h4 className="font-black italic uppercase tracking-tighter mb-8 flex items-center gap-3 text-lg">
+                                                        <CalendarDays className="h-5 w-5 text-primary" /> Disponibilidad Real
                                                     </h4>
-                                                    <div className="flex justify-center bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4">
+                                                    <div className="flex justify-center bg-sidebar-accent/20 rounded-2xl p-6 border border-border/20 backdrop-blur-sm">
                                                         <Calendar
                                                             mode="single"
-                                                            // We use the 'modifiers' prop to highlight booked dates
                                                             modifiers={{ booked: getBookedDates() }}
                                                             modifiersStyles={{
-                                                                booked: { backgroundColor: '#3b82f6', color: 'white', fontWeight: 'bold', borderRadius: '8px' }
+                                                                booked: { backgroundColor: 'oklch(0.8 0.18 185)', color: 'white', fontWeight: '900', borderRadius: '12px' }
                                                             }}
                                                             locale={es}
-                                                            className="rounded-md border-0 [--cell-size:48px] scale-105"
+                                                            className="rounded-md border-0 [--cell-size:44px]"
                                                         />
                                                     </div>
-                                                    <div className="mt-6 flex gap-6 text-sm justify-center text-muted-foreground">
-                                                        <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-blue-500"></div> Alquilado</div>
-                                                        <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-slate-200"></div> Disponible</div>
+                                                    <div className="mt-8 flex gap-8 text-[10px] font-black uppercase tracking-widest justify-center">
+                                                        <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-primary shadow-[0_0_8px_oklch(0.8_0.18_185)]"></div> Ocupado</div>
+                                                        <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-border/40"></div> Disponible</div>
                                                     </div>
                                                 </div>
                                             </div>
 
                                             {/* HISTORY LIST */}
-                                            <div className="md:col-span-12 lg:col-span-7 space-y-4">
-                                                <div className="flex items-center justify-between">
-                                                    <h4 className="font-semibold text-sm text-slate-500 uppercase tracking-wider">Historial de Alquileres</h4>
+                                            <div className="md:col-span-12 lg:col-span-7 space-y-6">
+                                                <div className="flex items-center gap-2 px-2">
+                                                    <div className="h-1 w-6 bg-primary rounded-full"></div>
+                                                    <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground italic">Historial Operativo</h4>
                                                 </div>
 
                                                 {rentalHistory.length === 0 ? (
-                                                    <div className="text-center py-16 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50/50 dark:bg-slate-900/20">
-                                                        <div className="bg-slate-100 dark:bg-slate-800 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                                                            <CalendarDays className="h-8 w-8 text-slate-400" />
+                                                    <div className="text-center py-24 glass-card border-dashed border-primary/20 bg-primary/2 group hover:bg-primary/5 transition-colors border-border/40">
+                                                        <div className="bg-primary/10 w-20 h-20 rounded-3xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform">
+                                                            <CalendarDays className="h-10 w-10 text-primary" />
                                                         </div>
-                                                        <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-1">Sin alquileres</h3>
-                                                        <p className="text-slate-500 mb-6">No hay registros de reservas aún.</p>
-                                                        <Button variant="outline" onClick={() => setIsRentalDialogOpen(true)}>Crear Primera Reserva</Button>
+                                                        <h3 className="text-xl font-black uppercase tracking-widest mb-2">Activo en Reposo</h3>
+                                                        <p className="text-muted-foreground max-w-sm mx-auto font-medium mb-10 text-sm">No se han detectado reservas en el sistema para esta unidad.</p>
+                                                        <Button
+                                                            variant="outline"
+                                                            onClick={() => setIsRentalDialogOpen(true)}
+                                                            className="rounded-xl font-black uppercase text-[10px] tracking-widest border-primary/20 hover:bg-primary hover:text-white h-11 px-8"
+                                                        >
+                                                            Registrar Evento
+                                                        </Button>
                                                     </div>
                                                 ) : (
-                                                    <div className="border rounded-xl overflow-hidden shadow-sm bg-white dark:bg-slate-900">
+                                                    <div className="glass-card overflow-hidden border-border/40">
                                                         <Table>
-                                                            <TableHeader>
-                                                                <TableRow className="bg-slate-50/50 dark:bg-slate-800/50">
-                                                                    <TableHead>Cliente</TableHead>
-                                                                    <TableHead>Fechas</TableHead>
-                                                                    <TableHead>Plataforma</TableHead>
-                                                                    <TableHead>Estado</TableHead>
-                                                                    <TableHead className="text-right">Total</TableHead>
+                                                            <TableHeader className="bg-sidebar-accent/30">
+                                                                <TableRow className="hover:bg-transparent border-border/40">
+                                                                    <TableHead className="font-bold uppercase text-[10px] tracking-widest py-4">Cliente</TableHead>
+                                                                    <TableHead className="font-bold uppercase text-[10px] tracking-widest py-4">Período</TableHead>
+                                                                    <TableHead className="font-bold uppercase text-[10px] tracking-widest py-4">Estado</TableHead>
+                                                                    <TableHead className="text-right font-bold uppercase text-[10px] tracking-widest py-4 px-6">Ingreso</TableHead>
                                                                 </TableRow>
                                                             </TableHeader>
                                                             <TableBody>
                                                                 {rentalHistory.map((rental) => (
-                                                                    <TableRow key={rental.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30">
-                                                                        <TableCell className="font-medium">{rental.customer_name || 'Cliente'}</TableCell>
-                                                                        <TableCell className="text-sm">
+                                                                    <TableRow key={rental.id} className="group hover:bg-primary/5 border-border/20 transition-all">
+                                                                        <TableCell className="py-5">
                                                                             <div className="flex flex-col">
-                                                                                <span className="font-medium text-slate-900 dark:text-slate-200">
-                                                                                    {new Date(rental.start_date).toLocaleDateString()}
+                                                                                <span className="font-black italic text-sm tracking-tight group-hover:text-primary transition-colors uppercase">
+                                                                                    {rental.customer_name || 'Generic Client'}
                                                                                 </span>
-                                                                                <span className="text-xs text-muted-foreground whitespace-nowrap italic">
-                                                                                    hasta {new Date(rental.end_date).toLocaleDateString()}
+                                                                                <span className="text-[9px] font-bold text-muted-foreground tracking-widest opacity-60 uppercase">
+                                                                                    Platform: {rental.platform || 'Direct'}
                                                                                 </span>
                                                                             </div>
                                                                         </TableCell>
-                                                                        <TableCell>
-                                                                            <Badge variant="secondary" className="font-normal capitalize px-2">{rental.platform || 'Manual'}</Badge>
+                                                                        <TableCell className="py-5">
+                                                                            <div className="flex flex-col">
+                                                                                <span className="text-xs font-bold uppercase opacity-80">
+                                                                                    {new Date(rental.start_date).toLocaleDateString()}
+                                                                                </span>
+                                                                                <span className="text-[9px] font-bold text-primary/60 italic tracking-tighter uppercase whitespace-nowrap">
+                                                                                    → {new Date(rental.end_date).toLocaleDateString()}
+                                                                                </span>
+                                                                            </div>
                                                                         </TableCell>
-                                                                        <TableCell>
-                                                                            <Badge variant="outline" className={`
-                                                                                ${rental.status === 'confirmed' ? 'border-emerald-500 text-emerald-600 bg-emerald-50' : ''}
-                                                                                ${rental.status === 'completed' ? 'border-blue-500 text-blue-600 bg-blue-50' : ''}
-                                                                                ${rental.status === 'cancelled' ? 'border-slate-300 text-slate-500 bg-slate-50' : ''}
+                                                                        <TableCell className="py-5">
+                                                                            <Badge className={`
+                                                                                uppercase text-[9px] font-black tracking-widest px-2 py-0.5 rounded-md shadow-sm border-0
+                                                                                ${rental.status === 'confirmed' ? 'bg-emerald-500/10 text-emerald-500' : ''}
+                                                                                ${rental.status === 'completed' ? 'bg-primary/10 text-primary' : ''}
+                                                                                ${rental.status === 'cancelled' ? 'bg-slate-500/10 text-slate-500' : ''}
                                                                             `}>
-                                                                                {rental.status === 'confirmed' ? 'Confirmado' : rental.status === 'completed' ? 'Completado' : 'Cancelado'}
+                                                                                {rental.status === 'confirmed' ? 'Activo' : rental.status === 'completed' ? 'Finalizado' : 'Baja'}
                                                                             </Badge>
                                                                         </TableCell>
-                                                                        <TableCell className="text-right font-bold text-slate-900 dark:text-white">
-                                                                            ${rental.total_amount?.toLocaleString() || '0'}
+                                                                        <TableCell className="text-right py-5 px-6">
+                                                                            <span className="font-black italic text-sm tracking-tighter text-glow text-primary">
+                                                                                ${rental.total_amount?.toLocaleString() || '0'}
+                                                                            </span>
                                                                         </TableCell>
                                                                     </TableRow>
                                                                 ))}
@@ -1264,14 +1506,14 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                                     </div>
                                 </TabsContent>
 
-                                <TabsContent value="documentos" className="mt-0">
-                                    <div className="space-y-6">
-                                        <div className="flex justify-between items-center">
-                                            <div>
-                                                <h3 className="text-lg font-bold">Documentación</h3>
-                                                <p className="text-sm text-muted-foreground">Seguros, registros y otros archivos</p>
+                                <TabsContent value="documentos" className="mt-0 outline-none">
+                                    <div className="space-y-10">
+                                        <div className="flex justify-between items-end px-2">
+                                            <div className="flex flex-col gap-1">
+                                                <h3 className="text-2xl font-black italic tracking-tight uppercase">Bóveda de <span className="text-primary">Documentos</span></h3>
+                                                <p className="text-xs text-muted-foreground font-bold uppercase tracking-wider">Cumplimiento y registros legales</p>
                                             </div>
-                                            <div className="flex gap-2">
+                                            <div className="flex gap-4">
                                                 <input
                                                     type="file"
                                                     id="document-upload"
@@ -1282,87 +1524,100 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                                                 />
                                                 <Button
                                                     variant="outline"
-                                                    size="sm"
+                                                    size="lg"
+                                                    className="h-12 border-primary/20 bg-primary/5 hover:bg-primary hover:text-primary-foreground transition-all rounded-xl shadow-lg shadow-primary/5 px-8"
                                                     onClick={() => document.getElementById('document-upload')?.click()}
                                                     disabled={isUploadingDocument}
-                                                    className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800"
                                                 >
                                                     {isUploadingDocument ? (
-                                                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                                        <Loader2 className="h-5 w-5 mr-3 animate-spin" />
                                                     ) : (
-                                                        <Plus className="h-4 w-4 mr-2" />
+                                                        <Plus className="h-5 w-5 mr-3" />
                                                     )}
-                                                    Subir Documentos
+                                                    Subir Archivos
                                                 </Button>
                                             </div>
                                         </div>
 
                                         {documentsList.length === 0 ? (
-                                            <div className="text-center py-20 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl bg-slate-50/50 dark:bg-slate-900/20">
-                                                <div className="bg-slate-100 dark:bg-slate-800 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
-                                                    <FileText className="h-10 w-10 text-slate-400" />
+                                            <div className="text-center py-24 glass-card border-dashed border-primary/20 bg-primary/2 group hover:bg-primary/5 transition-colors border-border/40">
+                                                <div className="bg-primary/10 w-24 h-24 rounded-[2rem] flex items-center justify-center mx-auto mb-8 group-hover:scale-110 transition-transform shadow-inner border border-primary/20">
+                                                    <FileText className="h-12 w-12 text-primary" />
                                                 </div>
-                                                <h3 className="text-xl font-semibold text-slate-900 dark:text-white mb-2">Carpeta vacía</h3>
-                                                <p className="text-slate-500 mb-8 max-w-xs mx-auto text-sm">No hay documentos cargados. Puedes subir PDFs o imágenes de seguros, títulos, etc.</p>
-                                                <Button variant="outline" onClick={() => document.getElementById('document-upload')?.click()}>
-                                                    Comenzar a subir
+                                                <h3 className="text-2xl font-black uppercase tracking-tighter mb-2">Bóveda Vacía</h3>
+                                                <p className="text-muted-foreground max-w-sm mx-auto font-medium mb-12 text-sm">No se han sincronizado registros legales. Almacena seguros, títulos o contratos en este espacio seguro.</p>
+                                                <Button
+                                                    onClick={() => document.getElementById('document-upload')?.click()}
+                                                    className="h-12 px-10 rounded-xl font-black tracking-widest text-[10px] uppercase shadow-2xl shadow-primary/20"
+                                                >
+                                                    Iniciar Sincronización
                                                 </Button>
                                             </div>
                                         ) : (
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                                                 {documentsList.map((doc) => (
                                                     <div
                                                         key={doc.id}
-                                                        className="group relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 hover:shadow-xl hover:border-blue-400 dark:hover:border-blue-500 transition-all duration-300 cursor-pointer"
+                                                        className="group relative glass-card p-6 hover:shadow-2xl hover:border-primary/40 transition-all duration-500 cursor-pointer overflow-hidden border-border/40"
                                                         onClick={() => setSelectedDocument(doc)}
                                                     >
-                                                        <div className="flex items-center gap-4">
-                                                            <div className={`w-20 h-20 rounded-xl overflow-hidden flex-shrink-0 flex items-center justify-center border border-slate-100 dark:border-slate-800 ${doc.file_url.toLowerCase().endsWith('.pdf') || doc.category?.toLowerCase() === 'pdf'
-                                                                ? 'bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400'
-                                                                : 'bg-slate-50 text-blue-600 dark:bg-slate-800/50 dark:text-blue-400'
-                                                                }`}>
-                                                                {!(doc.file_url.toLowerCase().endsWith('.pdf') || doc.category?.toLowerCase() === 'pdf') ? (
-                                                                    <img
-                                                                        src={doc.file_url}
-                                                                        alt={doc.title}
-                                                                        className="w-full h-full object-cover"
-                                                                    />
-                                                                ) : (
-                                                                    <FileText className="h-8 w-8" />
-                                                                )}
-                                                            </div>
-                                                            <div className="flex-1 min-w-0">
-                                                                <p className="font-bold text-slate-800 dark:text-white truncate group-hover:text-blue-600 transition-colors">
-                                                                    {doc.title}
-                                                                </p>
-                                                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
-                                                                    {doc.type.replace('_', ' ')} | {doc.category || 'FILE'}
-                                                                </p>
-                                                                <p className="text-xs text-slate-400 mt-2 flex items-center gap-1 font-medium">
-                                                                    <CalendarDays className="h-3.5 w-3.5" />
-                                                                    {new Date(doc.created_at).toLocaleDateString()}
-                                                                </p>
+                                                        <div className="absolute top-0 right-0 w-16 h-16 bg-primary/5 rounded-bl-[2.5rem] flex items-center justify-center group-hover:bg-primary/10 transition-colors">
+                                                            <div className="mt-[-8px] mr-[-8px]">
+                                                                <FileBadge className="h-4 w-4 text-primary opacity-40 group-hover:opacity-100 transition-opacity" />
                                                             </div>
                                                         </div>
 
-                                                        {/* Acciones Rápidas */}
+                                                        <div className="flex flex-col gap-4">
+                                                            <div className={`w-full h-44 rounded-2xl flex items-center justify-center border shadow-2xl overflow-hidden transition-transform duration-500 group-hover:scale-[1.02] ${doc.file_url.toLowerCase().endsWith('.pdf') || doc.category?.toLowerCase() === 'pdf'
+                                                                ? 'bg-red-500/5 text-red-500 border-red-500/10'
+                                                                : 'bg-primary/5 text-primary border-primary/10'
+                                                                }`}>
+                                                                {doc.file_url.toLowerCase().endsWith('.pdf') || doc.category?.toLowerCase() === 'pdf' ? (
+                                                                    <div className="flex flex-col items-center gap-2">
+                                                                        <FileText className="h-12 w-12 opacity-40" />
+                                                                        <span className="text-[10px] font-black uppercase tracking-[0.2em] opacity-40">Vista PDF</span>
+                                                                    </div>
+                                                                ) : (
+                                                                    <img
+                                                                        src={doc.file_url}
+                                                                        alt={doc.title}
+                                                                        className="w-full h-full object-cover transition-all duration-700 group-hover:scale-110"
+                                                                        onError={(e) => {
+                                                                            (e.target as HTMLImageElement).style.display = 'none';
+                                                                            (e.target as HTMLImageElement).parentElement?.insertAdjacentHTML('beforeend', '<div class="flex flex-col items-center gap-2 opacity-20"><svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-image"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg><span class="text-[8px] font-black uppercase tracking-widest">Error de Carga</span></div>');
+                                                                        }}
+                                                                    />
+                                                                )}
+                                                            </div>
+                                                            <div className="space-y-1">
+                                                                <h4 className="font-black italic text-sm tracking-tight truncate group-hover:text-primary transition-colors uppercase">
+                                                                    {doc.title}
+                                                                </h4>
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="text-[10px] font-bold text-muted-foreground tracking-widest uppercase opacity-60">
+                                                                        {doc.type.replace('_', ' ')}
+                                                                    </span>
+                                                                    <div className="w-1 h-1 rounded-full bg-border" />
+                                                                    <span className="text-[8px] font-bold text-primary/60 uppercase tracking-tighter">
+                                                                        {(doc as any).category || 'FILE'}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="absolute inset-x-0 bottom-0 h-1.5 bg-border/20">
+                                                            <div className="h-full bg-primary/40 w-0 group-hover:w-full transition-all duration-1000" />
+                                                        </div>
+
                                                         <div className="absolute top-4 right-4 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                                             <Button
                                                                 variant="ghost"
                                                                 size="icon"
-                                                                className="h-8 w-8 rounded-full bg-white/90 dark:bg-slate-800/90 shadow-sm text-slate-600 hover:text-blue-600"
+                                                                className="h-8 w-8 rounded-lg bg-background/80 backdrop-blur-sm shadow-sm hover:text-red-500 transition-colors"
                                                                 onClick={(e) => {
                                                                     e.stopPropagation()
-                                                                    setSelectedDocument(doc)
+                                                                    handleDeleteDocument(doc.id, e)
                                                                 }}
-                                                            >
-                                                                <Eye className="h-4 w-4" />
-                                                            </Button>
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="icon"
-                                                                className="h-8 w-8 rounded-full bg-white/90 dark:bg-slate-800/90 shadow-sm text-red-600 hover:bg-red-50"
-                                                                onClick={(e) => handleDeleteDocument(doc.id, e)}
                                                             >
                                                                 <Trash2 className="h-4 w-4" />
                                                             </Button>
@@ -1373,16 +1628,15 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                                         )}
                                     </div>
                                 </TabsContent>
-                            </div >
-                        </Tabs >
+                            </div>
+                        </Tabs>
+                    </div>
+                </div>
+            </div>
 
-
-                    </div >
-                </div >
-            </div >
 
             {/* CHECK-IN DIALOG */}
-            < Dialog open={isCheckInDialogOpen} onOpenChange={setIsCheckInDialogOpen} >
+            <Dialog open={isCheckInDialogOpen} onOpenChange={setIsCheckInDialogOpen}>
                 <DialogContent className="sm:max-w-[450px]">
                     <div className="space-y-6">
                         <div>
@@ -1488,47 +1742,53 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
             </Dialog >
 
             {/* MAINTENANCE DIALOG */}
-            < Dialog open={isMaintenanceDialogOpen} onOpenChange={setIsMaintenanceDialogOpen} >
-                <DialogContent className="sm:max-w-[500px]">
-                    <div className="space-y-6">
-                        <div>
-                            <div className="mx-auto bg-orange-100 dark:bg-orange-900/30 w-12 h-12 rounded-full flex items-center justify-center mb-4">
-                                <Wrench className="h-6 w-6 text-orange-600 dark:text-orange-400" />
+            <Dialog open={isMaintenanceDialogOpen} onOpenChange={setIsMaintenanceDialogOpen}>
+                <DialogContent className="sm:max-w-[600px] p-0 overflow-hidden border-0 bg-transparent shadow-none">
+                    <div className="bg-slate-50 dark:bg-slate-950/95 border border-primary/20 flex flex-col max-h-[90vh] rounded-[2.5rem] shadow-[0_0_50px_rgba(0,0,0,0.5)]">
+                        {/* Header Premium */}
+                        <div className="relative px-8 py-10 overflow-hidden flex-shrink-0">
+                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary to-transparent opacity-50" />
+                            <div className="relative z-10 flex flex-col items-center text-center">
+                                <div className="h-16 w-16 rounded-2xl cyber-gradient flex items-center justify-center text-primary-foreground shadow-2xl shadow-primary/40 mb-6 rotate-3">
+                                    <Wrench className="h-8 w-8" />
+                                </div>
+                                <h2 className="text-3xl font-black italic tracking-tighter uppercase leading-none mb-3 text-slate-900 dark:text-white">
+                                    Nuevo <span className="text-primary text-glow font-black">Registro</span> Técnico
+                                </h2>
+                                <p className="text-[11px] font-black text-primary/60 uppercase tracking-[0.3em]">
+                                    Unidad ID: {vehicle.license_plate || vehicle.id.slice(0, 8)}
+                                </p>
                             </div>
-                            <h2 className="text-xl font-bold text-center">Registrar Mantenimiento</h2>
-                            <p className="text-muted-foreground text-sm text-center mt-1">
-                                Detalla el servicio realizado al vehículo.
-                            </p>
                         </div>
 
-                        <div className="grid gap-4">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <Label>Tipo de Servicio</Label>
+                        {/* Form Content */}
+                        <div className="px-10 py-2 space-y-8 overflow-y-auto flex-1 custom-scrollbar">
+                            <div className="grid grid-cols-2 gap-8">
+                                <div className="space-y-3">
+                                    <Label className="text-[11px] font-black uppercase tracking-widest text-primary">Tipo de Servicio</Label>
                                     <Select
                                         value={maintenanceForm.service_type}
                                         onValueChange={(val) => setMaintenanceForm(prev => ({ ...prev, service_type: val }))}
                                     >
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Seleccionar..." />
+                                        <SelectTrigger className="h-12 bg-slate-200/50 dark:bg-primary/5 border-primary/20 rounded-xl font-bold uppercase text-[11px] tracking-widest hover:bg-primary/10 transition-colors">
+                                            <SelectValue placeholder="SELECCIONAR..." />
                                         </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="Cambio de Aceite y Filtro">Cambio de Aceite y Filtro</SelectItem>
-                                            <SelectItem value="Cambio de Neumáticos">Cambio de Neumáticos</SelectItem>
-                                            <SelectItem value="Filtro de Aire">Filtro de Aire</SelectItem>
-                                            <SelectItem value="Filtro de Cabina">Filtro de Cabina</SelectItem>
-                                            <SelectItem value="Aceite de Transmisión">Aceite de Transmisión</SelectItem>
-                                            <SelectItem value="Frenos">Frenos</SelectItem>
-                                            <SelectItem value="Batería">Batería</SelectItem>
-                                            <SelectItem value="Alineación y Balanceo">Alineación y Balanceo</SelectItem>
-                                            <SelectItem value="Otro">Otro (Extraordinario)</SelectItem>
+                                        <SelectContent className="z-[600] bg-white dark:bg-slate-900 border-primary/20 shadow-2xl">
+                                            <SelectItem value="Cambio de Aceite y Filtro">ACEITE & FILTRO</SelectItem>
+                                            <SelectItem value="Cambio de Neumáticos">NEUMÁTICOS</SelectItem>
+                                            <SelectItem value="Filtro de Aire">FILTRO DE AIRE</SelectItem>
+                                            <SelectItem value="Frenos">SISTEMA DE FRENOS</SelectItem>
+                                            <SelectItem value="Batería">BATERÍA / ELÉCTRICO</SelectItem>
+                                            <SelectItem value="Alineación y Balanceo">ALINEACIÓN</SelectItem>
+                                            <SelectItem value="Otro">OTRO SERVICIO</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
-                                <div className="space-y-2">
-                                    <Label>Fecha</Label>
+                                <div className="space-y-3">
+                                    <Label className="text-[11px] font-black uppercase tracking-widest text-primary">Fecha del Evento</Label>
                                     <Input
                                         type="date"
+                                        className="h-12 bg-slate-200/50 dark:bg-primary/5 border-primary/20 rounded-xl font-bold text-sm"
                                         value={maintenanceForm.date}
                                         onChange={(e) => setMaintenanceForm(prev => ({ ...prev, date: e.target.value }))}
                                     />
@@ -1536,116 +1796,161 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                             </div>
 
                             {maintenanceForm.service_type === "Otro" && (
-                                <div className="space-y-2">
-                                    <Label>Especifique el servicio</Label>
+                                <div className="space-y-3 animate-in fade-in slide-in-from-top-2">
+                                    <Label className="text-[11px] font-black uppercase tracking-widest text-primary">Especificación Técnica</Label>
                                     <Input
-                                        placeholder="Ej: Cambio de radiador..."
+                                        placeholder="EJ: REPARACIÓN DE TRANSMISIÓN..."
+                                        className="h-12 bg-slate-200/50 dark:bg-primary/5 border-primary/20 rounded-xl font-bold uppercase text-[11px] tracking-widest"
                                         value={maintenanceForm.custom_service_type}
                                         onChange={(e) => setMaintenanceForm(prev => ({ ...prev, custom_service_type: e.target.value }))}
                                     />
                                 </div>
                             )}
 
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <Label>Costo ($)</Label>
-                                    <div className="relative">
-                                        <DollarSign className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                            <div className="grid grid-cols-2 gap-8">
+                                <div className="space-y-3">
+                                    <Label className="text-[11px] font-black uppercase tracking-widest text-primary">Inversión ($)</Label>
+                                    <div className="relative group">
+                                        <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-primary group-hover:scale-110 transition-transform" />
                                         <Input
                                             type="number"
-                                            className="pl-9"
+                                            className="h-12 pl-12 bg-slate-200/50 dark:bg-primary/5 border-primary/20 rounded-xl font-black italic text-xl tracking-tighter"
                                             placeholder="0.00"
                                             value={maintenanceForm.cost}
                                             onChange={(e) => setMaintenanceForm(prev => ({ ...prev, cost: e.target.value }))}
                                         />
                                     </div>
                                 </div>
-                                <div className="space-y-2">
-                                    <Label>Millaje Actual</Label>
-                                    <Input
-                                        type="number"
-                                        placeholder="Ej: 50000"
-                                        value={maintenanceForm.current_mileage}
-                                        onChange={(e) => setMaintenanceForm(prev => ({ ...prev, current_mileage: e.target.value }))}
-                                    />
+                                <div className="space-y-3">
+                                    <Label className="text-[11px] font-black uppercase tracking-widest text-primary">Kilometraje (MI)</Label>
+                                    <div className="relative group">
+                                        <Gauge className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-primary group-hover:scale-110 transition-transform" />
+                                        <Input
+                                            type="number"
+                                            className="h-12 pl-12 bg-slate-200/50 dark:bg-primary/5 border-primary/20 rounded-xl font-black italic text-xl tracking-tighter"
+                                            placeholder="50000"
+                                            value={maintenanceForm.current_mileage}
+                                            onChange={(e) => setMaintenanceForm(prev => ({ ...prev, current_mileage: e.target.value }))}
+                                        />
+                                    </div>
                                 </div>
                             </div>
 
-                            <div className="space-y-2">
-                                <Label>Próximo Servicio (Millas)</Label>
-                                <div className="flex gap-2">
+                            <div className="space-y-3 p-6 rounded-2xl bg-primary/5 border border-primary/10 relative overflow-hidden group">
+                                <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-3xl -mr-16 -mt-16" />
+                                <div className="relative z-10">
+                                    <div className="flex justify-between items-center mb-4">
+                                        <Label className="text-[11px] font-black uppercase tracking-widest text-primary">Próxima Alerta (Millas)</Label>
+                                        <Button
+                                            variant="ghost"
+                                            type="button"
+                                            size="sm"
+                                            onClick={() => {
+                                                const current = parseInt(maintenanceForm.current_mileage || "0")
+                                                if (current > 0) {
+                                                    setMaintenanceForm(prev => ({ ...prev, next_service_mileage: (current + 5000).toString() }))
+                                                } else {
+                                                    toast.warning("Ingrese millaje actual")
+                                                }
+                                            }}
+                                            className="h-8 px-4 bg-primary text-white hover:bg-primary/80 rounded-lg font-black uppercase text-[10px] tracking-widest transition-all shadow-lg shadow-primary/20"
+                                        >
+                                            +5K MI Sugerido
+                                        </Button>
+                                    </div>
                                     <Input
                                         type="number"
-                                        placeholder="Ej: 55000"
+                                        className="h-12 bg-transparent border-primary/20 rounded-xl font-black italic text-lg tracking-tighter text-glow"
+                                        placeholder="55000"
                                         value={maintenanceForm.next_service_mileage}
                                         onChange={(e) => setMaintenanceForm(prev => ({ ...prev, next_service_mileage: e.target.value }))}
                                     />
-                                    <Button
-                                        variant="outline"
-                                        type="button"
-                                        onClick={() => {
-                                            const current = parseInt(maintenanceForm.current_mileage || "0")
-                                            if (current > 0) {
-                                                setMaintenanceForm(prev => ({ ...prev, next_service_mileage: (current + 5000).toString() }))
-                                            } else {
-                                                toast.warning("Ingrese millaje actual primero")
-                                            }
-                                        }}
-                                    >
-                                        +5k
-                                    </Button>
                                 </div>
-                                <p className="text-xs text-muted-foreground">Opcional. Indica cuándo debe realizarse el próximo mantenimiento.</p>
                             </div>
 
-                            <div className="space-y-2">
-                                <Label>Notas Adicionales</Label>
+                            <div className="space-y-3">
+                                <Label className="text-[11px] font-black uppercase tracking-widest text-primary">Notas del Servicio</Label>
                                 <Textarea
-                                    placeholder="Detalles sobre marcas, repuestos usados..."
+                                    placeholder="DETALLES TÉCNICOS, MARCAS DE REPUESTOS, DIAGNÓSTICO..."
+                                    className="min-h-[100px] bg-slate-200/50 dark:bg-primary/5 border-primary/20 rounded-xl font-bold text-sm p-4 resize-none focus:bg-primary/10 transition-all uppercase placeholder:text-[10px] placeholder:tracking-widest"
                                     value={maintenanceForm.notes}
                                     onChange={(e) => setMaintenanceForm(prev => ({ ...prev, notes: e.target.value }))}
                                 />
                             </div>
 
-                            <div className="space-y-2">
-                                <Label htmlFor="receipt">Foto de Comprobante / Recibo</Label>
-                                <div className="mt-1 flex items-center gap-4">
+                            <div className="space-y-4">
+                                <Label className="text-[11px] font-black uppercase tracking-widest text-primary">Evidencia Fotográfica (FACTURA/RECIBO)</Label>
+                                <div
+                                    className="relative h-24 border-2 border-dashed border-primary/20 rounded-2xl flex items-center justify-center bg-primary/2 hover:bg-primary/5 hover:border-primary/40 transition-all cursor-pointer group"
+                                    onClick={() => document.getElementById('receipt')?.click()}
+                                >
                                     <Input
                                         id="receipt"
                                         type="file"
                                         accept="image/*,.pdf"
                                         onChange={(e) => setMaintenanceReceipt(e.target.files?.[0] || null)}
-                                        className="cursor-pointer"
+                                        className="hidden"
                                     />
-                                    {maintenanceReceipt && (
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            className="text-red-500 hover:text-red-600 px-2"
-                                            onClick={() => {
-                                                setMaintenanceReceipt(null)
-                                                const input = document.getElementById('receipt') as HTMLInputElement
-                                                if (input) input.value = ''
-                                            }}
-                                        >
-                                            Quitar
-                                        </Button>
-                                    )}
+                                    <div className="flex flex-col items-center">
+                                        {maintenanceReceipt ? (
+                                            <div className="flex items-center gap-3">
+                                                <div className="h-10 w-10 flex items-center justify-center bg-emerald-500/10 text-emerald-500 rounded-lg">
+                                                    <FileText className="h-5 w-5" />
+                                                </div>
+                                                <div className="flex flex-col">
+                                                    <span className="text-[10px] font-black uppercase tracking-tighter max-w-[200px] truncate">{maintenanceReceipt.name}</span>
+                                                    <span className="text-[9px] text-emerald-500 font-bold uppercase tracking-widest">Listo para subir</span>
+                                                </div>
+                                                <Button
+                                                    size="icon"
+                                                    variant="ghost"
+                                                    className="h-8 w-8 text-red-500 hover:bg-red-500/10"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setMaintenanceReceipt(null);
+                                                    }}
+                                                >
+                                                    <X className="h-4 w-4" />
+                                                </Button>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <Upload className="h-6 w-6 text-primary/40 group-hover:text-primary transition-colors mb-2" />
+                                                <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Click para adjuntar archivo</span>
+                                            </>
+                                        )}
+                                    </div>
                                 </div>
-                                <p className="text-[10px] text-muted-foreground">Opcional. Sube una foto o PDF de la factura.</p>
                             </div>
                         </div>
 
-                        <div className="flex justify-end gap-3 pt-2">
-                            <Button variant="outline" onClick={() => setIsMaintenanceDialogOpen(false)}>Cancelar</Button>
-                            <Button onClick={handleSaveMaintenance} disabled={isSaving}>
-                                {isSaving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
-                                Registrar Mantenimiento
+                        {/* Footer Buttons */}
+                        <div className="p-8 bg-black/5 flex-shrink-0 flex gap-4">
+                            <Button
+                                variant="ghost"
+                                onClick={() => setIsMaintenanceDialogOpen(false)}
+                                className="flex-1 h-14 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-primary/5"
+                            >
+                                Cancelar
+                            </Button>
+                            <Button
+                                onClick={handleSaveMaintenance}
+                                disabled={isSaving}
+                                className="flex-[2] h-14 rounded-2xl bg-primary text-primary-foreground font-black uppercase text-[10px] tracking-widest shadow-2xl shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                            >
+                                {isSaving ? (
+                                    <Loader2 className="h-5 w-5 animate-spin" />
+                                ) : (
+                                    <>
+                                        <Save className="h-5 w-5 mr-3" />
+                                        Certificar Mantenimiento
+                                    </>
+                                )}
                             </Button>
                         </div>
                     </div>
                 </DialogContent>
-            </Dialog >
+            </Dialog>
 
             {/* LIGHTBOX LAYOUT */}
             {
@@ -1841,56 +2146,58 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
             </Dialog>
 
             {/* DOCUMENT VIEWER LIGHTBOX */}
-            {selectedDocument && (
-                <div className="fixed inset-0 z-[100] bg-slate-950/95 flex flex-col animate-in fade-in duration-300">
-                    {/* Header */}
-                    <div className="p-4 flex items-center justify-between text-white border-b border-white/10">
-                        <div className="flex items-center gap-3">
-                            <div className="bg-white/10 p-2 rounded-lg">
-                                <FileText className="h-5 w-5" />
+            {
+                selectedDocument && (
+                    <div className="fixed inset-0 z-[100] bg-slate-950/95 flex flex-col animate-in fade-in duration-300">
+                        {/* Header */}
+                        <div className="p-4 flex items-center justify-between text-white border-b border-white/10">
+                            <div className="flex items-center gap-3">
+                                <div className="bg-white/10 p-2 rounded-lg">
+                                    <FileText className="h-5 w-5" />
+                                </div>
+                                <div>
+                                    <h3 className="font-bold">{selectedDocument.title}</h3>
+                                    <p className="text-xs text-white/50 lowercase">{selectedDocument.type} • {new Date(selectedDocument.created_at).toLocaleDateString()}</p>
+                                </div>
                             </div>
-                            <div>
-                                <h3 className="font-bold">{selectedDocument.title}</h3>
-                                <p className="text-xs text-white/50 lowercase">{selectedDocument.type} • {new Date(selectedDocument.created_at).toLocaleDateString()}</p>
+                            <div className="flex gap-2">
+                                <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 h-10 w-10" asChild>
+                                    <a href={selectedDocument.file_url} target="_blank" rel="noopener noreferrer">
+                                        <Upload className="h-5 w-5 rotate-90" />
+                                    </a>
+                                </Button>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="text-white hover:bg-white/20 rounded-full h-10 w-10"
+                                    onClick={() => setSelectedDocument(null)}
+                                >
+                                    <X className="h-6 w-6" />
+                                </Button>
                             </div>
                         </div>
-                        <div className="flex gap-2">
-                            <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 h-10 w-10" asChild>
-                                <a href={selectedDocument.file_url} target="_blank" rel="noopener noreferrer">
-                                    <Upload className="h-5 w-5 rotate-90" />
-                                </a>
-                            </Button>
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                className="text-white hover:bg-white/20 rounded-full h-10 w-10"
-                                onClick={() => setSelectedDocument(null)}
-                            >
-                                <X className="h-6 w-6" />
-                            </Button>
-                        </div>
-                    </div>
 
-                    {/* Content */}
-                    <div className="flex-1 overflow-auto p-4 md:p-8 flex items-center justify-center">
-                        {selectedDocument.file_url.toLowerCase().endsWith('.pdf') || selectedDocument.category?.toLowerCase() === 'pdf' ? (
-                            <iframe
-                                src={selectedDocument.file_url}
-                                className="w-full h-full max-w-5xl bg-white rounded-xl shadow-2xl"
-                                title={selectedDocument.title}
-                            />
-                        ) : (
-                            <div className="relative group max-w-full max-h-full">
-                                <img
+                        {/* Content */}
+                        <div className="flex-1 overflow-auto p-4 md:p-8 flex items-center justify-center">
+                            {selectedDocument.file_url.toLowerCase().endsWith('.pdf') || selectedDocument.category?.toLowerCase() === 'pdf' ? (
+                                <iframe
                                     src={selectedDocument.file_url}
-                                    alt={selectedDocument.title}
-                                    className="max-w-full max-h-[80vh] object-contain rounded-lg shadow-2xl transition-transform duration-500 group-hover:scale-[1.02]"
+                                    className="w-full h-full max-w-5xl bg-white rounded-xl shadow-2xl"
+                                    title={selectedDocument.title}
                                 />
-                            </div>
-                        )}
+                            ) : (
+                                <div className="relative group max-w-full max-h-full">
+                                    <img
+                                        src={selectedDocument.file_url}
+                                        alt={selectedDocument.title}
+                                        className="max-w-full max-h-[80vh] object-contain rounded-lg shadow-2xl transition-transform duration-500 group-hover:scale-[1.02]"
+                                    />
+                                </div>
+                            )}
+                        </div>
                     </div>
-                </div>
-            )}
+                )
+            }
         </>
     )
 }
@@ -1900,27 +2207,34 @@ function InfoRow({
     value,
     isEditMode,
     onChange,
-    type = "text"
+    type = "text",
+    className,
+    prefix
 }: {
     label: string;
     value: string;
     isEditMode?: boolean;
     onChange?: (val: string) => void;
     type?: string;
+    className?: string;
+    prefix?: string;
 }) {
     return (
-        <div className="flex justify-between items-center py-3 border-b border-slate-100 dark:border-slate-800">
-            <span className="text-sm font-medium text-slate-600 dark:text-slate-400">{label}</span>
+        <div className={cn("flex justify-between items-center py-4 border-b border-border/30 group transition-colors", className)}>
+            <span className="text-xs font-black text-muted-foreground dark:text-gray-400 uppercase tracking-widest group-hover:text-primary transition-colors">{label}</span>
             {isEditMode && onChange ? (
-                <Input
-                    type={type}
-                    value={value}
-                    onChange={(e) => onChange(e.target.value)}
-                    className="w-2/3 h-8 text-right bg-slate-50 dark:bg-slate-800 border-none font-semibold"
-                />
+                <div className="flex items-center gap-2 w-2/3">
+                    {prefix && <span className="text-sm font-bold opacity-50">{prefix}</span>}
+                    <Input
+                        type={type}
+                        value={value}
+                        onChange={(e) => onChange(e.target.value)}
+                        className="h-10 text-right bg-primary/5 border-primary/20 rounded-lg font-black italic tracking-tight"
+                    />
+                </div>
             ) : (
-                <span className="text-sm font-semibold text-slate-900 dark:text-white">
-                    {type === "number" && !isEditMode ? parseFloat(value).toLocaleString() : value}
+                <span className="text-base font-black italic tracking-tight">
+                    {prefix}{type === "number" && !isEditMode ? parseFloat(value.replace(/,/g, '')).toLocaleString() : value}
                 </span>
             )}
         </div>

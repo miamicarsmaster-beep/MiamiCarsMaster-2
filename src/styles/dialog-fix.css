@@ -1,13 +1,13 @@
-/* Fix Dialog z-index to appear above app sidebar */
+/* Fix Dialog z-index to appear above app sidebar and fixed panels */
 [data-radix-dialog-overlay] {
-    z-index: 99 !important;
+    z-index: 400 !important;
 }
 
 [data-radix-dialog-content] {
-    z-index: 100 !important;
+    z-index: 401 !important;
 }
 
 /* Ensure portal is also high enough */
 [data-radix-portal] {
-    z-index: 99 !important;
+    z-index: 400 !important;
 }

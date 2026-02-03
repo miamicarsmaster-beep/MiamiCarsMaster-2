@@ -101,7 +101,10 @@ export function VehiclesGrid({ vehicles: initialVehicles, investors }: VehiclesG
             const { data, error } = await supabase
                 .from("vehicles")
                 .insert([payload])
-                .select()
+                .select(`
+                    *,
+                    assigned_investor:profiles!assigned_investor_id(id, full_name, email)
+                `)
                 .single()
 
             if (error) throw error
@@ -147,43 +150,55 @@ export function VehiclesGrid({ vehicles: initialVehicles, investors }: VehiclesG
     }
 
     return (
-        <div className="space-y-6 relative">
+        <div className="space-y-10 relative">
             {isPending && (
-                <div className="absolute inset-0 z-50 bg-background/50 backdrop-blur-[1px] flex items-center justify-center rounded-lg">
-                    <div className="flex gap-1">
-                        <div className="h-2 w-2 bg-primary rounded-full animate-bounce [animation-delay:-0.3s]"></div>
-                        <div className="h-2 w-2 bg-primary rounded-full animate-bounce [animation-delay:-0.15s]"></div>
-                        <div className="h-2 w-2 bg-primary rounded-full animate-bounce"></div>
+                <div className="absolute inset-0 z-50 bg-background/40 backdrop-blur-xl flex items-center justify-center rounded-3xl">
+                    <div className="flex flex-col items-center gap-4">
+                        <div className="flex gap-2">
+                            <div className="h-3 w-3 bg-primary rounded-full animate-bounce [animation-delay:-0.3s] shadow-[0_0_15px_oklch(0.8_0.18_185)]"></div>
+                            <div className="h-3 w-3 bg-primary rounded-full animate-bounce [animation-delay:-0.15s] shadow-[0_0_15px_oklch(0.8_0.18_185)]"></div>
+                            <div className="h-3 w-3 bg-primary rounded-full animate-bounce shadow-[0_0_15px_oklch(0.8_0.18_185)]"></div>
+                        </div>
+                        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary animate-pulse">Sincronizando</p>
                     </div>
                 </div>
             )}
-            <div className="flex justify-between items-center">
-                <div>
-                    <h3 className="text-lg font-semibold">Flota de Vehículos</h3>
-                    <p className="text-sm text-muted-foreground">{vehicles.length} vehículos en total</p>
+
+            <div className="flex justify-between items-end px-2">
+                <div className="flex flex-col gap-1">
+                    <h3 className="text-xl font-black italic tracking-tight uppercase">Activos <span className="text-primary">Operativos</span></h3>
+                    <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">{vehicles.length} Unidades en inventario</p>
                 </div>
                 <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
                     <DialogTrigger asChild>
-                        <Button onClick={resetForm}>
-                            <Plus className="mr-2 h-4 w-4" /> Agregar Vehículo
+                        <Button
+                            onClick={resetForm}
+                            size="lg"
+                            className="h-12 px-6 rounded-xl font-black uppercase tracking-widest text-xs shadow-2xl shadow-primary/20"
+                        >
+                            <Plus className="mr-2 h-5 w-5" /> Adquirir Unidad
                         </Button>
                     </DialogTrigger>
-                    <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                    <DialogContent className="glass-card border-primary/20 shadow-2xl max-w-2xl max-h-[90vh] overflow-y-auto">
                         <DialogHeader>
-                            <DialogTitle>Agregar Nuevo Vehículo</DialogTitle>
-                            <DialogDescription>
-                                Completa la información del vehículo a agregar a la flota.
+                            <DialogTitle className="text-2xl font-black italic uppercase tracking-tight">Registro de <span className="text-primary">Nueva Unidad</span></DialogTitle>
+                            <DialogDescription className="text-xs font-bold uppercase tracking-widest opacity-60">
+                                Introducir especificaciones técnicas y financieras
                             </DialogDescription>
                         </DialogHeader>
                         <Form {...form}>
                             <div className="contents">
                                 <VehicleForm investors={investors} />
-                                <DialogFooter className="mt-4">
-                                    <Button variant="outline" type="button" onClick={() => setIsAddOpen(false)}>
-                                        Cancelar
+                                <DialogFooter className="mt-8 gap-3 sm:gap-0">
+                                    <Button variant="ghost" type="button" onClick={() => setIsAddOpen(false)} className="rounded-xl font-bold uppercase text-xs tracking-widest">
+                                        Abortar
                                     </Button>
-                                    <Button onClick={form.handleSubmit(onSubmit)} disabled={form.formState.isSubmitting}>
-                                        {form.formState.isSubmitting ? "Guardando..." : "Guardar"}
+                                    <Button
+                                        onClick={form.handleSubmit(onSubmit)}
+                                        disabled={form.formState.isSubmitting}
+                                        className="px-8 rounded-xl font-black uppercase text-xs tracking-widest shadow-xl shadow-primary/20"
+                                    >
+                                        {form.formState.isSubmitting ? "Formalizando..." : "Registrar Activo"}
                                     </Button>
                                 </DialogFooter>
                             </div>
@@ -193,27 +208,37 @@ export function VehiclesGrid({ vehicles: initialVehicles, investors }: VehiclesG
             </div>
 
             {vehicles.length === 0 ? (
-                <Card>
-                    <CardContent className="py-16 text-center text-muted-foreground flex flex-col items-center justify-center">
-                        <div className="bg-primary/10 p-6 rounded-full mb-4 ring-1 ring-primary/20">
-                            <Car className="h-10 w-10 text-primary" />
-                        </div>
-                        <h3 className="text-lg font-semibold text-foreground mb-1">No hay vehículos registrados</h3>
-                        <p className="max-w-sm mx-auto text-sm">Gestiona tu flota agregando tu primer vehículo. Podrás realizar seguimiento de mantenimiento y alquileres.</p>
-                    </CardContent>
-                </Card>
+                <div className="glass-card p-24 text-center flex flex-col items-center justify-center border-dashed border-primary/20 bg-primary/2 group hover:bg-primary/5 transition-all">
+                    <div className="bg-primary/10 p-8 rounded-3xl mb-8 group-hover:scale-110 transition-transform shadow-inner">
+                        <Car className="h-12 w-12 text-primary" />
+                    </div>
+                    <h3 className="text-2xl font-black italic uppercase tracking-tighter mb-2">Inventario Vacío</h3>
+                    <p className="max-w-md mx-auto text-sm text-muted-foreground font-medium mb-10 leading-relaxed">No se han detectado activos vinculados a tu organización. Comienza expandiendo tu flota para habilitar las herramientas de gestión.</p>
+                    <Button
+                        onClick={() => setIsAddOpen(true)}
+                        className="h-12 px-10 rounded-xl font-black uppercase text-xs tracking-widest shadow-2xl shadow-primary/20"
+                    >
+                        Iniciar Adquisición
+                    </Button>
+                </div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                     {vehicles.map((vehicle) => (
-                        <VehicleCard
-                            key={vehicle.id}
-                            vehicle={vehicle}
-                            onDelete={handleDelete}
-                            onManage={(v) => {
-                                setAdminVehicle(v)
-                                setShowAdminPanel(true)
-                            }}
-                        />
+                        <div key={vehicle.id} className="animate-in fade-in slide-in-from-bottom-4 duration-500 fill-mode-both" style={{ animationDelay: `${vehicles.indexOf(vehicle) * 50}ms` }}>
+                            <VehicleCard
+                                vehicle={vehicle}
+                                onDelete={handleDelete}
+                                onUpdate={(updatedVehicle) => {
+                                    setVehicles(vehicles.map(v =>
+                                        v.id === updatedVehicle.id ? updatedVehicle : v
+                                    ))
+                                }}
+                                onManage={(v) => {
+                                    setAdminVehicle(v)
+                                    setShowAdminPanel(true)
+                                }}
+                            />
+                        </div>
                     ))}
                 </div>
             )}

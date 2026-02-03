@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Pencil, Mail, Phone, Trash2 } from "lucide-react"
+import { Pencil, Mail, Phone, Trash2, Car } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
 import { resetPassword } from "@/app/actions/reset-password"
@@ -150,77 +150,93 @@ export function InvestorsTable({ investors: initialInvestors, vehicles }: Invest
     }
 
     return (
-        <div className="space-y-4">
-            <div className="flex justify-between items-center">
-                <h3 className="text-lg font-semibold">Inversores ({investors.length})</h3>
-                <p className="text-sm text-muted-foreground">
-                    Los inversores se crean con el botón "Crear Inversor"
-                </p>
+        <div className="space-y-6">
+            <div className="flex flex-col space-y-2 mb-8 px-2 mt-4">
+                <h2 className="text-4xl font-black tracking-tighter bg-gradient-to-r from-foreground to-foreground/50 bg-clip-text text-transparent uppercase italic">
+                    Gestión de <span className="text-primary">Inversores</span>
+                </h2>
+                <p className="text-muted-foreground font-bold tracking-widest text-xs uppercase opacity-70">Base de datos de socios estratégicos • {investors.length} registros</p>
             </div>
 
-            <div className="rounded-md border">
+            <div className="glass-card overflow-hidden shadow-2xl">
                 <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>Nombre</TableHead>
-                            <TableHead>Email</TableHead>
-                            <TableHead>Teléfono</TableHead>
-                            <TableHead>País</TableHead>
-                            <TableHead>Vehículos Asignados</TableHead>
-                            <TableHead className="text-right">Acciones</TableHead>
+                    <TableHeader className="bg-sidebar-accent/50">
+                        <TableRow className="hover:bg-transparent border-border/50">
+                            <TableHead className="font-bold uppercase text-xs tracking-widest py-5">Nombre / Identidad</TableHead>
+                            <TableHead className="font-bold uppercase text-xs tracking-widest py-5">Contacto</TableHead>
+                            <TableHead className="font-bold uppercase text-xs tracking-widest py-5">Ubicación</TableHead>
+                            <TableHead className="font-bold uppercase text-xs tracking-widest py-5">Patrimonio (Autos)</TableHead>
+                            <TableHead className="text-right font-bold uppercase text-xs tracking-widest py-5 px-6">Acciones</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {investors.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={6} className="text-center text-muted-foreground">
-                                    No hay inversores registrados
+                                <TableCell colSpan={5} className="text-center py-20 text-muted-foreground italic">
+                                    No hay inversores en la base de datos
                                 </TableCell>
                             </TableRow>
                         ) : (
                             investors.map((investor) => (
-                                <TableRow key={investor.id}>
-                                    <TableCell className="font-medium">
-                                        {investor.full_name || "Sin nombre"}
-                                    </TableCell>
-                                    <TableCell>
-                                        <div className="flex items-center gap-2">
-                                            <Mail className="h-4 w-4 text-muted-foreground" />
-                                            {investor.email}
+                                <TableRow key={investor.id} className="group hover:bg-primary/5 transition-all border-border/30">
+                                    <TableCell className="py-5">
+                                        <div className="flex flex-col">
+                                            <span className="font-bold text-base tracking-tight group-hover:text-primary transition-colors">
+                                                {investor.full_name || "Sin nombre"}
+                                            </span>
+                                            <span className="text-xs text-muted-foreground font-medium opacity-70 italic">
+                                                {investor.email}
+                                            </span>
                                         </div>
                                     </TableCell>
                                     <TableCell>
-                                        {investor.phone ? (
-                                            <div className="flex items-center gap-2">
-                                                <Phone className="h-4 w-4 text-muted-foreground" />
-                                                {investor.phone}
-                                            </div>
-                                        ) : (
-                                            "—"
-                                        )}
+                                        <div className="flex flex-col gap-1 text-sm font-medium opacity-80">
+                                            {investor.phone ? (
+                                                <div className="flex items-center gap-2">
+                                                    <Phone className="h-3 w-3 text-primary" />
+                                                    {investor.phone}
+                                                </div>
+                                            ) : (
+                                                <span className="text-muted-foreground italic">—</span>
+                                            )}
+                                        </div>
                                     </TableCell>
                                     <TableCell>
-                                        {investor.country || "—"}
-                                    </TableCell>
-                                    <TableCell>
-                                        <Badge variant="secondary">
-                                            {getVehicleCount(investor.id)} vehículos
+                                        <Badge variant="outline" className="rounded-md bg-sidebar-accent/20 border-border/50 text-sm uppercase font-bold tracking-tighter">
+                                            {investor.country || "Internacional"}
                                         </Badge>
                                     </TableCell>
-                                    <TableCell className="text-right">
-                                        <Button variant="ghost" size="sm" onClick={() => openEditDialog(investor)}>
-                                            <Pencil className="h-4 w-4 mr-2" />
-                                            Editar
-                                        </Button>
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            className="text-red-500 hover:text-red-700 hover:bg-red-50 ml-2"
-                                            onClick={() => confirmDelete(investor)}
-                                        >
-                                            <Trash2 className="h-4 w-4 mr-2" />
-                                            Eliminar
-                                        </Button>
+                                    <TableCell>
+                                        <div className="flex items-center gap-2">
+                                            <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center border border-primary/20">
+                                                <Car className="h-4 w-4 text-primary" />
+                                            </div>
+                                            <span className="font-black italic text-xl tracking-tighter">
+                                                {getVehicleCount(investor.id)}
+                                            </span>
+                                        </div>
+                                    </TableCell>
+                                    <TableCell className="text-right px-6">
+                                        <div className="flex justify-end gap-2 shrink-0">
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="h-9 w-9 p-0 rounded-xl hover:bg-primary hover:text-primary-foreground transition-all"
+                                                onClick={() => openEditDialog(investor)}
+                                                title="Editar Perfil"
+                                            >
+                                                <Pencil className="h-4 w-4" />
+                                            </Button>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="h-9 w-9 p-0 rounded-xl hover:bg-red-500 hover:text-white transition-all"
+                                                onClick={() => confirmDelete(investor)}
+                                                title="Eliminar Inversor"
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        </div>
                                     </TableCell>
                                 </TableRow>
                             ))

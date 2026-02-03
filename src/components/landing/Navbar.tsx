@@ -1,4 +1,5 @@
 import Link from "next/link"
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
 
 export function Navbar() {
@@ -6,9 +7,15 @@ export function Navbar() {
         <nav className="fixed top-0 w-full z-50 border-b border-border/40 bg-background/80 backdrop-blur-md">
             <div className="container mx-auto flex h-16 items-center justify-between px-4 sm:px-8">
                 <Link href="/" className="flex items-center space-x-2">
-                    <span className="text-xl font-bold tracking-tighter text-foreground">
-                        MIAMI<span className="text-primary">CARS</span>
-                    </span>
+                    <div className="relative w-64 h-16">
+                        <Image
+                            src="/logo.png"
+                            alt="Miami Cars Investments"
+                            fill
+                            className="object-contain"
+                            priority
+                        />
+                    </div>
                 </Link>
 
                 <div className="hidden md:flex items-center gap-8 text-sm font-medium text-muted-foreground">

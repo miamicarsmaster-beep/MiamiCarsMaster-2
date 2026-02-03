@@ -13,25 +13,23 @@ export default async function FinancePage() {
     ])
 
     return (
-        <div className="space-y-6">
-            <div>
-                <h2 className="text-3xl font-bold tracking-tight">Gestión Financiera</h2>
-                <p className="text-muted-foreground">
-                    Registra ingresos y gastos de la flota
+        <div className="space-y-10">
+            <div className="flex flex-col gap-2">
+                <h2 className="text-4xl font-black italic tracking-tighter uppercase">Gestión <span className="text-primary">Financiera</span></h2>
+                <p className="text-xs font-bold text-muted-foreground uppercase tracking-[0.3em]">
+                    Control de ingresos y flujo de caja operativo
                 </p>
             </div>
 
-            <Card>
-                <CardHeader>
-                    <CardTitle>Transacciones</CardTitle>
-                    <CardDescription>
-                        Historial completo de ingresos y gastos por vehículo
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
+            <div className="glass-card p-1 shadow-2xl">
+                <div className="p-8 border-b border-border/40">
+                    <h3 className="text-sm font-black uppercase tracking-widest text-primary">Historial de Transacciones</h3>
+                    <p className="text-xs text-muted-foreground mt-1 font-medium">Auditoría completa de movimientos financieros por unidad</p>
+                </div>
+                <div className="p-4">
                     <FinancialTable records={records} vehicles={vehicles} />
-                </CardContent>
-            </Card>
+                </div>
+            </div>
         </div>
     )
 }

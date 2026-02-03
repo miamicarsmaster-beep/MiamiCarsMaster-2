@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -86,9 +87,15 @@ export default function LoginPage() {
 
             <Card className="w-full max-w-md border-border/60 shadow-xl backdrop-blur-sm bg-background/80">
                 <CardHeader className="space-y-1 text-center">
-                    <div className="flex justify-center mb-4">
-                        <div className="text-3xl font-bold tracking-tighter">
-                            MIAMI<span className="text-primary">CARS</span>
+                    <div className="flex justify-center mb-10">
+                        <div className="relative w-full h-28">
+                            <Image
+                                src="/logo.png"
+                                alt="Miami Cars Investments"
+                                fill
+                                className="object-contain"
+                                priority
+                            />
                         </div>
                     </div>
                     <CardTitle className="text-2xl">Iniciar Sesión</CardTitle>

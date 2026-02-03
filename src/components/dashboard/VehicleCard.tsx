@@ -1,101 +1,201 @@
 "use client"
 
+import { useState } from "react"
 import { Vehicle } from "@/types/database"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Calendar, Gauge, MapPin, Settings, Trash2 } from "lucide-react"
+import { Calendar, Gauge, MapPin, Settings, Trash2, ChevronDown, Check, Loader2 } from "lucide-react"
 import { ImageWithFallback } from "@/components/ui/image-with-fallback"
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { createClient } from "@/lib/supabase/client"
+import { useRouter } from "next/navigation"
+import { toast } from "sonner"
 
 interface VehicleCardProps {
     vehicle: Vehicle
     onDelete: (id: string) => void
     onManage?: (vehicle: Vehicle) => void
+    onUpdate?: (vehicle: Vehicle) => void
 }
 
-export function VehicleCard({ vehicle, onDelete, onManage }: VehicleCardProps) {
+export function VehicleCard({ vehicle, onDelete, onManage, onUpdate }: VehicleCardProps) {
+    const [isUpdating, setIsUpdating] = useState(false)
+    const router = useRouter()
+    const supabase = createClient()
+
     const generatePlaceholderImage = (make: string, model: string) => {
         const carName = `${make} ${model}`.replace(/\s+/g, '+')
         return `https://source.unsplash.com/800x600/?${carName},car`
     }
 
-    const getStatusBadge = (status: Vehicle["status"]) => {
-        const variants: Record<Vehicle["status"], { label: string; className: string }> = {
-            available: { label: "Disponible", className: "bg-emerald-500 hover:bg-emerald-600" },
-            rented: { label: "Alquilado", className: "bg-blue-500 hover:bg-blue-600" },
-            maintenance: { label: "Mantenimiento", className: "bg-amber-500 hover:bg-amber-600" },
-            inactive: { label: "Inactivo", className: "bg-slate-500 hover:bg-slate-600" },
+    const handleStatusUpdate = async (newStatus: Vehicle["status"]) => {
+        if (newStatus === vehicle.status) return
+
+        setIsUpdating(true)
+        try {
+            const { error } = await supabase
+                .from("vehicles")
+                .update({ status: newStatus })
+                .eq("id", vehicle.id)
+
+            if (error) throw error
+
+            const updatedVehicle = { ...vehicle, status: newStatus }
+            if (onUpdate) onUpdate(updatedVehicle)
+
+            toast.success(`Estado actualizado a ${newStatus.toUpperCase()}`)
+            router.refresh()
+        } catch (error) {
+            console.error("Error updating status:", error)
+            toast.error("Error al actualizar el estado")
+        } finally {
+            setIsUpdating(false)
         }
-        return <Badge className={variants[status].className}>{variants[status].label}</Badge>
     }
 
+    const statuses: { value: Vehicle["status"]; label: string; className: string }[] = [
+        { value: "available", label: "DISPONIBLE", className: "bg-emerald-500/90 hover:bg-emerald-600 shadow-emerald-500/20" },
+        { value: "rented", label: "ALQUILADO", className: "bg-blue-600/90 hover:bg-blue-700 shadow-blue-500/20" },
+        { value: "maintenance", label: "SERVICE", className: "bg-amber-500/90 hover:bg-amber-600 shadow-amber-500/20" },
+        { value: "inactive", label: "INACTIVO", className: "bg-slate-700/90 hover:bg-slate-800 shadow-slate-500/20" },
+    ]
+
+    const currentStatus = statuses.find(s => s.value === vehicle.status) || statuses[0]
+
     return (
-        <Card className="group overflow-hidden hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-            <div className="aspect-video relative bg-muted overflow-hidden">
+        <div className="glass-card group overflow-hidden border-border/30 hover:border-primary/40 transition-all duration-500 hover:-translate-y-2 shadow-2xl hover:shadow-primary/20 rounded-[2.5rem]">
+            <div className="aspect-[16/10] relative overflow-hidden rounded-t-[2.5rem]">
                 <ImageWithFallback
                     src={vehicle.image_url || generatePlaceholderImage(vehicle.make, vehicle.model)}
                     fallbackSrc={generatePlaceholderImage(vehicle.make, vehicle.model)}
                     alt={`${vehicle.make} ${vehicle.model}`}
                     fill
-                    className="object-cover transition-transform duration-300 group-hover:scale-105"
+                    className="object-cover transition-transform duration-1000 group-hover:scale-110"
                     sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                 />
-                <div className="absolute top-2 right-2">
-                    {getStatusBadge(vehicle.status)}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/20 to-transparent opacity-80" />
+
+                {/* Status Badge Over Image - Now Interactive */}
+                <div className="absolute top-6 right-6 scale-110 z-20">
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button
+                                variant="ghost"
+                                disabled={isUpdating}
+                                className={`h-auto p-0 rounded-full border-0 backdrop-blur-md overflow-hidden hover:scale-105 transition-transform ${currentStatus.className}`}
+                            >
+                                <Badge className="bg-transparent hover:bg-transparent text-white px-4 py-1.5 text-xs font-black tracking-[0.2em] flex items-center gap-2 border-0">
+                                    {isUpdating ? (
+                                        <Loader2 className="h-3 w-3 animate-spin" />
+                                    ) : (
+                                        <>
+                                            {currentStatus.label}
+                                            <ChevronDown className="h-3 w-3 opacity-50" />
+                                        </>
+                                    )}
+                                </Badge>
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent
+                            align="end"
+                            className="bg-white/90 dark:bg-slate-900/95 backdrop-blur-2xl border-primary/20 rounded-[1.5rem] p-3 min-w-[180px] shadow-[0_20px_50px_rgba(0,0,0,0.3)] animate-in zoom-in-95 duration-200"
+                        >
+                            <p className="text-[10px] font-black text-primary/40 uppercase tracking-[0.2em] px-3 pb-2 mb-2 border-b border-primary/10">Cambiar Disponibilidad</p>
+                            {statuses.map((s) => (
+                                <DropdownMenuItem
+                                    key={s.value}
+                                    onClick={() => handleStatusUpdate(s.value)}
+                                    className={`rounded-xl px-4 py-3.5 text-xs font-black tracking-widest uppercase cursor-pointer mb-1 last:mb-0 transition-all duration-300
+                                        ${vehicle.status === s.value
+                                            ? 'bg-primary text-white shadow-lg shadow-primary/20 scale-[1.02]'
+                                            : 'hover:bg-primary/10 hover:translate-x-1'}`}
+                                >
+                                    <div className="flex items-center justify-between w-full">
+                                        <div className="flex items-center gap-3">
+                                            <div className={`h-2.5 w-2.5 rounded-full border border-white/20 ${s.className.split(' ')[0]}`} />
+                                            {s.label}
+                                        </div>
+                                        {vehicle.status === s.value && <Check className="h-4 w-4 text-white" />}
+                                    </div>
+                                </DropdownMenuItem>
+                            ))}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                </div>
+
+                {/* Hero Info */}
+                <div className="absolute bottom-6 left-8 flex flex-col gap-1">
+                    <span className="text-primary text-xs font-black uppercase tracking-[0.3em] drop-shadow-sm">
+                        {vehicle.year} MODEL • {vehicle.license_plate || "SN"}
+                    </span>
+                    <h3 className="text-white text-3xl font-black italic tracking-tighter uppercase leading-none drop-shadow-xl">
+                        {vehicle.make} <span className="text-white/80">{vehicle.model}</span>
+                    </h3>
                 </div>
             </div>
 
-            <CardHeader>
-                <CardTitle className="flex justify-between items-start">
-                    <div>
-                        <div className="text-lg">{vehicle.make} {vehicle.model}</div>
-                        <div className="text-sm font-normal text-muted-foreground">{vehicle.year}</div>
+            <div className="p-8 space-y-6">
+                <div className="grid grid-cols-2 gap-6">
+                    <div className="flex items-center gap-4">
+                        <div className="h-10 w-10 rounded-xl bg-primary/5 border border-primary/20 flex items-center justify-center shadow-inner">
+                            <Calendar className="h-5 w-5 text-primary" />
+                        </div>
+                        <div className="flex flex-col">
+                            <span className="text-xs font-black uppercase tracking-widest text-muted-foreground opacity-60 italic">Placa</span>
+                            <span className="text-sm font-black uppercase tracking-tight">{vehicle.license_plate || "N/A"}</span>
+                        </div>
                     </div>
-                </CardTitle>
-            </CardHeader>
+                    <div className="flex items-center gap-4">
+                        <div className="h-10 w-10 rounded-xl bg-primary/5 border border-primary/10 flex items-center justify-center shadow-inner">
+                            <Gauge className="h-5 w-5 text-primary" />
+                        </div>
+                        <div className="flex flex-col">
+                            <span className="text-xs font-black uppercase tracking-widest text-muted-foreground opacity-60 italic">Recorrido</span>
+                            <span className="text-sm font-black uppercase tracking-tight">{vehicle.mileage?.toLocaleString() || 0} MI</span>
+                        </div>
+                    </div>
+                </div>
 
-            <CardContent className="space-y-2 text-sm">
-                <div className="flex items-center gap-2 text-muted-foreground">
-                    <Calendar className="h-4 w-4" />
-                    <span>Placa: {vehicle.license_plate || "Sin placa"}</span>
-                </div>
-                {vehicle.location && (
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                        <MapPin className="h-4 w-4" />
-                        <span>{vehicle.location}</span>
+                <div className="flex items-center gap-4 pt-4 border-t border-border/30">
+                    <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                        <MapPin className="h-4 w-4 text-primary" />
                     </div>
-                )}
-                <div className="flex items-center gap-2 text-muted-foreground">
-                    <Gauge className="h-4 w-4" />
-                    <span>{vehicle.mileage?.toLocaleString() || 0} millas</span>
+                    <span className="text-xs font-black uppercase tracking-widest opacity-80">{vehicle.location || "Ubicación No Definida"}</span>
                 </div>
+
                 {vehicle.assigned_investor && (
-                    <div className="pt-2 border-t">
-                        <p className="text-xs text-muted-foreground">Asignado a:</p>
-                        <p className="font-medium">{vehicle.assigned_investor.full_name || vehicle.assigned_investor.email}</p>
+                    <div className="p-5 rounded-2xl bg-primary/[0.03] border border-primary/10 flex flex-col gap-2 relative overflow-hidden group/investor">
+                        <div className="absolute top-0 right-0 w-24 h-24 bg-primary/5 rounded-full blur-3xl -mr-12 -mt-12" />
+                        <p className="text-xs font-black uppercase tracking-widest text-primary italic relative z-10">Inversor Socio</p>
+                        <p className="text-sm font-black uppercase tracking-tighter truncate text-foreground/90 relative z-10">
+                            {vehicle.assigned_investor.full_name || vehicle.assigned_investor.email}
+                        </p>
                     </div>
                 )}
-            </CardContent>
+            </div>
 
-            <CardFooter className="bg-muted/50 flex justify-between gap-2">
+            <div className="px-6 pb-8 flex gap-3">
                 <Button
-                    variant="default"
-                    size="sm"
-                    className="flex-1"
                     onClick={() => onManage?.(vehicle)}
+                    className="flex-1 h-14 rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground font-black uppercase tracking-widest text-xs shadow-xl shadow-primary/30 transition-all hover:scale-[1.02] active:scale-95"
                 >
                     <Settings className="h-4 w-4 mr-2" />
-                    Administrar
+                    Administrar Vehículo
                 </Button>
                 <Button
                     variant="ghost"
-                    size="icon"
                     onClick={() => onDelete(vehicle.id)}
-                    className="text-red-600 hover:text-red-700 flex-shrink-0"
+                    className="w-14 h-14 rounded-2xl text-red-500 hover:bg-red-500/10 hover:text-red-600 border border-transparent hover:border-red-500/20 transition-all"
                 >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className="h-5 w-5" />
                 </Button>
-            </CardFooter>
-        </Card>
+            </div>
+        </div>
     )
 }

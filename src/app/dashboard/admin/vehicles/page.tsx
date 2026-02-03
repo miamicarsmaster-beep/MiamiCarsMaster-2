@@ -18,15 +18,18 @@ export default async function VehiclesPage() {
         console.log('[VehiclesPage] Data loaded - Vehicles:', vehicles.length, 'Investors:', investors.length)
 
         return (
-            <div className="space-y-6">
-                <div>
-                    <h2 className="text-3xl font-bold tracking-tight">Gestión de Flota</h2>
-                    <p className="text-muted-foreground">
-                        Administra todos los vehículos de la plataforma
+            <div className="space-y-10">
+                <div className="flex flex-col gap-2">
+                    <h2 className="text-4xl font-black italic tracking-tighter uppercase font-sans">Flota de <span className="text-primary">Vehículos</span></h2>
+                    <p className="text-xs font-bold text-muted-foreground uppercase tracking-[0.3em]">
+                        Gestión de activos de alto rendimiento
                     </p>
                 </div>
 
-                <VehiclesGrid vehicles={vehicles} investors={investors} />
+                <div className="relative">
+                    <div className="absolute -top-24 -right-24 w-96 h-96 bg-primary/5 blur-[120px] rounded-full pointer-events-none" />
+                    <VehiclesGrid vehicles={vehicles} investors={investors} />
+                </div>
             </div>
         )
     } catch (error) {
