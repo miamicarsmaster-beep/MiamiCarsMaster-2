@@ -2,8 +2,10 @@ import { createClient } from "@/lib/supabase/server"
 import { getVehiclesByInvestor } from "@/lib/data/vehicles"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { DollarSign, TrendingUp, TrendingDown, Calendar, FileText } from "lucide-react"
+import { DollarSign, TrendingUp, TrendingDown, Calendar, FileText, Download, PieChart, ArrowUpRight, BadgeDollarSign } from "lucide-react"
 import { redirect } from "next/navigation"
+import { cn } from "@/lib/utils"
+import { Button } from "@/components/ui/button"
 
 interface FinancialRecord {
     id: string
@@ -109,251 +111,270 @@ export default async function InvestorFinancePage() {
         }, {} as Record<string, number>)
 
     return (
-        <div className="space-y-8">
-            <div>
-                <h2 className="text-3xl font-bold tracking-tight">Mis Finanzas</h2>
-                <p className="text-muted-foreground">
-                    Resumen financiero de tus vehículos
-                </p>
+        <div className="space-y-8 pb-10 animate-in fade-in duration-700">
+            {/* Header Section */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div className="space-y-1">
+                    <h1 className="text-4xl md:text-5xl font-black italic tracking-tighter uppercase leading-none">
+                        Gestión <span className="text-primary">Financiera</span>
+                    </h1>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-muted-foreground">Control de rentabilidad y flujo de caja de activos</p>
+                </div>
+
+                <div className="flex items-center gap-3">
+                    <Button variant="outline" className="rounded-xl h-12 font-black uppercase text-[10px] tracking-widest border-border/50 hover:bg-primary/5 hover:text-primary transition-all">
+                        <Download className="h-4 w-4 mr-2" /> Exportar Reporte
+                    </Button>
+                </div>
             </div>
 
-            {/* Summary Cards */}
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">
-                            Ingresos Totales
-                        </CardTitle>
-                        <TrendingUp className="h-4 w-4 text-emerald-600" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold text-emerald-600">
-                            ${totalIncome.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            {/* Summary KPI Cards */}
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+                <Card className="bg-white dark:bg-slate-900/50 backdrop-blur-xl border-border/50 rounded-[2rem] p-6 group hover:border-emerald-500/30 transition-all shadow-xl relative overflow-hidden">
+                    <div className="absolute top-0 right-0 h-24 w-24 bg-emerald-500/5 -mr-12 -mt-12 rounded-full blur-3xl group-hover:bg-emerald-500/10 transition-colors" />
+                    <div className="flex flex-col gap-4">
+                        <div className="h-12 w-12 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500 shadow-sm group-hover:scale-110 transition-transform">
+                            <TrendingUp className="h-6 w-6" />
                         </div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                            Histórico total
-                        </p>
-                    </CardContent>
+                        <div>
+                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-1">Ingresos Totales</p>
+                            <h3 className="text-2xl font-black italic tracking-tighter text-emerald-500">
+                                ${totalIncome.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                            </h3>
+                        </div>
+                    </div>
                 </Card>
 
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">
-                            Gastos Totales
-                        </CardTitle>
-                        <TrendingDown className="h-4 w-4 text-red-600" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold text-red-600">
-                            ${totalExpenses.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                <Card className="bg-white dark:bg-slate-900/50 backdrop-blur-xl border-border/50 rounded-[2rem] p-6 group hover:border-red-500/30 transition-all shadow-xl relative overflow-hidden">
+                    <div className="absolute top-0 right-0 h-24 w-24 bg-red-500/5 -mr-12 -mt-12 rounded-full blur-3xl group-hover:bg-red-500/10 transition-colors" />
+                    <div className="flex flex-col gap-4">
+                        <div className="h-12 w-12 rounded-xl bg-red-500/10 flex items-center justify-center text-red-500 shadow-sm group-hover:scale-110 transition-transform">
+                            <TrendingDown className="h-6 w-6" />
                         </div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                            Histórico total
-                        </p>
-                    </CardContent>
+                        <div>
+                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-1">Gastos Totales</p>
+                            <h3 className="text-2xl font-black italic tracking-tighter text-red-500">
+                                ${totalExpenses.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                            </h3>
+                        </div>
+                    </div>
                 </Card>
 
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">
-                            Balance Neto
-                        </CardTitle>
-                        <DollarSign className="h-4 w-4 text-blue-600" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className={`text-2xl font-bold ${netBalance >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
-                            ${netBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                <Card className="bg-white dark:bg-slate-900/50 backdrop-blur-xl border-border/50 rounded-[2rem] p-6 group hover:border-blue-500/30 transition-all shadow-xl relative overflow-hidden">
+                    <div className="absolute top-0 right-0 h-24 w-24 bg-blue-500/5 -mr-12 -mt-12 rounded-full blur-3xl group-hover:bg-blue-500/10 transition-colors" />
+                    <div className="flex flex-col gap-4">
+                        <div className="h-12 w-12 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500 shadow-sm group-hover:scale-110 transition-transform">
+                            <DollarSign className="h-6 w-6" />
                         </div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                            Ganancia/Pérdida total
-                        </p>
-                    </CardContent>
+                        <div>
+                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-1">Balance Neto</p>
+                            <h3 className={cn("text-2xl font-black italic tracking-tighter", netBalance >= 0 ? "text-blue-500" : "text-red-500")}>
+                                ${netBalance.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                            </h3>
+                        </div>
+                    </div>
                 </Card>
 
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">
-                            Este Mes
-                        </CardTitle>
-                        <Calendar className="h-4 w-4 text-violet-600" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className={`text-2xl font-bold ${monthlyNet >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                            ${monthlyNet.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                <Card className="bg-white dark:bg-slate-900/50 backdrop-blur-xl border-border/50 rounded-[2rem] p-6 group hover:border-primary/30 transition-all shadow-xl relative overflow-hidden">
+                    <div className="absolute top-0 right-0 h-24 w-24 bg-primary/5 -mr-12 -mt-12 rounded-full blur-3xl group-hover:bg-primary/10 transition-colors" />
+                    <div className="flex flex-col gap-4">
+                        <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary shadow-sm group-hover:scale-110 transition-transform">
+                            <Calendar className="h-6 w-6" />
                         </div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                            Balance mensual
-                        </p>
-                    </CardContent>
+                        <div>
+                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-1">Balance del Mes</p>
+                            <h3 className={cn("text-2xl font-black italic tracking-tighter", monthlyNet >= 0 ? "text-emerald-500" : "text-red-500")}>
+                                ${monthlyNet.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                            </h3>
+                        </div>
+                    </div>
                 </Card>
             </div>
 
-            {/* Monthly Breakdown */}
-            <div className="grid gap-4 md:grid-cols-2">
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <TrendingUp className="h-5 w-5 text-emerald-600" />
-                            Ingresos del Mes
-                        </CardTitle>
-                        <CardDescription>
-                            ${monthlyIncome.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        {Object.keys(incomeByCategory).length === 0 ? (
-                            <p className="text-sm text-muted-foreground text-center py-4">
-                                No hay ingresos registrados
-                            </p>
-                        ) : (
-                            <div className="space-y-3">
-                                {Object.entries(incomeByCategory)
-                                    .sort(([, a], [, b]) => b - a)
-                                    .slice(0, 5)
-                                    .map(([category, amount]) => (
-                                        <div key={category} className="flex items-center justify-between">
-                                            <div className="flex items-center gap-2">
-                                                <div className="h-2 w-2 rounded-full bg-emerald-500" />
-                                                <span className="text-sm font-medium">{category}</span>
-                                            </div>
-                                            <span className="text-sm text-emerald-600 font-semibold">
-                                                ${amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                                            </span>
-                                        </div>
-                                    ))}
+            {/* Monthly Insights Breakdowns */}
+            <div className="grid gap-8 md:grid-cols-2">
+                <Card className="bg-white dark:bg-slate-900/50 backdrop-blur-xl border-border/50 rounded-[2.5rem] p-8 shadow-2xl relative overflow-hidden">
+                    <div className="flex items-center justify-between mb-8">
+                        <div className="flex items-center gap-3">
+                            <div className="h-10 w-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500">
+                                <TrendingUp className="h-5 w-5" />
                             </div>
-                        )}
-                    </CardContent>
-                </Card>
+                            <h3 className="text-lg font-black uppercase italic tracking-tighter">Principales <span className="text-emerald-500">Ingresos</span></h3>
+                        </div>
+                        <p className="text-xl font-black italic tracking-tighter text-emerald-500">${monthlyIncome.toLocaleString()}</p>
+                    </div>
 
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <TrendingDown className="h-5 w-5 text-red-600" />
-                            Gastos del Mes
-                        </CardTitle>
-                        <CardDescription>
-                            ${monthlyExpenses.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        {Object.keys(expenseByCategory).length === 0 ? (
-                            <p className="text-sm text-muted-foreground text-center py-4">
-                                No hay gastos registrados
-                            </p>
-                        ) : (
-                            <div className="space-y-3">
-                                {Object.entries(expenseByCategory)
-                                    .sort(([, a], [, b]) => b - a)
-                                    .slice(0, 5)
-                                    .map(([category, amount]) => (
-                                        <div key={category} className="flex items-center justify-between">
-                                            <div className="flex items-center gap-2">
-                                                <div className="h-2 w-2 rounded-full bg-red-500" />
-                                                <span className="text-sm font-medium">{category}</span>
-                                            </div>
-                                            <span className="text-sm text-red-600 font-semibold">
-                                                ${amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                                            </span>
-                                        </div>
-                                    ))}
-                            </div>
-                        )}
-                    </CardContent>
-                </Card>
-            </div>
-
-            {/* Recent Transactions */}
-            <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                        <FileText className="h-5 w-5" />
-                        Transacciones Recientes
-                    </CardTitle>
-                    <CardDescription>
-                        Últimas {Math.min(records.length, 20)} transacciones
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                    {records.length === 0 ? (
-                        <div className="text-center py-12 text-muted-foreground">
-                            <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                            <p className="font-medium">No hay transacciones registradas</p>
-                            <p className="text-sm mt-1">
-                                Las transacciones aparecerán aquí cuando se registren ingresos o gastos
-                            </p>
+                    {Object.keys(incomeByCategory).length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-10 opacity-20">
+                            <PieChart className="h-12 w-12 mb-2" />
+                            <p className="text-[10px] font-black uppercase tracking-widest">Sin datos este mes</p>
                         </div>
                     ) : (
-                        <div className="space-y-2">
-                            <div className="overflow-x-auto">
-                                <table className="w-full">
-                                    <thead>
-                                        <tr className="border-b text-sm text-muted-foreground">
-                                            <th className="text-left py-3 px-2">Fecha</th>
-                                            <th className="text-left py-3 px-2">Vehículo</th>
-                                            <th className="text-left py-3 px-2">Categoría</th>
-                                            <th className="text-left py-3 px-2">Descripción</th>
-                                            <th className="text-left py-3 px-2">Tipo</th>
-                                            <th className="text-right py-3 px-2">Monto</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {records.slice(0, 20).map((record) => (
-                                            <tr key={record.id} className="border-b last:border-0 hover:bg-muted/50 transition-colors">
-                                                <td className="py-3 px-2 text-sm">
-                                                    {new Date(record.date).toLocaleDateString('es-ES', {
-                                                        year: 'numeric',
-                                                        month: 'short',
-                                                        day: 'numeric'
-                                                    })}
-                                                </td>
-                                                <td className="py-3 px-2 text-sm font-medium">
-                                                    {record.vehicle ? (
-                                                        <div>
-                                                            <div>{record.vehicle.make} {record.vehicle.model}</div>
-                                                            <div className="text-xs text-muted-foreground">
-                                                                {record.vehicle.license_plate}
-                                                            </div>
-                                                        </div>
-                                                    ) : (
-                                                        <span className="text-muted-foreground">—</span>
-                                                    )}
-                                                </td>
-                                                <td className="py-3 px-2 text-sm">
-                                                    {record.category}
-                                                </td>
-                                                <td className="py-3 px-2 text-sm text-muted-foreground max-w-xs truncate">
-                                                    {record.description || '—'}
-                                                </td>
-                                                <td className="py-3 px-2">
-                                                    <Badge
-                                                        variant={record.type === 'income' ? 'default' : 'secondary'}
-                                                        className={record.type === 'income' ? 'bg-emerald-500' : 'bg-red-500'}
-                                                    >
-                                                        {record.type === 'income' ? 'Ingreso' : 'Gasto'}
-                                                    </Badge>
-                                                </td>
-                                                <td className={`py-3 px-2 text-sm font-semibold text-right ${record.type === 'income' ? 'text-emerald-600' : 'text-red-600'
-                                                    }`}>
-                                                    {record.type === 'income' ? '+' : '-'}${Number(record.amount).toLocaleString('en-US', {
-                                                        minimumFractionDigits: 2,
-                                                        maximumFractionDigits: 2
-                                                    })}
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                            {records.length > 20 && (
-                                <p className="text-sm text-muted-foreground text-center pt-4">
-                                    Mostrando las 20 transacciones más recientes de {records.length} totales
-                                </p>
-                            )}
+                        <div className="space-y-5">
+                            {Object.entries(incomeByCategory)
+                                .sort(([, a], [, b]) => b - a)
+                                .slice(0, 5)
+                                .map(([category, amount]) => (
+                                    <div key={category} className="group flex items-center justify-between p-4 rounded-2xl bg-slate-900/20 border border-white/5 hover:bg-slate-900/40 transition-all">
+                                        <div className="flex items-center gap-3">
+                                            <div className="h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                                            <span className="text-xs font-bold uppercase tracking-widest leading-none">{category}</span>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            <span className="text-sm font-black italic tracking-tighter text-emerald-500">${amount.toLocaleString()}</span>
+                                            <div className="h-6 w-6 rounded-lg bg-white/5 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <ArrowUpRight className="h-3 w-3 text-muted-foreground" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
                         </div>
                     )}
-                </CardContent>
-            </Card>
+                </Card>
+
+                <Card className="bg-white dark:bg-slate-900/50 backdrop-blur-xl border-border/50 rounded-[2.5rem] p-8 shadow-2xl relative overflow-hidden">
+                    <div className="flex items-center justify-between mb-8">
+                        <div className="flex items-center gap-3">
+                            <div className="h-10 w-10 rounded-xl bg-red-500/10 flex items-center justify-center text-red-500">
+                                <TrendingDown className="h-5 w-5" />
+                            </div>
+                            <h3 className="text-lg font-black uppercase italic tracking-tighter">Distribución de <span className="text-red-500">Gastos</span></h3>
+                        </div>
+                        <p className="text-xl font-black italic tracking-tighter text-red-500">${monthlyExpenses.toLocaleString()}</p>
+                    </div>
+
+                    {Object.keys(expenseByCategory).length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-10 opacity-20">
+                            <PieChart className="h-12 w-12 mb-2" />
+                            <p className="text-[10px] font-black uppercase tracking-widest">Sin datos este mes</p>
+                        </div>
+                    ) : (
+                        <div className="space-y-5">
+                            {Object.entries(expenseByCategory)
+                                .sort(([, a], [, b]) => b - a)
+                                .slice(0, 5)
+                                .map(([category, amount]) => (
+                                    <div key={category} className="group flex items-center justify-between p-4 rounded-2xl bg-slate-900/20 border border-white/5 hover:bg-slate-900/40 transition-all">
+                                        <div className="flex items-center gap-3">
+                                            <div className="h-2 w-2 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]" />
+                                            <span className="text-xs font-bold uppercase tracking-widest leading-none">{category}</span>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            <span className="text-sm font-black italic tracking-tighter text-red-500">${amount.toLocaleString()}</span>
+                                            <div className="h-6 w-6 rounded-lg bg-white/5 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <ArrowUpRight className="h-3 w-3 text-muted-foreground" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                        </div>
+                    )}
+                </Card>
+            </div>
+
+            {/* Transactions Table Section */}
+            <div className="space-y-6">
+                <div className="flex items-center gap-3 border-b border-border/50 pb-4">
+                    <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-500">
+                        <FileText className="h-5 w-5" />
+                    </div>
+                    <h3 className="text-xl font-black uppercase italic tracking-tighter">Registro de <span className="text-primary">Transacciones</span></h3>
+                </div>
+
+                <Card className="bg-white dark:bg-slate-900/50 backdrop-blur-xl border-border/50 rounded-[2.5rem] shadow-2xl overflow-hidden">
+                    {records.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-24 opacity-20 text-center">
+                            <BadgeDollarSign className="h-16 w-16 mb-4" />
+                            <h4 className="text-sm font-black uppercase tracking-widest">Sin Movimientos</h4>
+                            <p className="text-xs font-medium uppercase tracking-wide mt-2">No hay transacciones procesadas aún</p>
+                        </div>
+                    ) : (
+                        <div className="overflow-x-auto">
+                            <table className="w-full border-collapse">
+                                <thead>
+                                    <tr className="bg-muted/40 border-b border-border/50">
+                                        <th className="px-6 py-5 text-left text-[10px] font-black uppercase tracking-widest text-muted-foreground">Fecha</th>
+                                        <th className="px-6 py-5 text-left text-[10px] font-black uppercase tracking-widest text-muted-foreground">Activo</th>
+                                        <th className="px-6 py-5 text-left text-[10px] font-black uppercase tracking-widest text-muted-foreground">Categoría</th>
+                                        <th className="px-6 py-5 text-left text-[10px] font-black uppercase tracking-widest text-muted-foreground">Detalles</th>
+                                        <th className="px-6 py-5 text-left text-[10px] font-black uppercase tracking-widest text-muted-foreground">Tipo</th>
+                                        <th className="px-6 py-5 text-right text-[10px] font-black uppercase tracking-widest text-muted-foreground">Monto</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {records.slice(0, 20).map((record, i) => (
+                                        <tr key={record.id} className={cn(
+                                            "group border-b border-border/10 last:border-0 hover:bg-primary/5 transition-all duration-300",
+                                            i % 2 === 0 ? "bg-white/5" : "bg-transparent"
+                                        )}>
+                                            <td className="py-6 px-8">
+                                                <p className="text-xs font-black italic tracking-tighter uppercase whitespace-nowrap">
+                                                    {new Date(record.date).toLocaleDateString('es-ES', {
+                                                        day: 'numeric',
+                                                        month: 'short',
+                                                        year: 'numeric'
+                                                    })}
+                                                </p>
+                                            </td>
+                                            <td className="py-6 px-8">
+                                                {record.vehicle ? (
+                                                    <div className="space-y-0.5">
+                                                        <p className="text-xs font-black uppercase tracking-tighter leading-none group-hover:text-primary transition-colors">
+                                                            {record.vehicle.make} {record.vehicle.model}
+                                                        </p>
+                                                        <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground opacity-60">
+                                                            {record.vehicle.license_plate}
+                                                        </p>
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-[10px] font-bold uppercase tracking-widest opacity-20">—</span>
+                                                )}
+                                            </td>
+                                            <td className="py-6 px-8">
+                                                <Badge variant="outline" className="rounded-lg px-2.5 py-1 text-[9px] font-black uppercase tracking-widest border-border/50 bg-muted/30">
+                                                    {record.category}
+                                                </Badge>
+                                            </td>
+                                            <td className="py-6 px-8">
+                                                <p className="text-xs font-medium text-muted-foreground truncate max-w-[200px]">
+                                                    {record.description || '—'}
+                                                </p>
+                                            </td>
+                                            <td className="py-6 px-8">
+                                                <div className={cn(
+                                                    "inline-flex items-center gap-2 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest",
+                                                    record.type === 'income' ? "bg-emerald-500/10 text-emerald-500" : "bg-red-500/10 text-red-500"
+                                                )}>
+                                                    <div className={cn("h-1.5 w-1.5 rounded-full", record.type === 'income' ? "bg-emerald-500 animate-pulse" : "bg-red-500")} />
+                                                    {record.type === 'income' ? 'Ingreso' : 'Gasto'}
+                                                </div>
+                                            </td>
+                                            <td className="py-6 px-8 text-right">
+                                                <p className={cn(
+                                                    "text-sm font-black italic tracking-tighter",
+                                                    record.type === 'income' ? "text-emerald-500" : "text-red-500"
+                                                )}>
+                                                    {record.type === 'income' ? '+' : '-'}${Number(record.amount).toLocaleString('en-US', {
+                                                        minimumFractionDigits: 2
+                                                    })}
+                                                </p>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </Card>
+
+                {records.length > 20 && (
+                    <div className="flex justify-center">
+                        <Button variant="ghost" className="rounded-xl font-black uppercase text-[10px] tracking-[0.2em] text-muted-foreground hover:text-primary hover:bg-primary/5">
+                            Cargar más transacciones <ArrowUpRight className="h-3 w-3 ml-2" />
+                        </Button>
+                    </div>
+                )}
+            </div>
         </div>
     )
 }

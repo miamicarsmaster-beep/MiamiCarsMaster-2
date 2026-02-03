@@ -10,6 +10,7 @@ import {
     FileText,
     LogOut,
     BadgeDollarSign,
+    Calendar,
 } from "lucide-react"
 
 const adminRoutes = [
@@ -47,6 +48,11 @@ const investorRoutes = [
         href: "/dashboard/investor",
     },
     {
+        label: "Alquileres",
+        icon: Calendar,
+        href: "/dashboard/investor/rentals",
+    },
+    {
         label: "Mis Finanzas",
         icon: BadgeDollarSign,
         href: "/dashboard/investor/finance",
@@ -71,7 +77,7 @@ export function Sidebar() {
                 <Link href="/" className="flex items-center gap-3 mb-10 group px-0">
                     <div className="relative w-full h-24">
                         <Image
-                            src="/logo.png"
+                            src="/logo-white.png"
                             alt="Miami Cars Investments"
                             fill
                             className="object-contain object-left"
