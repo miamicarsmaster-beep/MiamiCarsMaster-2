@@ -77,7 +77,7 @@ export function Sidebar() {
                 <Link href="/" className="flex items-center gap-3 mb-10 group px-0">
                     <div className="relative w-full h-24">
                         <Image
-                            src="/logo-white.png"
+                            src="/logo-dark.png"
                             alt="Miami Cars Investments"
                             fill
                             className="object-contain object-left"

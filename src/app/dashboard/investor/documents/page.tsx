@@ -77,9 +77,19 @@ export default function InvestorDocumentsPage() {
         }
     }
 
+    const isImage = (type: string) => {
+        const t = type?.toLowerCase() || ''
+        return t.startsWith('image/') || ['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(t)
+    }
+
+    const isPDF = (type: string) => {
+        const t = type?.toLowerCase() || ''
+        return t.includes('pdf') || t === 'pdf'
+    }
+
     const getFileIcon = (type: string) => {
-        if (type.startsWith('image/')) return <ImageIcon className="h-8 w-8" />
-        if (type.includes('pdf')) return <FileText className="h-8 w-8" />
+        if (isImage(type)) return <ImageIcon className="h-8 w-8" />
+        if (isPDF(type)) return <FileText className="h-8 w-8" />
         return <File className="h-8 w-8" />
     }
 
@@ -146,11 +156,11 @@ export default function InvestorDocumentsPage() {
             {isLoading ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                     {[...Array(8)].map((_, i) => (
-                        <Card key={i} className="animate-pulse bg-muted/20 border-border/50 rounded-[2rem] h-[300px]" />
+                        <Card key={i} className="animate-pulse bg-slate-50 border-border/40 rounded-[2.5rem] h-[350px]" />
                     ))}
                 </div>
             ) : filteredDocuments.length === 0 ? (
-                <Card className="bg-muted/30 border-dashed border-border/50 rounded-[2.5rem] py-24 text-center">
+                <Card className="bg-slate-50/50 border-dashed border-border/40 rounded-[2.5rem] py-24 text-center">
                     <div className="bg-primary/5 h-20 w-20 rounded-full flex items-center justify-center mx-auto mb-6">
                         <FolderOpen className="h-10 w-10 text-primary opacity-20" />
                     </div>
@@ -167,7 +177,7 @@ export default function InvestorDocumentsPage() {
                                 <div className="flex items-center justify-between mb-4">
                                     <div className={cn(
                                         "h-10 w-10 rounded-xl flex items-center justify-center text-white shadow-lg transition-transform duration-500 group-hover:rotate-12",
-                                        doc.type.includes('pdf') ? "bg-red-500" : "bg-blue-500"
+                                        isPDF(doc.type) ? "bg-red-500" : isImage(doc.type) ? "bg-blue-500" : "bg-slate-600"
                                     )}>
                                         {getFileIcon(doc.type)}
                                     </div>
@@ -185,26 +195,41 @@ export default function InvestorDocumentsPage() {
 
                             <CardContent className="p-6 pt-4 space-y-6">
                                 <div
-                                    className="flex items-center justify-center h-40 bg-slate-900/40 rounded-[1.5rem] border border-white/5 text-muted-foreground group-hover:bg-slate-900/60 transition-all cursor-pointer relative overflow-hidden shadow-inner"
+                                    className="flex items-center justify-center h-48 bg-slate-50 dark:bg-slate-900/40 rounded-[2rem] border border-border/40 text-muted-foreground group-hover:bg-slate-100 dark:group-hover:bg-slate-900/60 transition-all cursor-pointer relative overflow-hidden shadow-inner flex flex-col items-center justify-center"
                                     onClick={() => setPreviewDoc(doc)}
                                 >
-                                    {doc.type.startsWith('image/') ? (
+                                    {isImage(doc.type) ? (
                                         <ImageWithFallback
                                             src={doc.file_url}
                                             fallbackSrc=""
                                             alt={doc.title}
                                             fill
-                                            className="object-cover opacity-60 group-hover:opacity-100 group-hover:scale-110 transition-all duration-700"
+                                            className="object-cover opacity-90 group-hover:opacity-100 group-hover:scale-110 transition-all duration-700"
                                         />
+                                    ) : isPDF(doc.type) ? (
+                                        <div className="flex flex-col items-center gap-3 w-full h-full justify-center bg-gradient-to-br from-red-50 to-white dark:from-red-950/20 dark:to-slate-900">
+                                            <div className="h-16 w-16 rounded-2xl bg-red-500/10 flex items-center justify-center text-red-500 shadow-xl group-hover:scale-110 group-hover:rotate-3 transition-all duration-500">
+                                                <FileText className="h-8 w-8" />
+                                            </div>
+                                            <div className="text-center space-y-1">
+                                                <span className="text-[10px] font-black uppercase tracking-[0.2em] block text-red-600/60">PDF DOCUMENT</span>
+                                                <span className="text-[8px] font-bold text-muted-foreground/40 uppercase block">Vault Verified</span>
+                                            </div>
+                                        </div>
                                     ) : (
-                                        <div className="flex flex-col items-center gap-2">
-                                            <FileText className="h-10 w-10 opacity-20" />
-                                            <span className="text-[9px] font-black uppercase tracking-[0.2em] opacity-30">PREVIEW</span>
+                                        <div className="flex flex-col items-center gap-3 w-full h-full justify-center bg-gradient-to-br from-slate-50 to-slate-100/50 dark:from-slate-900 dark:to-slate-800/50">
+                                            <div className="h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-xl group-hover:scale-110 group-hover:rotate-3 transition-all duration-500">
+                                                <File className="h-8 w-8" />
+                                            </div>
+                                            <div className="text-center space-y-1">
+                                                <span className="text-[10px] font-black uppercase tracking-[0.2em] block">PREVIEW VAULT</span>
+                                                <span className="text-[8px] font-bold text-muted-foreground/60 uppercase block">{doc.type || 'FILE'}</span>
+                                            </div>
                                         </div>
                                     )}
                                     <div className="absolute inset-0 bg-primary/0 group-hover:bg-primary/5 transition-colors flex items-center justify-center">
-                                        <div className="h-12 w-12 rounded-full bg-primary/20 backdrop-blur-md flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all scale-75 group-hover:scale-100">
-                                            <Eye className="h-6 w-6 text-primary" />
+                                        <div className="h-14 w-14 rounded-full bg-white/80 dark:bg-primary/20 backdrop-blur-md shadow-2xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all scale-75 group-hover:scale-100">
+                                            <Eye className="h-7 w-7 text-primary" />
                                         </div>
                                     </div>
                                 </div>
@@ -279,13 +304,13 @@ export default function InvestorDocumentsPage() {
                         </Button>
                     </DialogHeader>
                     <div className="flex-1 w-full h-[calc(85vh-88px)] bg-slate-900/50 flex items-center justify-center p-4">
-                        {previewDoc?.type.includes('pdf') ? (
+                        {isPDF(previewDoc?.type || '') ? (
                             <iframe
-                                src={`${previewDoc.file_url}#toolbar=0`}
+                                src={`${previewDoc?.file_url}#toolbar=0`}
                                 className="w-full h-full rounded-xl border border-white/5 shadow-2xl"
-                                title={previewDoc.title}
+                                title={previewDoc?.title}
                             />
-                        ) : previewDoc?.type.startsWith('image/') ? (
+                        ) : isImage(previewDoc?.type || '') ? (
                             <div className="relative w-full h-full p-4">
                                 <ImageWithFallback
                                     src={previewDoc.file_url}

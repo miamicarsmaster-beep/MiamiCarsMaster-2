@@ -181,13 +181,36 @@ export default function InvestorRentalsPage() {
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                            <div className="bg-slate-50/50 dark:bg-slate-900/20 p-8 rounded-[2rem] border border-border/50 shadow-inner">
+                            <div className="bg-slate-50/50 dark:bg-slate-900/20 p-6 md:p-8 rounded-[2.5rem] border border-border/40 shadow-inner flex items-center justify-center">
                                 <Calendar
                                     mode="single"
                                     selected={selectedDate}
                                     onSelect={setSelectedDate}
                                     locale={es}
-                                    className="w-full max-w-[350px] mx-auto"
+                                    className="p-0"
+                                    classNames={{
+                                        months: "w-full",
+                                        month: "w-full space-y-6",
+                                        month_caption: "flex justify-center pt-1 relative items-center mb-4",
+                                        caption_label: "text-sm font-black uppercase tracking-[0.2em] italic",
+                                        nav: "space-x-1 flex items-center",
+                                        button_previous: "h-8 w-8 bg-transparent p-0 opacity-50 hover:opacity-100 transition-opacity",
+                                        button_next: "h-8 w-8 bg-transparent p-0 opacity-50 hover:opacity-100 transition-opacity",
+                                        table: "w-full border-collapse",
+                                        weekdays: "flex justify-between mb-4",
+                                        weekday: "text-muted-foreground w-10 font-black uppercase text-[10px] tracking-widest text-center",
+                                        week: "flex w-full justify-between mt-2",
+                                        day: "h-10 w-10 text-center text-sm p-0 relative focus-within:relative focus-within:z-20 flex items-center justify-center",
+                                        day_button: cn(
+                                            "h-9 w-9 p-0 font-bold aria-selected:opacity-100 rounded-xl transition-all duration-300 hover:bg-primary/10",
+                                            "flex items-center justify-center text-[11px]"
+                                        ),
+                                        today: "bg-primary/10 text-primary font-black border border-primary/20",
+                                        selected: "bg-primary text-white hover:bg-primary hover:text-white focus:bg-primary focus:text-white shadow-lg shadow-primary/30 scale-110",
+                                        outside: "text-muted-foreground/20 opacity-50",
+                                        disabled: "text-muted-foreground opacity-50",
+                                        hidden: "invisible",
+                                    }}
                                     modifiers={{
                                         rented: (date) => rentals.some(rental =>
                                             isWithinInterval(startOfDay(date), {
@@ -203,8 +226,8 @@ export default function InvestorRentalsPage() {
                                         )
                                     }}
                                     modifiersClassNames={{
-                                        rented: "bg-blue-500 text-white font-black rounded-lg shadow-[0_0_10px_rgba(59,130,246,0.3)] hover:bg-blue-600 transition-colors",
-                                        active: "bg-emerald-500 text-white font-black rounded-lg shadow-[0_0_15px_rgba(16,185,129,0.4)] hover:bg-emerald-600 hover:scale-110 transition-all"
+                                        rented: "bg-blue-500/10 text-blue-600 border border-blue-500/20 shadow-sm",
+                                        active: "bg-emerald-500 text-white font-black shadow-[0_0_15px_rgba(16,185,129,0.4)] scale-105"
                                     }}
                                 />
                             </div>
