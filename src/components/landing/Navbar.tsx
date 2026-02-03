@@ -29,6 +29,9 @@ export function Navbar() {
                     <Link href="#como-funciona" className="hover:text-primary transition-all hover:tracking-[0.4em]">
                         Cómo funciona
                     </Link>
+                    <Link href="#fleet" className="hover:text-primary transition-all hover:tracking-[0.4em]">
+                        Nuestra Flota
+                    </Link>
                     <Link href="#beneficios" className="hover:text-primary transition-all hover:tracking-[0.4em]">
                         Beneficios
                     </Link>

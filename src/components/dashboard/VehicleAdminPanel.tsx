@@ -138,7 +138,7 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
         image_url: vehicle.image_url || ""
     })
 
-    // Estados para funcionalidades
+    const [isLoadingData, setIsLoadingData] = useState(false)
     const [photos, setPhotos] = useState<VehiclePhoto[]>([])
     const [mileageHistory, setMileageHistory] = useState<MileageLog[]>([])
     const [maintenanceHistory, setMaintenanceHistory] = useState<MaintenanceRecord[]>([])
@@ -175,7 +175,7 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
         next_service_mileage: "",
         notes: ""
     })
-    const [maintenanceReceipt, setMaintenanceReceipt] = useState<File | null>(null)
+    const [maintenanceReceipts, setMaintenanceReceipts] = useState<File[]>([])
 
 
 
@@ -439,21 +439,26 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
         try {
             let receiptUrls: string[] = []
 
-            // Upload receipt if exists
-            if (maintenanceReceipt) {
-                const fileExt = maintenanceReceipt.name.split('.').pop()
-                const fileName = `${vehicle.id}-maint-${Date.now()}.${fileExt}`
-                const { error: uploadError } = await supabase.storage
-                    .from('documents') // Usamos el bucket de documentos
-                    .upload(`maintenance/${fileName}`, maintenanceReceipt)
+            // Upload receipts if they exist
+            if (maintenanceReceipts.length > 0) {
+                const uploadPromises = maintenanceReceipts.map(async (file) => {
+                    const fileExt = file.name.split('.').pop()
+                    const fileName = `${vehicle.id}-maint-${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
 
-                if (uploadError) throw uploadError
+                    const { error: uploadError } = await supabase.storage
+                        .from('documents')
+                        .upload(`maintenance/${fileName}`, file)
 
-                const { data: { publicUrl } } = supabase.storage
-                    .from('documents')
-                    .getPublicUrl(`maintenance/${fileName}`)
+                    if (uploadError) throw uploadError
 
-                receiptUrls = [publicUrl]
+                    const { data: { publicUrl } } = supabase.storage
+                        .from('documents')
+                        .getPublicUrl(`maintenance/${fileName}`)
+
+                    return publicUrl
+                })
+
+                receiptUrls = await Promise.all(uploadPromises)
             }
 
             const cost = parseFloat(maintenanceForm.cost)
@@ -491,7 +496,7 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
             toast.success("Mantenimiento registrado")
             router.refresh()
             setIsMaintenanceDialogOpen(false)
-            setMaintenanceReceipt(null)
+            setMaintenanceReceipts([])
             setMaintenanceForm({
                 service_type: "",
                 custom_service_type: "",
@@ -725,6 +730,7 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
     }
 
     const loadMaintenanceHistory = async () => {
+        setIsLoadingData(true)
         try {
             const { data, error } = await supabase
                 .from("maintenances")
@@ -751,6 +757,8 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
         } catch (error) {
             console.error("Error loading maintenance history:", error)
             toast.error("Error al cargar historial de mantenimiento")
+        } finally {
+            setIsLoadingData(false)
         }
     }
 
@@ -1082,20 +1090,24 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
 
                                 <TabsContent value="galeria" className="mt-0 outline-none">
                                     <div className="space-y-10">
-                                        <div className="flex justify-between items-end px-2">
-                                            <div className="flex flex-col gap-1">
-                                                <h3 className="text-2xl font-black italic tracking-tight">Galería <span className="text-primary">Multimedia</span></h3>
-                                                <p className="text-xs text-muted-foreground font-bold uppercase tracking-wider">{photos.length} Archivos Visuales</p>
+                                        <div className="flex justify-between items-center px-1">
+                                            <div className="flex items-center gap-4">
+                                                <div className="h-14 w-14 rounded-2xl cyber-gradient flex items-center justify-center text-primary-foreground shadow-lg shadow-primary/20">
+                                                    <Camera className="h-7 w-7" />
+                                                </div>
+                                                <div>
+                                                    <h3 className="text-2xl font-black italic tracking-tighter uppercase">Archivo <span className="text-primary">Visual</span></h3>
+                                                    <p className="text-[10px] text-muted-foreground font-black uppercase tracking-[0.2em]">{photos.length} Capturas registradas</p>
+                                                </div>
                                             </div>
-                                            <div>
+                                            <div className="flex gap-4">
                                                 <input
                                                     type="file"
                                                     id="gallery-upload"
-                                                    accept="image/*"
-                                                    multiple
                                                     className="hidden"
+                                                    multiple
+                                                    accept="image/*"
                                                     onChange={handlePhotoUpload}
-                                                    disabled={isUploadingPhoto}
                                                 />
                                                 <Label htmlFor="gallery-upload">
                                                     <Button variant="outline" size="lg" className="h-12 border-primary/20 bg-primary/5 hover:bg-primary hover:text-primary-foreground transition-all rounded-xl cursor-pointer" asChild>
@@ -1108,7 +1120,12 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                                             </div>
                                         </div>
 
-                                        {photos.length === 0 ? (
+                                        {isLoadingData ? (
+                                            <div className="flex flex-col items-center justify-center py-20 gap-4">
+                                                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                                                <p className="text-[10px] font-black uppercase tracking-widest animate-pulse">Cargando Galería...</p>
+                                            </div>
+                                        ) : photos.length === 0 ? (
                                             <div className="text-center py-24 glass-card rounded-3xl border-dashed border-primary/20 bg-primary/2 group hover:bg-primary/5 transition-colors">
                                                 <div className="bg-primary/10 w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform">
                                                     <Camera className="h-10 w-10 text-primary" />
@@ -1242,7 +1259,12 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                                             </div>
                                         )}
 
-                                        {mileageHistory.length === 0 ? (
+                                        {isLoadingData ? (
+                                            <div className="flex flex-col items-center justify-center py-20 gap-4">
+                                                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                                                <p className="text-[10px] font-black uppercase tracking-widest animate-pulse">Sincronizando Telemetría...</p>
+                                            </div>
+                                        ) : mileageHistory.length === 0 ? (
                                             <div className="text-center py-24 glass-card border-dashed border-primary/20 bg-primary/2 group hover:bg-primary/5 transition-colors">
                                                 <div className="bg-primary/10 w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform">
                                                     <Gauge className="h-10 w-10 text-primary" />
@@ -1301,7 +1323,12 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                                             </Button>
                                         </div>
 
-                                        {maintenanceHistory.length === 0 ? (
+                                        {isLoadingData ? (
+                                            <div className="flex flex-col items-center justify-center py-20 gap-4">
+                                                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                                                <p className="text-[10px] font-black uppercase tracking-widest animate-pulse">Accediendo a Historial Técnico...</p>
+                                            </div>
+                                        ) : maintenanceHistory.length === 0 ? (
                                             <div className="text-center py-24 glass-card border-dashed border-primary/20 bg-primary/2 group hover:bg-primary/5 transition-colors">
                                                 <div className="bg-primary/10 w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform">
                                                     <Wrench className="h-10 w-10 text-primary" />
@@ -1353,14 +1380,48 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                                                                 <TableCell className="text-right px-6 py-5">
                                                                     <div className="flex justify-end gap-2">
                                                                         {record.receipt_images && record.receipt_images.length > 0 && (
-                                                                            <Button
-                                                                                variant="ghost"
-                                                                                size="icon"
-                                                                                className="h-9 w-9 rounded-xl bg-primary/5 text-primary hover:bg-primary hover:text-primary-foreground transition-all"
-                                                                                onClick={() => window.open(record.receipt_images![0], '_blank')}
-                                                                            >
-                                                                                <FileText className="h-4 w-4" />
-                                                                            </Button>
+                                                                            record.receipt_images.length === 1 ? (
+                                                                                <Button
+                                                                                    variant="ghost"
+                                                                                    size="icon"
+                                                                                    className="h-9 w-9 rounded-xl bg-primary/5 text-primary hover:bg-primary hover:text-primary-foreground transition-all"
+                                                                                    onClick={() => window.open(record.receipt_images![0], '_blank')}
+                                                                                >
+                                                                                    <FileText className="h-4 w-4" />
+                                                                                </Button>
+                                                                            ) : (
+                                                                                <DropdownMenu>
+                                                                                    <DropdownMenuTrigger asChild>
+                                                                                        <Button
+                                                                                            variant="ghost"
+                                                                                            size="icon"
+                                                                                            className="h-9 w-9 rounded-xl bg-primary/5 text-primary hover:bg-primary hover:text-primary-foreground transition-all"
+                                                                                        >
+                                                                                            <span className="flex items-center justify-center relative">
+                                                                                                <FileText className="h-4 w-4" />
+                                                                                                <span className="absolute -top-1 -right-1 bg-primary text-white text-[8px] rounded-full w-3 h-3 flex items-center justify-center border-white border">
+                                                                                                    {record.receipt_images.length}
+                                                                                                </span>
+                                                                                            </span>
+                                                                                        </Button>
+                                                                                    </DropdownMenuTrigger>
+                                                                                    <DropdownMenuContent align="end" className="w-48 bg-white dark:bg-slate-900 border-primary/20">
+                                                                                        <div className="px-3 py-2 border-b border-border/50 mb-1">
+                                                                                            <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Documentos Adjuntos</span>
+                                                                                        </div>
+                                                                                        {record.receipt_images.map((img, i) => (
+                                                                                            <DropdownMenuItem
+                                                                                                key={i}
+                                                                                                className="text-[10px] font-bold uppercase tracking-tight py-2 cursor-pointer"
+                                                                                                onClick={() => window.open(img, '_blank')}
+                                                                                            >
+                                                                                                <FileText className="h-3 w-3 mr-2 opacity-50" />
+                                                                                                Documento #{i + 1}
+                                                                                            </DropdownMenuItem>
+                                                                                        ))}
+                                                                                    </DropdownMenuContent>
+                                                                                </DropdownMenu>
+                                                                            )
                                                                         )}
                                                                         <Button
                                                                             variant="ghost"
@@ -1431,7 +1492,12 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                                                     <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground italic">Historial Operativo</h4>
                                                 </div>
 
-                                                {rentalHistory.length === 0 ? (
+                                                {isLoadingData ? (
+                                                    <div className="flex flex-col items-center justify-center py-20 gap-4">
+                                                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                                                        <p className="text-[10px] font-black uppercase tracking-widest animate-pulse">Consultando Calendario...</p>
+                                                    </div>
+                                                ) : rentalHistory.length === 0 ? (
                                                     <div className="text-center py-24 glass-card border-dashed border-primary/20 bg-primary/2 group hover:bg-primary/5 transition-colors border-border/40">
                                                         <div className="bg-primary/10 w-20 h-20 rounded-3xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform">
                                                             <CalendarDays className="h-10 w-10 text-primary" />
@@ -1634,7 +1700,6 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                 </div>
             </div>
 
-
             {/* CHECK-IN DIALOG */}
             <Dialog open={isCheckInDialogOpen} onOpenChange={setIsCheckInDialogOpen}>
                 <DialogContent className="sm:max-w-[450px]">
@@ -1665,10 +1730,10 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                         </div>
                     </div>
                 </DialogContent>
-            </Dialog >
+            </Dialog>
 
             {/* RENTAL DIALOG */}
-            < Dialog open={isRentalDialogOpen} onOpenChange={setIsRentalDialogOpen} >
+            <Dialog open={isRentalDialogOpen} onOpenChange={setIsRentalDialogOpen}>
                 <DialogContent className="sm:max-w-[500px]">
                     <div className="space-y-6">
                         <div>
@@ -1683,10 +1748,10 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                         </div>
                     </div>
                 </DialogContent>
-            </Dialog >
+            </Dialog>
 
             {/* MILEAGE DIALOG */}
-            < Dialog open={isMileageDialogOpen} onOpenChange={setIsMileageDialogOpen} >
+            <Dialog open={isMileageDialogOpen} onOpenChange={setIsMileageDialogOpen}>
                 <DialogContent className="sm:max-w-[400px]">
                     <div className="space-y-6">
                         <div>
@@ -1739,7 +1804,7 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                         </div>
                     </div>
                 </DialogContent>
-            </Dialog >
+            </Dialog>
 
             {/* MAINTENANCE DIALOG */}
             <Dialog open={isMaintenanceDialogOpen} onOpenChange={setIsMaintenanceDialogOpen}>
@@ -1879,48 +1944,59 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                             </div>
 
                             <div className="space-y-4">
-                                <Label className="text-[11px] font-black uppercase tracking-widest text-primary">Evidencia Fotográfica (FACTURA/RECIBO)</Label>
+                                <Label className="text-[11px] font-black uppercase tracking-widest text-primary">Evidencia Fotográfica (FACTURAS/RECIBOS)</Label>
+
+                                {/* Dropzone */}
                                 <div
                                     className="relative h-24 border-2 border-dashed border-primary/20 rounded-2xl flex items-center justify-center bg-primary/2 hover:bg-primary/5 hover:border-primary/40 transition-all cursor-pointer group"
                                     onClick={() => document.getElementById('receipt')?.click()}
                                 >
-                                    <Input
+                                    <input
                                         id="receipt"
                                         type="file"
                                         accept="image/*,.pdf"
-                                        onChange={(e) => setMaintenanceReceipt(e.target.files?.[0] || null)}
+                                        multiple
+                                        onChange={(e) => {
+                                            const files = Array.from(e.target.files || [])
+                                            setMaintenanceReceipts(prev => [...prev, ...files])
+                                        }}
                                         className="hidden"
                                     />
                                     <div className="flex flex-col items-center">
-                                        {maintenanceReceipt ? (
-                                            <div className="flex items-center gap-3">
-                                                <div className="h-10 w-10 flex items-center justify-center bg-emerald-500/10 text-emerald-500 rounded-lg">
-                                                    <FileText className="h-5 w-5" />
-                                                </div>
-                                                <div className="flex flex-col">
-                                                    <span className="text-[10px] font-black uppercase tracking-tighter max-w-[200px] truncate">{maintenanceReceipt.name}</span>
-                                                    <span className="text-[9px] text-emerald-500 font-bold uppercase tracking-widest">Listo para subir</span>
+                                        <Upload className="h-6 w-6 text-primary/40 group-hover:text-primary transition-colors mb-2" />
+                                        <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground group-hover:text-primary transition-colors">Click para añadir archivos</span>
+                                    </div>
+                                </div>
+
+                                {/* File List */}
+                                {maintenanceReceipts.length > 0 && (
+                                    <div className="grid grid-cols-1 gap-2 max-h-[150px] overflow-y-auto pr-2 custom-scrollbar">
+                                        {maintenanceReceipts.map((file, index) => (
+                                            <div key={`${file.name}-${index}`} className="flex items-center justify-between p-3 rounded-xl bg-primary/5 border border-primary/10 animate-in fade-in slide-in-from-top-1">
+                                                <div className="flex items-center gap-3 overflow-hidden">
+                                                    <div className="h-8 w-8 flex-shrink-0 flex items-center justify-center bg-emerald-500/10 text-emerald-500 rounded-lg">
+                                                        <FileText className="h-4 w-4" />
+                                                    </div>
+                                                    <div className="flex flex-col overflow-hidden">
+                                                        <span className="text-[10px] font-black uppercase tracking-tighter truncate">{file.name}</span>
+                                                        <span className="text-[8px] text-emerald-500 font-bold uppercase tracking-widest">Listo para subir</span>
+                                                    </div>
                                                 </div>
                                                 <Button
                                                     size="icon"
                                                     variant="ghost"
-                                                    className="h-8 w-8 text-red-500 hover:bg-red-500/10"
+                                                    className="h-8 w-8 text-red-500 hover:bg-red-500/10 rounded-full"
                                                     onClick={(e) => {
                                                         e.stopPropagation();
-                                                        setMaintenanceReceipt(null);
+                                                        setMaintenanceReceipts(prev => prev.filter((_, i) => i !== index));
                                                     }}
                                                 >
                                                     <X className="h-4 w-4" />
                                                 </Button>
                                             </div>
-                                        ) : (
-                                            <>
-                                                <Upload className="h-6 w-6 text-primary/40 group-hover:text-primary transition-colors mb-2" />
-                                                <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Click para adjuntar archivo</span>
-                                            </>
-                                        )}
+                                        ))}
                                     </div>
-                                </div>
+                                )}
                             </div>
                         </div>
 
@@ -1953,92 +2029,86 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
             </Dialog>
 
             {/* LIGHTBOX LAYOUT */}
-            {
-                selectedPhoto && (
-                    <div className="fixed inset-0 z-[60] bg-black/95 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-300" onClick={() => setSelectedPhoto(null)}>
+            {selectedPhoto && (
+                <div className="fixed inset-0 z-[60] bg-black/95 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-300" onClick={() => setSelectedPhoto(null)}>
+                    {/* Close Button */}
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="absolute top-4 right-4 text-white/70 hover:text-white hover:bg-white/10 z-50 h-10 w-10 rounded-full"
+                        onClick={() => setSelectedPhoto(null)}
+                    >
+                        <X className="h-6 w-6" />
+                    </Button>
 
-                        {/* Close Button */}
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="absolute top-4 right-4 text-white/70 hover:text-white hover:bg-white/10 z-50 h-10 w-10 rounded-full"
-                            onClick={() => setSelectedPhoto(null)}
-                        >
-                            <X className="h-6 w-6" />
-                        </Button>
+                    {/* Navigation Buttons (if multiple photos) */}
+                    {photos.length > 1 && (
+                        <>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="absolute left-4 top-1/2 -translate-y-1/2 text-white/70 hover:text-white hover:bg-white/10 h-12 w-12 rounded-full hidden md:flex"
+                                onClick={(e) => {
+                                    e.stopPropagation()
+                                    const currentIndex = photos.findIndex(p => p.id === selectedPhoto.id)
+                                    const prevIndex = (currentIndex - 1 + photos.length) % photos.length
+                                    setSelectedPhoto(photos[prevIndex])
+                                }}
+                            >
+                                <ChevronLeft className="h-8 w-8" />
+                            </Button>
 
-                        {/* Navigation Buttons (if multiple photos) */}
-                        {photos.length > 1 && (
-                            <>
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="absolute left-4 top-1/2 -translate-y-1/2 text-white/70 hover:text-white hover:bg-white/10 h-12 w-12 rounded-full hidden md:flex"
-                                    onClick={(e) => {
-                                        e.stopPropagation()
-                                        const currentIndex = photos.findIndex(p => p.id === selectedPhoto.id)
-                                        const prevIndex = (currentIndex - 1 + photos.length) % photos.length
-                                        setSelectedPhoto(photos[prevIndex])
-                                    }}
-                                >
-                                    <ChevronLeft className="h-8 w-8" />
-                                </Button>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="absolute right-4 top-1/2 -translate-y-1/2 text-white/70 hover:text-white hover:bg-white/10 h-12 w-12 rounded-full hidden md:flex"
+                                onClick={(e) => {
+                                    e.stopPropagation()
+                                    const currentIndex = photos.findIndex(p => p.id === selectedPhoto.id)
+                                    const nextIndex = (currentIndex + 1) % photos.length
+                                    setSelectedPhoto(photos[nextIndex])
+                                }}
+                            >
+                                <ChevronRight className="h-8 w-8" />
+                            </Button>
+                        </>
+                    )}
 
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-white/70 hover:text-white hover:bg-white/10 h-12 w-12 rounded-full hidden md:flex"
-                                    onClick={(e) => {
-                                        e.stopPropagation()
-                                        const currentIndex = photos.findIndex(p => p.id === selectedPhoto.id)
-                                        const nextIndex = (currentIndex + 1) % photos.length
-                                        setSelectedPhoto(photos[nextIndex])
-                                    }}
-                                >
-                                    <ChevronRight className="h-8 w-8" />
-                                </Button>
-                            </>
-                        )}
+                    {/* Main Image Container */}
+                    <div className="relative max-w-7xl max-h-[85vh] w-full h-full flex flex-col items-center justify-center" onClick={e => e.stopPropagation()}>
+                        <div className="relative flex-1 w-full flex items-center justify-center">
+                            <img
+                                src={selectedPhoto.image_url}
+                                alt={selectedPhoto.caption || "Vehicle Photo"}
+                                className="max-w-full max-h-full object-contain shadow-2xl rounded-sm"
+                            />
+                        </div>
 
-                        {/* Main Image Container */}
-                        <div className="relative max-w-7xl max-h-[85vh] w-full h-full flex flex-col items-center justify-center" onClick={e => e.stopPropagation()}>
-                            <div className="relative flex-1 w-full flex items-center justify-center">
-                                <img
-                                    src={selectedPhoto.image_url}
-                                    alt={selectedPhoto.caption || "Vehicle Photo"}
-                                    className="max-w-full max-h-full object-contain shadow-2xl rounded-sm"
-                                />
-                            </div>
+                        {/* Caption / Info Footer */}
+                        <div className="mt-4 text-center">
+                            <p className="text-white/90 font-medium text-lg">{selectedPhoto.caption || "Sin título"}</p>
+                            <p className="text-white/50 text-sm">
+                                {new Date(selectedPhoto.created_at).toLocaleDateString()}
+                                {selectedPhoto.is_primary && <span className="ml-2 text-emerald-400 font-bold">• Principal</span>}
+                            </p>
 
-                            {/* Caption / Info Footer */}
-                            <div className="mt-4 text-center">
-                                <p className="text-white/90 font-medium text-lg">{selectedPhoto.caption || "Sin título"}</p>
-                                <p className="text-white/50 text-sm">
-                                    {new Date(selectedPhoto.created_at).toLocaleDateString()}
-                                    {selectedPhoto.is_primary && <span className="ml-2 text-emerald-400 font-bold">• Principal</span>}
-                                </p>
-
-                                <div className="flex gap-2 justify-center mt-3 scale-90 opacity-70 hover:opacity-100 transition-opacity">
-                                    {!selectedPhoto.is_primary && (
-                                        <Button variant="secondary" size="sm" onClick={() => handleSetPrimaryPhoto(selectedPhoto.id)}>
-                                            Hacer Principal
-                                        </Button>
-                                    )}
-                                    <Button variant="destructive" size="sm" onClick={(e) => {
-                                        handleDeletePhoto(selectedPhoto.id, e)
-                                        setSelectedPhoto(null)
-                                    }}>
-                                        <Trash2 className="h-4 w-4 mr-1" /> Eliminar
+                            <div className="flex gap-2 justify-center mt-3 scale-90 opacity-70 hover:opacity-100 transition-opacity">
+                                {!selectedPhoto.is_primary && (
+                                    <Button variant="secondary" size="sm" onClick={() => handleSetPrimaryPhoto(selectedPhoto.id)}>
+                                        Hacer Principal
                                     </Button>
-                                </div>
+                                )}
+                                <Button variant="destructive" size="sm" onClick={(e) => {
+                                    handleDeletePhoto(selectedPhoto.id, e)
+                                    setSelectedPhoto(null)
+                                }}>
+                                    <Trash2 className="h-4 w-4 mr-1" /> Eliminar
+                                </Button>
                             </div>
                         </div>
                     </div>
-                )
-            }
-
-
-
+                </div>
+            )}
 
             {/* RENTAL DIALOG */}
             <Dialog open={isRentalDialogOpen} onOpenChange={setIsRentalDialogOpen}>
@@ -2146,58 +2216,54 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
             </Dialog>
 
             {/* DOCUMENT VIEWER LIGHTBOX */}
-            {
-                selectedDocument && (
-                    <div className="fixed inset-0 z-[100] bg-slate-950/95 flex flex-col animate-in fade-in duration-300">
-                        {/* Header */}
-                        <div className="p-4 flex items-center justify-between text-white border-b border-white/10">
-                            <div className="flex items-center gap-3">
-                                <div className="bg-white/10 p-2 rounded-lg">
-                                    <FileText className="h-5 w-5" />
-                                </div>
-                                <div>
-                                    <h3 className="font-bold">{selectedDocument.title}</h3>
-                                    <p className="text-xs text-white/50 lowercase">{selectedDocument.type} • {new Date(selectedDocument.created_at).toLocaleDateString()}</p>
-                                </div>
+            {selectedDocument && (
+                <div className="fixed inset-0 z-[100] bg-slate-950/95 flex flex-col animate-in fade-in duration-300">
+                    <div className="p-4 flex items-center justify-between text-white border-b border-white/10">
+                        <div className="flex items-center gap-3">
+                            <div className="bg-white/10 p-2 rounded-lg">
+                                <FileText className="h-5 w-5" />
                             </div>
-                            <div className="flex gap-2">
-                                <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 h-10 w-10" asChild>
-                                    <a href={selectedDocument.file_url} target="_blank" rel="noopener noreferrer">
-                                        <Upload className="h-5 w-5 rotate-90" />
-                                    </a>
-                                </Button>
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="text-white hover:bg-white/20 rounded-full h-10 w-10"
-                                    onClick={() => setSelectedDocument(null)}
-                                >
-                                    <X className="h-6 w-6" />
-                                </Button>
+                            <div>
+                                <h3 className="font-bold">{selectedDocument.title}</h3>
+                                <p className="text-xs text-white/50 lowercase">{selectedDocument.type} • {new Date(selectedDocument.created_at).toLocaleDateString()}</p>
                             </div>
                         </div>
-
-                        {/* Content */}
-                        <div className="flex-1 overflow-auto p-4 md:p-8 flex items-center justify-center">
-                            {selectedDocument.file_url.toLowerCase().endsWith('.pdf') || selectedDocument.category?.toLowerCase() === 'pdf' ? (
-                                <iframe
-                                    src={selectedDocument.file_url}
-                                    className="w-full h-full max-w-5xl bg-white rounded-xl shadow-2xl"
-                                    title={selectedDocument.title}
-                                />
-                            ) : (
-                                <div className="relative group max-w-full max-h-full">
-                                    <img
-                                        src={selectedDocument.file_url}
-                                        alt={selectedDocument.title}
-                                        className="max-w-full max-h-[80vh] object-contain rounded-lg shadow-2xl transition-transform duration-500 group-hover:scale-[1.02]"
-                                    />
-                                </div>
-                            )}
+                        <div className="flex gap-2">
+                            <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 h-10 w-10" asChild>
+                                <a href={selectedDocument.file_url} target="_blank" rel="noopener noreferrer">
+                                    <Upload className="h-5 w-5 rotate-90" />
+                                </a>
+                            </Button>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="text-white hover:bg-white/20 rounded-full h-10 w-10"
+                                onClick={() => setSelectedDocument(null)}
+                            >
+                                <X className="h-6 w-6" />
+                            </Button>
                         </div>
                     </div>
-                )
-            }
+
+                    <div className="flex-1 overflow-auto p-4 md:p-8 flex items-center justify-center">
+                        {selectedDocument.file_url.toLowerCase().endsWith('.pdf') || selectedDocument.category?.toLowerCase() === 'pdf' ? (
+                            <iframe
+                                src={selectedDocument.file_url}
+                                className="w-full h-full max-w-5xl bg-white rounded-xl shadow-2xl"
+                                title={selectedDocument.title}
+                            />
+                        ) : (
+                            <div className="relative group max-w-full max-h-full">
+                                <img
+                                    src={selectedDocument.file_url}
+                                    alt={selectedDocument.title}
+                                    className="max-w-full max-h-[80vh] object-contain rounded-lg shadow-2xl transition-transform duration-500 group-hover:scale-[1.02]"
+                                />
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
         </>
     )
 }
@@ -2225,16 +2291,16 @@ function InfoRow({
             {isEditMode && onChange ? (
                 <div className="flex items-center gap-2 w-2/3">
                     {prefix && <span className="text-sm font-bold opacity-50">{prefix}</span>}
-                    <Input
+                    <input
                         type={type}
                         value={value}
                         onChange={(e) => onChange(e.target.value)}
-                        className="h-10 text-right bg-primary/5 border-primary/20 rounded-lg font-black italic tracking-tight"
+                        className="h-10 text-right bg-primary/5 border-primary/20 rounded-lg font-black italic tracking-tight w-full px-3 outline-none"
                     />
                 </div>
             ) : (
                 <span className="text-base font-black italic tracking-tight">
-                    {prefix}{type === "number" && !isEditMode ? parseFloat(value.replace(/,/g, '')).toLocaleString() : value}
+                    {prefix}{type === "number" && !isEditMode ? (parseFloat(value.replace(/,/g, '')) || 0).toLocaleString() : value}
                 </span>
             )}
         </div>

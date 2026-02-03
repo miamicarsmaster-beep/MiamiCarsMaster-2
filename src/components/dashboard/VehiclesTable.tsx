@@ -179,7 +179,7 @@ export function VehiclesGrid({ vehicles: initialVehicles, investors }: VehiclesG
                             <Plus className="mr-2 h-5 w-5" /> Adquirir Unidad
                         </Button>
                     </DialogTrigger>
-                    <DialogContent className="glass-card border-primary/20 shadow-2xl max-w-2xl max-h-[90vh] overflow-y-auto">
+                    <DialogContent className="bg-white dark:bg-slate-900/95 backdrop-blur-2xl border-border/40 shadow-2xl max-w-2xl max-h-[90vh] rounded-[3rem]">
                         <DialogHeader>
                             <DialogTitle className="text-2xl font-black italic uppercase tracking-tight">Registro de <span className="text-primary">Nueva Unidad</span></DialogTitle>
                             <DialogDescription className="text-xs font-bold uppercase tracking-widest opacity-60">

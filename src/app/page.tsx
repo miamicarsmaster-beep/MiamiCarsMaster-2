@@ -1,5 +1,6 @@
 import { Navbar } from "@/components/landing/Navbar"
 import { Hero } from "@/components/landing/Hero"
+import { VehicleFleet } from "@/components/landing/VehicleFleet"
 import { ProcessSection } from "@/components/landing/ProcessSection"
 import { ExperienceSection } from "@/components/landing/ExperienceSection"
 import { BenefitsSection } from "@/components/landing/BenefitsSection"
@@ -13,6 +14,7 @@ export default function Home() {
     <main className="min-h-screen bg-background text-foreground antialiased selection:bg-primary/20 selection:text-primary scroll-smooth">
       <Navbar />
       <Hero />
+      <VehicleFleet />
       <ProcessSection />
       <ExperienceSection />
       <BenefitsSection />
