@@ -313,9 +313,9 @@ export default function InvestorDocumentsPage() {
                         ) : isImage(previewDoc?.type || '') ? (
                             <div className="relative w-full h-full p-4">
                                 <ImageWithFallback
-                                    src={previewDoc.file_url}
+                                    src={previewDoc?.file_url || ''}
                                     fallbackSrc=""
-                                    alt={previewDoc.title}
+                                    alt={previewDoc?.title || ''}
                                     fill
                                     className="object-contain"
                                 />
