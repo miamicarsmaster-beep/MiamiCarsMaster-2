@@ -79,6 +79,8 @@ export interface Document {
     file_url: string
     type: DocumentType
     uploaded_by: string | null
+    category: string | null
+    expiry_date: string | null
     created_at: string
     updated_at: string
     // Relations

@@ -1,26 +1,14 @@
--- Migration to fix the foreign key in the documents table
--- The original initial schema had vehicle_id referencing profiles(id) instead of vehicles(id)
+-- Migration to change 'type' column to TEXT and unify documents table
+-- This removes the rigid enum constraint which is causing errors
 
--- 1. Correct the foreign key reference
+-- 1. Change the 'type' column from ENUM to TEXT
+ALTER TABLE documents ALTER COLUMN type TYPE TEXT;
+
+-- 2. Ensure columns are consistent
+ALTER TABLE documents ADD COLUMN IF NOT EXISTS category TEXT;
+ALTER TABLE documents ADD COLUMN IF NOT EXISTS expiry_date DATE;
+ALTER TABLE documents ADD COLUMN IF NOT EXISTS owner_id UUID REFERENCES profiles(id);
+
+-- 3. Fix the vehicle_id foreign key if it's still wrong
 ALTER TABLE documents DROP CONSTRAINT IF EXISTS documents_vehicle_id_fkey;
 ALTER TABLE documents ADD CONSTRAINT documents_vehicle_id_fkey FOREIGN KEY (vehicle_id) REFERENCES vehicles(id) ON DELETE CASCADE;
-
--- 2. Ensure we have a storage bucket for documents (this is safe to run in SQL for Supabase)
-INSERT INTO storage.buckets (id, name, public)
-VALUES ('documents', 'documents', true)
-ON CONFLICT (id) DO NOTHING;
-
--- 3. Set up storage policies for the documents bucket
-CREATE POLICY "Public Access"
-ON storage.objects FOR SELECT
-USING ( bucket_id = 'documents' );
-
-CREATE POLICY "Authenticated users can upload documents"
-ON storage.objects FOR INSERT
-TO authenticated
-WITH CHECK ( bucket_id = 'documents' );
-
-CREATE POLICY "Admins can delete documents"
-ON storage.objects FOR DELETE
-TO authenticated
-USING ( bucket_id = 'documents' AND (SELECT public.get_my_role()) = 'admin' );

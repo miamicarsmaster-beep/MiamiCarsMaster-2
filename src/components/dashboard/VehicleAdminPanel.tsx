@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea"
 import {
     Camera, Gauge, MapPin, Wrench, X, CalendarDays, CheckCircle2, Edit3, Save,
-    DollarSign, Trash2, Plus, FileText, Loader2, TrendingUp, AlertCircle, Upload, Eye, ChevronLeft, ChevronRight, Activity
+    DollarSign, Trash2, Plus, FileText, Loader2, TrendingUp, AlertCircle, Upload, Eye, ChevronLeft, ChevronRight, Activity, Image as ImageIcon
 } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
@@ -113,7 +113,6 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
     const [isSaving, setIsSaving] = useState(false)
     const [formData, setFormData] = useState({
         id: vehicle.id,
-        owner_id: vehicle.owner_id,
         created_at: vehicle.created_at,
         make: vehicle.make,
         model: vehicle.model,
@@ -166,6 +165,7 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
         next_service_mileage: "",
         notes: ""
     })
+    const [maintenanceReceipt, setMaintenanceReceipt] = useState<File | null>(null)
 
 
 
@@ -195,7 +195,6 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
             const {
                 id: _id,
                 created_at: _ca,
-                owner_id: _oid,
                 ...dataToUpdate
             } = formData;
 
@@ -393,7 +392,6 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
             setIsSaving(false)
         }
     }
-
     const handleSaveMaintenance = async () => {
         const type = maintenanceForm.service_type === "Otro" ? maintenanceForm.custom_service_type : maintenanceForm.service_type
 
@@ -403,6 +401,25 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
 
         setIsSaving(true)
         try {
+            let receiptUrls: string[] = []
+
+            // Upload receipt if exists
+            if (maintenanceReceipt) {
+                const fileExt = maintenanceReceipt.name.split('.').pop()
+                const fileName = `${vehicle.id}-maint-${Date.now()}.${fileExt}`
+                const { error: uploadError } = await supabase.storage
+                    .from('documents') // Usamos el bucket de documentos
+                    .upload(`maintenance/${fileName}`, maintenanceReceipt)
+
+                if (uploadError) throw uploadError
+
+                const { data: { publicUrl } } = supabase.storage
+                    .from('documents')
+                    .getPublicUrl(`maintenance/${fileName}`)
+
+                receiptUrls = [publicUrl]
+            }
+
             const { error } = await supabase
                 .from('maintenances')
                 .insert({
@@ -410,16 +427,17 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                     service_type: type,
                     cost: parseFloat(maintenanceForm.cost),
                     date: maintenanceForm.date,
-                    // mileage_at_service column doesn't exist in schema, adding to notes
                     next_service_mileage: maintenanceForm.next_service_mileage ? parseInt(maintenanceForm.next_service_mileage) : null,
                     notes: `${maintenanceForm.notes || ''} \n[Millaje al servicio: ${maintenanceForm.current_mileage}]`.trim(),
-                    status: 'completed'
+                    status: 'completed',
+                    receipt_images: receiptUrls.length > 0 ? receiptUrls : null
                 })
 
             if (error) throw error
 
             toast.success("Mantenimiento registrado")
             setIsMaintenanceDialogOpen(false)
+            setMaintenanceReceipt(null)
             setMaintenanceForm({
                 service_type: "",
                 custom_service_type: "",
@@ -564,13 +582,16 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                 else if (nameLower.includes('contract') || nameLower.includes('contrato')) docType = 'contract'
 
                 const { error: uploadError } = await supabase.storage
-                    .from('vehicle-images')
+                    .from('documents')
                     .upload(fileName, file)
 
-                if (uploadError) throw uploadError
+                if (uploadError) {
+                    console.error("Storage upload error:", uploadError)
+                    throw new Error(`Error de almacenamiento: ${uploadError.message}`)
+                }
 
                 const { data: { publicUrl } } = supabase.storage
-                    .from('vehicle-images')
+                    .from('documents')
                     .getPublicUrl(fileName)
 
                 const { error: dbError } = await supabase
@@ -584,8 +605,8 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                     })
 
                 if (dbError) {
-                    console.error("Database error:", dbError)
-                    throw new Error(`Error en base de datos: ${dbError.message}`)
+                    console.error("Database insert error:", dbError)
+                    throw new Error(`Error en base de datos: ${dbError.message} (Asegúrate de ejecutar la migración SQL)`)
                 }
             }
 
@@ -1101,6 +1122,7 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                                                             <TableHead>Próximo</TableHead>
                                                             <TableHead>Costo</TableHead>
                                                             <TableHead>Notas</TableHead>
+                                                            <TableHead className="text-right w-[50px]"></TableHead>
                                                         </TableRow>
                                                     </TableHeader>
                                                     <TableBody>
@@ -1114,6 +1136,19 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                                                                 <TableCell>{(record as any).next_service_mileage ? `${(record as any).next_service_mileage?.toLocaleString()} mi` : "-"}</TableCell>
                                                                 <TableCell>${record.cost?.toLocaleString()}</TableCell>
                                                                 <TableCell className="max-w-[200px] truncate text-muted-foreground">{record.notes}</TableCell>
+                                                                <TableCell className="text-right">
+                                                                    {record.receipt_images && record.receipt_images.length > 0 && (
+                                                                        <Button
+                                                                            variant="ghost"
+                                                                            size="icon"
+                                                                            className="h-8 w-8 text-blue-500 hover:text-blue-600 hover:bg-blue-50"
+                                                                            onClick={() => window.open(record.receipt_images![0], '_blank')}
+                                                                            title="Ver comprobante"
+                                                                        >
+                                                                            <ImageIcon className="h-4 w-4" />
+                                                                        </Button>
+                                                                    )}
+                                                                </TableCell>
                                                             </TableRow>
                                                         ))}
                                                     </TableBody>
@@ -1570,6 +1605,34 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                                     value={maintenanceForm.notes}
                                     onChange={(e) => setMaintenanceForm(prev => ({ ...prev, notes: e.target.value }))}
                                 />
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="receipt">Foto de Comprobante / Recibo</Label>
+                                <div className="mt-1 flex items-center gap-4">
+                                    <Input
+                                        id="receipt"
+                                        type="file"
+                                        accept="image/*,.pdf"
+                                        onChange={(e) => setMaintenanceReceipt(e.target.files?.[0] || null)}
+                                        className="cursor-pointer"
+                                    />
+                                    {maintenanceReceipt && (
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="text-red-500 hover:text-red-600 px-2"
+                                            onClick={() => {
+                                                setMaintenanceReceipt(null)
+                                                const input = document.getElementById('receipt') as HTMLInputElement
+                                                if (input) input.value = ''
+                                            }}
+                                        >
+                                            Quitar
+                                        </Button>
+                                    )}
+                                </div>
+                                <p className="text-[10px] text-muted-foreground">Opcional. Sube una foto o PDF de la factura.</p>
                             </div>
                         </div>
 
