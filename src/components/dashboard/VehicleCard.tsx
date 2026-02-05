@@ -5,7 +5,7 @@ import { Vehicle } from "@/types/database"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Calendar, Gauge, MapPin, Settings, Trash2, ChevronDown, Check, Loader2 } from "lucide-react"
+import { Calendar, Gauge, MapPin, Settings, Trash2, ChevronDown, Check, Loader2, User, Fuel } from "lucide-react"
 import { ImageWithFallback } from "@/components/ui/image-with-fallback"
 import {
     DropdownMenu,
@@ -144,11 +144,11 @@ export function VehicleCard({ vehicle, onDelete, onManage, onUpdate }: VehicleCa
                 <div className="grid grid-cols-2 gap-6">
                     <div className="flex items-center gap-4">
                         <div className="h-10 w-10 rounded-xl bg-primary/5 border border-primary/20 flex items-center justify-center shadow-inner">
-                            <Calendar className="h-5 w-5 text-primary" />
+                            <Settings className="h-5 w-5 text-primary" />
                         </div>
                         <div className="flex flex-col">
-                            <span className="text-xs font-black uppercase tracking-widest text-muted-foreground opacity-60 italic">Placa</span>
-                            <span className="text-sm font-black uppercase tracking-tight">{vehicle.license_plate || "N/A"}</span>
+                            <span className="text-xs font-black uppercase tracking-widest text-muted-foreground opacity-60 italic">Transmisión</span>
+                            <span className="text-sm font-black uppercase tracking-tight capitalize">{vehicle.transmission || "N/A"}</span>
                         </div>
                     </div>
                     <div className="flex items-center gap-4">
@@ -158,6 +158,27 @@ export function VehicleCard({ vehicle, onDelete, onManage, onUpdate }: VehicleCa
                         <div className="flex flex-col">
                             <span className="text-xs font-black uppercase tracking-widest text-muted-foreground opacity-60 italic">Recorrido</span>
                             <span className="text-sm font-black uppercase tracking-tight">{vehicle.mileage?.toLocaleString() || 0} MI</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-6">
+                    <div className="flex items-center gap-4">
+                        <div className="h-10 w-10 rounded-xl bg-primary/5 border border-primary/20 flex items-center justify-center shadow-inner">
+                            <User className="h-5 w-5 text-primary" />
+                        </div>
+                        <div className="flex flex-col">
+                            <span className="text-xs font-black uppercase tracking-widest text-muted-foreground opacity-60 italic">Asientos</span>
+                            <span className="text-sm font-black uppercase tracking-tight">{vehicle.seats || "N/A"}</span>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                        <div className="h-10 w-10 rounded-xl bg-primary/5 border border-primary/20 flex items-center justify-center shadow-inner">
+                            <Fuel className="h-5 w-5 text-primary" />
+                        </div>
+                        <div className="flex flex-col">
+                            <span className="text-xs font-black uppercase tracking-widest text-muted-foreground opacity-60 italic">Combustible</span>
+                            <span className="text-sm font-black uppercase tracking-tight capitalize">{vehicle.fuel_type || "N/A"}</span>
                         </div>
                     </div>
                 </div>

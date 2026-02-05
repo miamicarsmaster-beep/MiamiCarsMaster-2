@@ -1,8 +1,10 @@
 import { createClient } from "@/lib/supabase/server"
+import { InvestorPDFExport } from "@/components/dashboard/InvestorPDFExport"
 import { getVehiclesByInvestor } from "@/lib/data/vehicles"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { DollarSign, TrendingUp, TrendingDown, Calendar, FileText, Download, PieChart, ArrowUpRight, BadgeDollarSign } from "lucide-react"
+import { DollarSign, TrendingUp, TrendingDown, Calendar, FileText, Download, PieChart, ArrowUpRight, BadgeDollarSign, Car as CarIcon } from "lucide-react"
+import { ImageWithFallback } from "@/components/ui/image-with-fallback"
 import { redirect } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -110,6 +112,60 @@ export default async function InvestorFinancePage() {
             return acc
         }, {} as Record<string, number>)
 
+    // Calculate full monthly breakdown
+    const monthlyData: Record<string, { income: number; expenses: number }> = {}
+    records.forEach(record => {
+        const date = new Date(record.date)
+        const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+
+        if (!monthlyData[monthKey]) {
+            monthlyData[monthKey] = { income: 0, expenses: 0 }
+        }
+
+        if (record.type === 'income') {
+            monthlyData[monthKey].income += Number(record.amount)
+        } else {
+            monthlyData[monthKey].expenses += Number(record.amount)
+        }
+    })
+
+    const monthlyBreakdown = Object.entries(monthlyData)
+        .sort(([a], [b]) => b.localeCompare(a))
+        .map(([month, data]) => ({
+            month,
+            income: data.income,
+            expenses: data.expenses,
+            net: data.income - data.expenses
+        }))
+
+    // Build the summary object for the PDF export component
+    const investorSummary = {
+        investorId: user!.id,
+        investorName: profile?.full_name || 'Inversor',
+        investorEmail: user!.email || '',
+        vehicleCount: vehicles.length,
+        totalIncome,
+        totalExpenses,
+        netBalance,
+        vehicles: vehicles.map(v => {
+            const vRecords = records.filter(r => r.vehicle_id === v.id)
+            const vIncome = vRecords.filter(r => r.type === 'income').reduce((s, r) => s + Number(r.amount), 0)
+            const vExpenses = vRecords.filter(r => r.type === 'expense').reduce((s, r) => s + Number(r.amount), 0)
+            return {
+                vehicleId: v.id,
+                make: v.make,
+                model: v.model,
+                licensePlate: v.license_plate,
+                imageUrl: v.image_url,
+                totalIncome: vIncome,
+                totalExpenses: vExpenses,
+                netBalance: vIncome - vExpenses,
+                transactionCount: vRecords.length
+            }
+        }),
+        lastTransactionDate: records.length > 0 ? records[0].date : null
+    }
+
     return (
         <div className="space-y-8 pb-10 animate-in fade-in duration-700">
             {/* Header Section */}
@@ -122,9 +178,11 @@ export default async function InvestorFinancePage() {
                 </div>
 
                 <div className="flex items-center gap-3">
-                    <Button variant="outline" className="rounded-xl h-12 font-black uppercase text-[10px] tracking-widest border-border/50 hover:bg-primary/5 hover:text-primary transition-all">
-                        <Download className="h-4 w-4 mr-2" /> Exportar Reporte
-                    </Button>
+                    <InvestorPDFExport
+                        investor={investorSummary}
+                        transactions={records}
+                        monthlyBreakdown={monthlyBreakdown}
+                    />
                 </div>
             </div>
 
@@ -270,6 +328,77 @@ export default async function InvestorFinancePage() {
                         </div>
                     )}
                 </Card>
+            </div>
+
+            {/* Vehicles Breakdown */}
+            <div className="space-y-6">
+                <div className="flex items-center gap-3 border-b border-border/50 pb-4">
+                    <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-500">
+                        <CarIcon className="h-5 w-5" />
+                    </div>
+                    <h3 className="text-xl font-black uppercase italic tracking-tighter">Desglose por <span className="text-primary">Vehículo</span></h3>
+                </div>
+
+                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                    {investorSummary.vehicles.map((vehicle) => (
+                        <Card key={vehicle.vehicleId} className="group overflow-hidden bg-white dark:bg-slate-900/50 backdrop-blur-xl border-border/50 rounded-[2rem] shadow-xl hover:shadow-2xl transition-all hover:scale-[1.02]">
+                            <div className="relative aspect-video w-full overflow-hidden">
+                                <ImageWithFallback
+                                    src={vehicle.imageUrl || "/placeholder-car.jpg"}
+                                    fallbackSrc="/placeholder-car.jpg"
+                                    alt={`${vehicle.make} ${vehicle.model}`}
+                                    fill
+                                    className="object-cover transition-transform duration-500 group-hover:scale-110"
+                                />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                                <div className="absolute bottom-3 left-4">
+                                    <h4 className="text-sm font-black uppercase tracking-tight text-white leading-none">
+                                        {vehicle.make} {vehicle.model}
+                                    </h4>
+                                    <p className="text-[9px] font-bold uppercase tracking-widest text-white/70 mt-1">
+                                        {vehicle.licensePlate || 'Sin matrícula'}
+                                    </p>
+                                </div>
+                            </div>
+                            <div className="p-5 space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">
+                                        Ingresos Totales
+                                    </span>
+                                    <span className="text-sm font-black italic text-emerald-500">
+                                        +${vehicle.totalIncome.toLocaleString()}
+                                    </span>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                    <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">
+                                        Gastos Totales
+                                    </span>
+                                    <span className="text-sm font-black italic text-red-500">
+                                        -${vehicle.totalExpenses.toLocaleString()}
+                                    </span>
+                                </div>
+                                <div className="pt-2 border-t border-border/50">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">
+                                            Balance Neto
+                                        </span>
+                                        <span className={cn(
+                                            "text-base font-black italic",
+                                            vehicle.netBalance >= 0 ? "text-emerald-500" : "text-red-500"
+                                        )}>
+                                            ${vehicle.netBalance.toLocaleString()}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div className="flex items-center justify-center pt-2">
+                                    <Badge variant="outline" className="text-[8px] font-black uppercase tracking-widest bg-muted/30">
+                                        {vehicle.transactionCount} Transacciones
+                                    </Badge>
+                                </div>
+                            </div>
+                        </Card>
+                    ))}
+                </div>
             </div>
 
             {/* Transactions Table Section */}

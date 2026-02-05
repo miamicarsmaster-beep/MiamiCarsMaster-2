@@ -20,8 +20,8 @@ export function ExperienceSection() {
 
                         <div className="relative aspect-[4/3] rounded-[2.5rem] overflow-hidden shadow-2xl border border-white/10 group">
                             <img
-                                src="/mustang-silver.jpg"
-                                alt="Mustang Silver Miami"
+                                src="/experience-car.jpg"
+                                alt="Experience Premium Miami"
                                 className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
                             />
                             <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />

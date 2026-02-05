@@ -286,12 +286,88 @@ export function VehicleForm({ investors }: VehicleFormProps) {
                     <FormItem>
                         <FormLabel className="text-[10px] font-black uppercase tracking-widest text-foreground/70">Ubicación</FormLabel>
                         <FormControl>
-                            <Input {...field} placeholder="Miami..." className="bg-white/5 border-border/60 focus:bg-white/10 transition-all" />
+                            <Input {...field} placeholder="Miami..." className="bg-white/5 border-border/60 focus:bg-white/10 transition-all font-medium" />
                         </FormControl>
                         <FormMessage />
                     </FormItem>
                 )}
             />
+
+            <div className="grid grid-cols-2 gap-4">
+                <FormField
+                    control={form.control}
+                    name="seats"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel className="text-[10px] font-black uppercase tracking-widest text-foreground/70">Asientos</FormLabel>
+                            <FormControl>
+                                <Input {...field} type="number" placeholder="5" className="bg-white/5 border-border/60 focus:bg-white/10 transition-all font-medium" onChange={e => field.onChange(e.target.valueAsNumber || null)} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="transmission"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel className="text-[10px] font-black uppercase tracking-widest text-foreground/70">Transmisión</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value || "automatic"}>
+                                <FormControl>
+                                    <SelectTrigger className="bg-white/5 border-border/60 transition-all font-medium">
+                                        <SelectValue placeholder="Seleccionar..." />
+                                    </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                    <SelectItem value="automatic">Automática</SelectItem>
+                                    <SelectItem value="manual">Manual</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+                <FormField
+                    control={form.control}
+                    name="fuel_type"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel className="text-[10px] font-black uppercase tracking-widest text-foreground/70">Combustible</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value || "nafta"}>
+                                <FormControl>
+                                    <SelectTrigger className="bg-white/5 border-border/60 transition-all font-medium">
+                                        <SelectValue placeholder="Seleccionar..." />
+                                    </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                    <SelectItem value="nafta">Nafta</SelectItem>
+                                    <SelectItem value="gasoil">Gasoil</SelectItem>
+                                    <SelectItem value="electric">Eléctrico</SelectItem>
+                                    <SelectItem value="hybrid">Híbrido</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="range"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel className="text-[10px] font-black uppercase tracking-widest text-foreground/70">Autonomía (mi/km)</FormLabel>
+                            <FormControl>
+                                <Input {...field} type="number" placeholder="400" className="bg-white/5 border-border/60 focus:bg-white/10 transition-all font-medium" onChange={e => field.onChange(e.target.valueAsNumber || null)} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+            </div>
         </div>
     )
 }

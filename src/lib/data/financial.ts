@@ -1,7 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { FinancialRecord } from '@/types/database'
+import { cache } from 'react'
 
-export async function getFinancialRecords(): Promise<FinancialRecord[]> {
+export const getFinancialRecords = cache(async (): Promise<FinancialRecord[]> => {
     const supabase = await createClient()
 
     const { data, error } = await supabase
@@ -18,9 +19,9 @@ export async function getFinancialRecords(): Promise<FinancialRecord[]> {
     }
 
     return data || []
-}
+})
 
-export async function getFinancialRecordsByVehicle(vehicleId: string): Promise<FinancialRecord[]> {
+export const getFinancialRecordsByVehicle = cache(async (vehicleId: string): Promise<FinancialRecord[]> => {
     const supabase = await createClient()
 
     const { data, error } = await supabase
@@ -35,4 +36,4 @@ export async function getFinancialRecordsByVehicle(vehicleId: string): Promise<F
     }
 
     return data || []
-}
+})

@@ -40,6 +40,10 @@ const vehicleSchema = z.object({
     location: z.string().optional(),
     image_url: z.string().optional(),
     daily_rental_price: z.coerce.number().optional().nullable(),
+    seats: z.coerce.number().min(1).optional().nullable(),
+    transmission: z.string().optional(),
+    fuel_type: z.string().optional(),
+    range: z.coerce.number().min(0).optional().nullable(),
 })
 
 type VehicleFormValues = z.infer<typeof vehicleSchema>

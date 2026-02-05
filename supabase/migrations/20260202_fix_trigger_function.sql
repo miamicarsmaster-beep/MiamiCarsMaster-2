@@ -25,3 +25,4 @@ EXCEPTION
         RETURN NEW; -- O RAISE EXCEPTION si queremos bloquear el registro
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+e

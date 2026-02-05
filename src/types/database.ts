@@ -33,6 +33,11 @@ export interface Vehicle {
     mileage: number
     location: string | null
     daily_rental_price: number | null
+    // New vehicle specifications
+    seats?: number | null
+    transmission?: string | null
+    fuel_type?: string | null
+    range?: number | null
     created_at: string
     updated_at: string
     // Relations

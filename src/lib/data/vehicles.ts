@@ -1,7 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { Vehicle } from '@/types/database'
+import { cache } from 'react'
 
-export async function getVehicles(): Promise<Vehicle[]> {
+export const getVehicles = cache(async (): Promise<Vehicle[]> => {
     const supabase = await createClient()
 
     // Auth is handled by middleware - this function is only called from protected routes
@@ -20,9 +21,9 @@ export async function getVehicles(): Promise<Vehicle[]> {
 
     console.log('[getVehicles] Successfully loaded', data?.length || 0, 'vehicles')
     return data || []
-}
+})
 
-export async function getVehicleById(id: string): Promise<Vehicle | null> {
+export const getVehicleById = cache(async (id: string): Promise<Vehicle | null> => {
     const supabase = await createClient()
 
     const { data, error } = await supabase
@@ -40,9 +41,9 @@ export async function getVehicleById(id: string): Promise<Vehicle | null> {
     }
 
     return data
-}
+})
 
-export async function getVehiclesByInvestor(investorId: string): Promise<Vehicle[]> {
+export const getVehiclesByInvestor = cache(async (investorId: string): Promise<Vehicle[]> => {
     const supabase = await createClient()
 
     const { data, error } = await supabase
@@ -57,4 +58,4 @@ export async function getVehiclesByInvestor(investorId: string): Promise<Vehicle
     }
 
     return data || []
-}
+})

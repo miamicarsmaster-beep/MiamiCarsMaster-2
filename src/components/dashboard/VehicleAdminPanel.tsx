@@ -135,7 +135,11 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
         daily_rental_price: vehicle.daily_rental_price || 0,
         purchase_price: vehicle.purchase_price || 0,
         assigned_investor_id: vehicle.assigned_investor_id || "none",
-        image_url: vehicle.image_url || ""
+        image_url: vehicle.image_url || "",
+        seats: vehicle.seats || 5,
+        transmission: vehicle.transmission || "automatic",
+        fuel_type: vehicle.fuel_type || "nafta",
+        range: vehicle.range || 0
     })
 
     const [isLoadingData, setIsLoadingData] = useState(false)
@@ -808,14 +812,14 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
         <>
             <div className="fixed inset-0 z-40 md:left-80 bg-slate-50 dark:bg-slate-950 flex flex-col animate-in slide-in-from-bottom-4 fade-in duration-300 shadow-2xl">
                 {/* HEADER */}
-                <div className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/40 px-6 md:px-10 py-4 md:py-6 flex-shrink-0">
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                        <div className="flex items-center gap-4 md:gap-6">
+                <div className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/40 px-4 md:px-6 py-3 md:py-4 flex-shrink-0">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                        <div className="flex items-center gap-3 md:gap-4">
                             <div className="flex flex-col">
-                                <h1 className="text-xl md:text-3xl font-black italic tracking-tighter uppercase leading-none">
+                                <h1 className="text-lg md:text-2xl font-black italic tracking-tighter uppercase leading-none">
                                     {formData.make} <span className="text-primary">{formData.model}</span>
                                 </h1>
-                                <p className="text-[10px] md:text-sm font-bold text-muted-foreground uppercase tracking-[0.2em] md:tracking-[0.3em] mt-2">
+                                <p className="text-[9px] md:text-xs font-bold text-muted-foreground uppercase tracking-[0.2em] mt-1">
                                     Expediente Técnico {formData.year} • {formData.license_plate || 'SIN MATRÍCULA'}
                                 </p>
                             </div>
@@ -826,13 +830,13 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                                         disabled={isSaving}
                                         className={`h-auto p-0 rounded-full border-0 shadow-lg transition-transform hover:scale-105 active:scale-95 ${statusBadge.className}`}
                                     >
-                                        <Badge className="bg-transparent hover:bg-transparent text-white px-3 md:px-4 py-1.5 text-[10px] md:text-xs font-black uppercase tracking-widest flex items-center gap-2 border-0">
+                                        <Badge className="bg-transparent hover:bg-transparent text-white px-2 md:px-3 py-1 text-[9px] md:text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 border-0">
                                             {isSaving ? (
-                                                <Loader2 className="h-3 w-3 animate-spin" />
+                                                <Loader2 className="h-2.5 w-2.5 animate-spin" />
                                             ) : (
                                                 <>
                                                     {statusBadge.label}
-                                                    <ChevronDown className="h-3 w-3 opacity-50" />
+                                                    <ChevronDown className="h-2.5 w-2.5 opacity-50" />
                                                 </>
                                             )}
                                         </Badge>
@@ -863,28 +867,28 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                                 </DropdownMenuContent>
                             </DropdownMenu>
                         </div>
-                        <div className="flex items-center gap-2 md:gap-4 ml-auto md:ml-0">
+                        <div className="flex items-center gap-2 md:gap-3 ml-auto md:ml-0">
                             {isEditMode ? (
                                 <>
-                                    <Button variant="outline" size="lg" onClick={() => setIsEditMode(false)} className="rounded-2xl font-bold uppercase text-xs tracking-widest h-12 px-6">Cancelar</Button>
-                                    <Button size="lg" onClick={handleSave} disabled={isSaving} className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-black uppercase text-xs tracking-[0.15em] h-12 px-10 shadow-2xl shadow-emerald-500/40 border-0 transition-all hover:scale-[1.02] active:scale-95">
-                                        {isSaving ? <Loader2 className="h-5 w-5 mr-3 animate-spin" /> : <Save className="h-5 w-5 mr-3" />}
-                                        Actualizar Activo
+                                    <Button variant="outline" size="sm" onClick={() => setIsEditMode(false)} className="rounded-xl font-bold uppercase text-[10px] tracking-widest h-9 px-4">Cancelar</Button>
+                                    <Button size="sm" onClick={handleSave} disabled={isSaving} className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-black uppercase text-[10px] tracking-[0.15em] h-9 px-6 shadow-lg shadow-emerald-500/40 border-0 transition-all hover:scale-[1.02] active:scale-95">
+                                        {isSaving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+                                        Actualizar
                                     </Button>
                                 </>
                             ) : (
                                 <Button
-                                    size="lg"
+                                    size="sm"
                                     onClick={() => setIsEditMode(true)}
-                                    className="rounded-2xl border-2 border-primary bg-primary text-white hover:bg-primary/90 font-black uppercase text-xs tracking-[0.15em] h-12 px-10 shadow-2xl shadow-primary/40 transition-all hover:scale-[1.02] active:scale-95 group/editbtn"
+                                    className="rounded-xl border-2 border-primary bg-primary text-white hover:bg-primary/90 font-black uppercase text-[10px] tracking-[0.15em] h-9 px-6 shadow-lg shadow-primary/40 transition-all hover:scale-[1.02] active:scale-95 group/editbtn"
                                 >
-                                    <Edit3 className="h-5 w-5 mr-3 group-hover:rotate-12 transition-transform" />
-                                    EDITAR VEHÍCULO
+                                    <Edit3 className="h-4 w-4 mr-2 group-hover:rotate-12 transition-transform" />
+                                    EDITAR
                                 </Button>
                             )}
-                            <div className="w-[1px] h-8 bg-border/40 mx-1 md:mx-2 hidden md:block" />
-                            <Button variant="ghost" size="icon" onClick={onClose} className="h-10 w-10 md:h-12 md:w-12 rounded-xl md:rounded-2xl hover:bg-red-500/10 hover:text-red-500 transition-all group">
-                                <X className="h-5 w-5 md:h-6 md:w-6 group-hover:rotate-90 transition-transform duration-300" />
+                            <div className="w-[1px] h-6 bg-border/40 mx-1 hidden md:block" />
+                            <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8 md:h-9 md:w-9 rounded-lg hover:bg-red-500/10 hover:text-red-500 transition-all group">
+                                <X className="h-4 w-4 md:h-5 md:w-5 group-hover:rotate-90 transition-transform duration-300" />
                             </Button>
                         </div>
                     </div>
@@ -892,10 +896,10 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
 
                 {/* MAIN CONTENT */}
                 <div className="flex-1 overflow-y-auto">
-                    <div className="max-w-[1600px] mx-auto p-4 md:p-8">
+                    <div className="max-w-[1600px] mx-auto p-3 md:p-5">
 
                         {/* HERO SECTION - 2 COLUMNAS */}
-                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-8">
+                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 mb-5">
 
                             {/* COLUMNA IZQUIERDA - IMAGEN */}
                             <div className="lg:col-span-7 space-y-4">
@@ -928,33 +932,33 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                             </div>
 
                             {/* COLUMNA DERECHA - KPI CARDS */}
-                            <div className="lg:col-span-5 grid grid-cols-2 gap-4">
-                                <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-6 text-white shadow-lg">
-                                    <DollarSign className="h-8 w-8 mb-3 opacity-80" />
-                                    <p className="text-sm uppercase font-black opacity-90 mb-1">Tarifa Diaria</p>
-                                    <p className="text-3xl font-bold">${formData.daily_rental_price}</p>
-                                    <p className="text-sm opacity-75 mt-1">Por día de alquiler</p>
+                            <div className="lg:col-span-5 grid grid-cols-2 gap-3">
+                                <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg p-4 text-white shadow-md">
+                                    <DollarSign className="h-6 w-6 mb-2 opacity-80" />
+                                    <p className="text-[10px] uppercase font-black opacity-90 mb-0.5">Tarifa Diaria</p>
+                                    <p className="text-2xl font-bold">${formData.daily_rental_price}</p>
+                                    <p className="text-[10px] opacity-75 mt-0.5">Por día</p>
                                 </div>
 
-                                <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl p-6 text-white shadow-lg">
-                                    <TrendingUp className="h-8 w-8 mb-3 opacity-80" />
-                                    <p className="text-sm uppercase font-black opacity-90 mb-1">ROI Estimado</p>
-                                    <p className="text-3xl font-bold">{roi}%</p>
-                                    <p className="text-sm opacity-75 mt-1">Retorno anual proyectado</p>
+                                <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg p-4 text-white shadow-md">
+                                    <TrendingUp className="h-6 w-6 mb-2 opacity-80" />
+                                    <p className="text-[10px] uppercase font-black opacity-90 mb-0.5">ROI Estimado</p>
+                                    <p className="text-2xl font-bold">{roi}%</p>
+                                    <p className="text-[10px] opacity-75 mt-0.5">Retorno anual</p>
                                 </div>
 
-                                <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl p-6 text-white shadow-lg">
-                                    <Gauge className="h-8 w-8 mb-3 opacity-80" />
-                                    <p className="text-sm uppercase font-black opacity-90 mb-1">Millaje</p>
-                                    <p className="text-3xl font-bold">{(formData.mileage / 1000).toFixed(1)}k</p>
-                                    <p className="text-sm opacity-75 mt-1">Millas totales</p>
+                                <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-lg p-4 text-white shadow-md">
+                                    <Gauge className="h-6 w-6 mb-2 opacity-80" />
+                                    <p className="text-[10px] uppercase font-black opacity-90 mb-0.5">Millaje</p>
+                                    <p className="text-2xl font-bold">{(formData.mileage / 1000).toFixed(1)}k</p>
+                                    <p className="text-[10px] opacity-75 mt-0.5">Millas totales</p>
                                 </div>
 
-                                <div className="bg-gradient-to-br from-slate-700 to-slate-800 rounded-xl p-6 text-white shadow-lg">
-                                    <DollarSign className="h-8 w-8 mb-3 opacity-80" />
-                                    <p className="text-sm uppercase font-black opacity-90 mb-1">Inversión</p>
-                                    <p className="text-2xl font-bold">${(formData.purchase_price / 1000).toFixed(0)}k</p>
-                                    <p className="text-sm opacity-75 mt-1">Valor de compra</p>
+                                <div className="bg-gradient-to-br from-slate-700 to-slate-800 rounded-lg p-4 text-white shadow-md">
+                                    <DollarSign className="h-6 w-6 mb-2 opacity-80" />
+                                    <p className="text-[10px] uppercase font-black opacity-90 mb-0.5">Inversión</p>
+                                    <p className="text-xl font-bold">${(formData.purchase_price / 1000).toFixed(0)}k</p>
+                                    <p className="text-[10px] opacity-75 mt-0.5">Valor de compra</p>
                                 </div>
                             </div>
                         </div>
@@ -1028,6 +1032,64 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                                                     value={formData.location || ''}
                                                     isEditMode={isEditMode}
                                                     onChange={(val) => setFormData(prev => ({ ...prev, location: val }))}
+                                                />
+                                                <InfoRow
+                                                    label="Asientos"
+                                                    value={formData.seats?.toString() || '5'}
+                                                    isEditMode={isEditMode}
+                                                    type="number"
+                                                    onChange={(val) => setFormData(prev => ({ ...prev, seats: parseInt(val) || 5 }))}
+                                                />
+                                                <div className="flex justify-between items-center py-4 border-b border-border/30">
+                                                    <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Transmisión</span>
+                                                    {isEditMode ? (
+                                                        <Select
+                                                            value={formData.transmission || "automatic"}
+                                                            onValueChange={(val) => setFormData(prev => ({ ...prev, transmission: val }))}
+                                                        >
+                                                            <SelectTrigger className="w-[200px] h-10 border-primary/20 bg-primary/5 rounded-xl">
+                                                                <SelectValue placeholder="Seleccionar..." />
+                                                            </SelectTrigger>
+                                                            <SelectContent className="z-[500] bg-white dark:bg-slate-900 shadow-2xl">
+                                                                <SelectItem value="automatic">Automática</SelectItem>
+                                                                <SelectItem value="manual">Manual</SelectItem>
+                                                            </SelectContent>
+                                                        </Select>
+                                                    ) : (
+                                                        <span className="text-sm font-black italic tracking-tight capitalize">
+                                                            {formData.transmission === 'automatic' ? 'Automática' : 'Manual'}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <div className="flex justify-between items-center py-4 border-b border-border/30">
+                                                    <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Combustible</span>
+                                                    {isEditMode ? (
+                                                        <Select
+                                                            value={formData.fuel_type || "nafta"}
+                                                            onValueChange={(val) => setFormData(prev => ({ ...prev, fuel_type: val }))}
+                                                        >
+                                                            <SelectTrigger className="w-[200px] h-10 border-primary/20 bg-primary/5 rounded-xl">
+                                                                <SelectValue placeholder="Seleccionar..." />
+                                                            </SelectTrigger>
+                                                            <SelectContent className="z-[500] bg-white dark:bg-slate-900 shadow-2xl">
+                                                                <SelectItem value="nafta">Nafta</SelectItem>
+                                                                <SelectItem value="gasoil">Gasoil</SelectItem>
+                                                                <SelectItem value="electric">Eléctrico</SelectItem>
+                                                                <SelectItem value="hybrid">Híbrido</SelectItem>
+                                                            </SelectContent>
+                                                        </Select>
+                                                    ) : (
+                                                        <span className="text-sm font-black italic tracking-tight capitalize">
+                                                            {formData.fuel_type}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <InfoRow
+                                                    label="Autonomía (mi/km)"
+                                                    value={formData.range?.toString() || '0'}
+                                                    isEditMode={isEditMode}
+                                                    type="number"
+                                                    onChange={(val) => setFormData(prev => ({ ...prev, range: parseInt(val) || 0 }))}
                                                 />
                                             </div>
                                         </div>

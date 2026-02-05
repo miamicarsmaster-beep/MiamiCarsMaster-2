@@ -11,7 +11,7 @@ export function Hero() {
             {/* Background Image with Dark Gradient Overlay */}
             <div className="absolute inset-0 z-0">
                 <img
-                    src="/hero-mustang.jpg"
+                    src="/hero-banner.png"
                     alt="Miami Luxury Investment"
                     className="w-full h-full object-cover opacity-60 scale-105"
                 />

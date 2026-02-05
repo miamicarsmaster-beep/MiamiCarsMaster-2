@@ -1,7 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { Profile } from '@/types/database'
+import { cache } from 'react'
 
-export async function getProfiles(): Promise<Profile[]> {
+export const getProfiles = cache(async (): Promise<Profile[]> => {
     const supabase = await createClient()
 
     const { data, error } = await supabase
@@ -15,9 +16,9 @@ export async function getProfiles(): Promise<Profile[]> {
     }
 
     return data || []
-}
+})
 
-export async function getInvestors(): Promise<Profile[]> {
+export const getInvestors = cache(async (): Promise<Profile[]> => {
     const supabase = await createClient()
 
     const { data, error } = await supabase
@@ -33,9 +34,9 @@ export async function getInvestors(): Promise<Profile[]> {
 
     console.log('[getInvestors] Successfully loaded', data?.length || 0, 'investors')
     return data || []
-}
+})
 
-export async function getProfileById(id: string): Promise<Profile | null> {
+export const getProfileById = cache(async (id: string): Promise<Profile | null> => {
     const supabase = await createClient()
 
     const { data, error } = await supabase
@@ -50,4 +51,4 @@ export async function getProfileById(id: string): Promise<Profile | null> {
     }
 
     return data
-}
+})
