@@ -56,7 +56,7 @@ export async function getInvestorFinancialSummary(investorId?: string): Promise<
     // Get all vehicles with their assigned investors
     const { data: vehicles, error: vehiclesError } = await supabase
         .from('vehicles')
-        .select('id, make, model, license_plate, assigned_investor_id')
+        .select('id, make, model, license_plate, assigned_investor_id, image_url')
         .not('assigned_investor_id', 'is', null)
 
     if (vehiclesError) {

@@ -6,10 +6,7 @@ export async function updateSession(request: NextRequest) {
         request,
     })
 
-    // Debug logging: Check what cookies are arriving in production
-    const allCookies = request.cookies.getAll()
-    const hasAuthCookie = allCookies.some(c => c.name.includes('sb-') && c.name.includes('-auth-token'))
-    console.log(`[Middleware] ${request.nextUrl.pathname} - Cookies: ${allCookies.length}, HasAuth: ${hasAuthCookie}`)
+    // Security: Auth state check proceeds without logging sensitive info
 
     const supabase = createServerClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -50,10 +47,9 @@ export async function updateSession(request: NextRequest) {
 
     const pathname = request.nextUrl.pathname
 
-    if (user) {
-        console.log(`[Middleware] ✅ User authenticated: ${user.email} - Path: ${pathname}`)
-    } else {
-        console.log(`[Middleware] ❌ No user session - Path: ${pathname} - Cookies: ${hasAuthCookie}`)
+    // Non-sensitive path logging for development
+    if (process.env.NODE_ENV === 'development') {
+        console.log(`[Middleware] ${user ? '✅' : '❌'} - ${pathname}`)
     }
 
     // Protect dashboard routes

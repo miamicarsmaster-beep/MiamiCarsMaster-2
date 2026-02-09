@@ -14,6 +14,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'),
   title: "Miami Cars Investments | Plataforma de Inversión Premium",
   description: "Gestionamos tu flota de lujo en Miami con transparencia total. Invierte de forma inteligente con reportes en tiempo real y gestión operativa experta.",
   openGraph: {
