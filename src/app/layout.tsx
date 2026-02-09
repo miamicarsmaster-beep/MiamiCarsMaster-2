@@ -21,10 +21,10 @@ export const metadata: Metadata = {
     description: "Maximiza tu capital con nuestra gestión de flotas de lujo. Transparencia, seguridad jurídica y rendición mensual.",
     images: [
       {
-        url: "/hero-mustang.jpg",
-        width: 1200,
-        height: 630,
-        alt: "Miami Cars Investments Premium Fleet",
+        url: "/og-fleet.png",
+        width: 1408,
+        height: 736,
+        alt: "Miami Cars Investments Premium Fleet with Miami Skyline",
       },
     ],
     locale: "es_US",
@@ -34,7 +34,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Miami Cars Investments",
     description: "Gestión experta de inversiones de flota en Miami.",
-    images: ["/hero-mustang.jpg"],
+    images: ["/og-fleet.png"],
   },
 };
 
