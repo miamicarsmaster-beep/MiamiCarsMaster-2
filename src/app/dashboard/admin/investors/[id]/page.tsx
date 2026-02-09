@@ -112,7 +112,7 @@ export default async function InvestorDetailPage({ params }: PageProps) {
                         </Button>
                     </Link>
                     <div>
-                        <h2 className="text-3xl md:text-4xl font-black tracking-tight uppercase italic">
+                        <h2 className="text-2xl sm:text-3xl md:text-4xl font-black tracking-tight uppercase italic">
                             {investor.investorName || 'Sin nombre'}
                         </h2>
                         <p className="text-sm text-muted-foreground font-bold uppercase tracking-widest mt-1">
@@ -305,10 +305,10 @@ export default async function InvestorDetailPage({ params }: PageProps) {
                                         <th className="px-4 py-3 text-left text-[9px] font-black uppercase tracking-widest text-muted-foreground">
                                             Mes
                                         </th>
-                                        <th className="px-4 py-3 text-right text-[9px] font-black uppercase tracking-widest text-muted-foreground">
+                                        <th className="px-4 py-3 text-right text-[9px] font-black uppercase tracking-widest text-muted-foreground hidden sm:table-cell">
                                             Ingresos
                                         </th>
-                                        <th className="px-4 py-3 text-right text-[9px] font-black uppercase tracking-widest text-muted-foreground">
+                                        <th className="px-4 py-3 text-right text-[9px] font-black uppercase tracking-widest text-muted-foreground hidden sm:table-cell">
                                             Gastos
                                         </th>
                                         <th className="px-4 py-3 text-right text-[9px] font-black uppercase tracking-widest text-muted-foreground">
@@ -330,12 +330,12 @@ export default async function InvestorDetailPage({ params }: PageProps) {
                                                     {new Date(month.month + '-01').toLocaleDateString('es-ES', { month: 'short', year: 'numeric' })}
                                                 </span>
                                             </td>
-                                            <td className="py-3 px-4 text-right">
+                                            <td className="py-3 px-4 text-right hidden sm:table-cell">
                                                 <span className="text-sm font-black italic text-emerald-500">
                                                     +${month.income.toLocaleString()}
                                                 </span>
                                             </td>
-                                            <td className="py-3 px-4 text-right">
+                                            <td className="py-3 px-4 text-right hidden sm:table-cell">
                                                 <span className="text-sm font-black italic text-red-500">
                                                     -${month.expenses.toLocaleString()}
                                                 </span>
@@ -389,13 +389,13 @@ export default async function InvestorDetailPage({ params }: PageProps) {
                                         <th className="px-4 py-3 text-left text-[9px] font-black uppercase tracking-widest text-muted-foreground">
                                             Vehículo
                                         </th>
-                                        <th className="px-4 py-3 text-left text-[9px] font-black uppercase tracking-widest text-muted-foreground">
+                                        <th className="px-4 py-3 text-left text-[9px] font-black uppercase tracking-widest text-muted-foreground hidden md:table-cell">
                                             Categoría
                                         </th>
-                                        <th className="px-4 py-3 text-left text-[9px] font-black uppercase tracking-widest text-muted-foreground">
+                                        <th className="px-4 py-3 text-left text-[9px] font-black uppercase tracking-widest text-muted-foreground hidden lg:table-cell">
                                             Descripción
                                         </th>
-                                        <th className="px-4 py-3 text-center text-[9px] font-black uppercase tracking-widest text-muted-foreground">
+                                        <th className="px-4 py-3 text-center text-[9px] font-black uppercase tracking-widest text-muted-foreground hidden sm:table-cell">
                                             Tipo
                                         </th>
                                         <th className="px-4 py-3 text-right text-[9px] font-black uppercase tracking-widest text-muted-foreground">
@@ -431,17 +431,17 @@ export default async function InvestorDetailPage({ params }: PageProps) {
                                                     </p>
                                                 </div>
                                             </td>
-                                            <td className="py-3 px-4">
+                                            <td className="py-3 px-4 hidden md:table-cell">
                                                 <Badge variant="outline" className="text-[8px] font-black uppercase">
                                                     {transaction.category}
                                                 </Badge>
                                             </td>
-                                            <td className="py-3 px-4">
+                                            <td className="py-3 px-4 hidden lg:table-cell">
                                                 <span className="text-xs text-muted-foreground">
                                                     {transaction.description || '—'}
                                                 </span>
                                             </td>
-                                            <td className="py-3 px-4 text-center">
+                                            <td className="py-3 px-4 text-center hidden sm:table-cell">
                                                 <div className={cn(
                                                     "inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-[8px] font-black uppercase tracking-widest",
                                                     transaction.type === 'income' ? "bg-emerald-500/10 text-emerald-500" : "bg-red-500/10 text-red-500"

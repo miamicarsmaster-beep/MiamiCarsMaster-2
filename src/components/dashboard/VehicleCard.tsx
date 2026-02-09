@@ -130,17 +130,17 @@ export function VehicleCard({ vehicle, onDelete, onManage, onUpdate }: VehicleCa
                 </div>
 
                 {/* Hero Info */}
-                <div className="absolute bottom-6 left-8 flex flex-col gap-1">
-                    <span className="text-primary text-xs font-black uppercase tracking-[0.3em] drop-shadow-sm">
+                <div className="absolute bottom-6 left-6 sm:left-8 flex flex-col gap-1">
+                    <span className="text-primary text-[10px] sm:text-xs font-black uppercase tracking-[0.3em] drop-shadow-sm">
                         {vehicle.year} MODEL • {vehicle.license_plate || "SN"}
                     </span>
-                    <h3 className="text-white text-3xl font-black italic tracking-tighter uppercase leading-none drop-shadow-xl">
+                    <h3 className="text-white text-2xl sm:text-3xl font-black italic tracking-tighter uppercase leading-none drop-shadow-xl">
                         {vehicle.make} <span className="text-white/80">{vehicle.model}</span>
                     </h3>
                 </div>
             </div>
 
-            <div className="p-8 space-y-6">
+            <div className="p-6 sm:p-8 space-y-6">
                 <div className="grid grid-cols-2 gap-6">
                     <div className="flex items-center gap-4">
                         <div className="h-10 w-10 rounded-xl bg-primary/5 border border-primary/20 flex items-center justify-center shadow-inner">
@@ -201,7 +201,7 @@ export function VehicleCard({ vehicle, onDelete, onManage, onUpdate }: VehicleCa
                 )}
             </div>
 
-            <div className="px-6 pb-8 flex gap-3">
+            <div className="px-5 sm:px-6 pb-8 flex gap-2 sm:gap-3">
                 <Button
                     onClick={() => onManage?.(vehicle)}
                     className="flex-1 h-14 rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground font-black uppercase tracking-widest text-xs shadow-xl shadow-primary/30 transition-all hover:scale-[1.02] active:scale-95"

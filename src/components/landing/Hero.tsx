@@ -35,7 +35,7 @@ export function Hero() {
                         initial={{ opacity: 0, y: 30 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.8, delay: 0.2 }}
-                        className="text-4xl sm:text-5xl md:text-8xl lg:text-9xl font-black tracking-tighter text-white mb-8 leading-[0.85] uppercase italic"
+                        className="text-[32px] sm:text-[54px] md:text-8xl lg:text-9xl font-black tracking-tighter text-white mb-8 leading-[0.85] uppercase italic"
                     >
                         Tu capital, <br />
                         <span className="text-primary italic">nuestra operativa.</span>

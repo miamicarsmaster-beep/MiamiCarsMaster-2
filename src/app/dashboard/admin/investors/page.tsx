@@ -199,17 +199,17 @@ export default async function InvestorsFinancePage() {
                                         <th className="px-4 py-3 text-left text-[9px] font-black uppercase tracking-widest text-muted-foreground">
                                             Inversor
                                         </th>
-                                        <th className="px-4 py-3 text-center text-[9px] font-black uppercase tracking-widest text-muted-foreground">
+                                        <th className="px-4 py-3 text-center text-[9px] font-black uppercase tracking-widest text-muted-foreground hidden md:table-cell">
                                             Vehículos
                                         </th>
-                                        <th className="px-4 py-3 text-right text-[9px] font-black uppercase tracking-widest text-muted-foreground">
+                                        <th className="px-4 py-3 text-right text-[9px] font-black uppercase tracking-widest text-muted-foreground hidden lg:table-cell">
                                             Ingresos
                                         </th>
-                                        <th className="px-4 py-3 text-right text-[9px] font-black uppercase tracking-widest text-muted-foreground">
+                                        <th className="px-4 py-3 text-right text-[9px] font-black uppercase tracking-widest text-muted-foreground hidden lg:table-cell">
                                             Gastos
                                         </th>
                                         <th className="px-4 py-3 text-right text-[9px] font-black uppercase tracking-widest text-muted-foreground">
-                                            Balance Neto
+                                            Balance
                                         </th>
                                         <th className="px-4 py-3 text-right text-[9px] font-black uppercase tracking-widest text-muted-foreground">
                                             Acción
@@ -246,17 +246,17 @@ export default async function InvestorsFinancePage() {
                                                     </div>
                                                 </Link>
                                             </td>
-                                            <td className="py-4 px-4 text-center">
+                                            <td className="py-4 px-4 text-center hidden md:table-cell">
                                                 <Badge variant="outline" className="font-black text-[10px]">
                                                     {investor.vehicleCount}
                                                 </Badge>
                                             </td>
-                                            <td className="py-4 px-4 text-right">
+                                            <td className="py-4 px-4 text-right hidden lg:table-cell">
                                                 <p className="text-sm font-black italic tracking-tighter text-emerald-500">
                                                     +${investor.totalIncome.toLocaleString()}
                                                 </p>
                                             </td>
-                                            <td className="py-4 px-4 text-right">
+                                            <td className="py-4 px-4 text-right hidden lg:table-cell">
                                                 <p className="text-sm font-black italic tracking-tighter text-red-500">
                                                     -${investor.totalExpenses.toLocaleString()}
                                                 </p>
@@ -278,11 +278,11 @@ export default async function InvestorsFinancePage() {
                                                 </div>
                                             </td>
                                             <td className="py-4 px-4 text-right">
-                                                <div className="flex items-center justify-end gap-2">
+                                                <div className="flex items-center justify-end gap-1 sm:gap-2">
                                                     <Link href={`/dashboard/admin/investors/${investor.investorId}`}>
-                                                        <Button variant="outline" size="sm" className="h-8 rounded-lg font-black uppercase text-[9px] tracking-widest border-primary/20 hover:bg-primary hover:text-white transition-all group-hover:border-primary">
-                                                            Ver informe
-                                                            <ChevronRight className="ml-1.5 h-3 w-3" />
+                                                        <Button variant="outline" size="sm" className="h-8 px-2 sm:px-3 rounded-lg font-black uppercase text-[8px] sm:text-[9px] tracking-widest border-primary/20 hover:bg-primary hover:text-white transition-all group-hover:border-primary">
+                                                            <span className="hidden sm:inline">Ver informe</span>
+                                                            <ChevronRight className="sm:ml-1.5 h-3 w-3" />
                                                         </Button>
                                                     </Link>
                                                     <DeleteInvestorButton

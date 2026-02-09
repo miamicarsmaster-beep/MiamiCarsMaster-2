@@ -168,7 +168,7 @@ export function VehiclesGrid({ vehicles: initialVehicles, investors }: VehiclesG
                 </div>
             )}
 
-            <div className="flex justify-between items-end px-2">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 px-2">
                 <div className="flex flex-col gap-1">
                     <h3 className="text-xl font-black italic tracking-tight uppercase">Activos <span className="text-primary">Operativos</span></h3>
                     <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">{vehicles.length} Unidades en inventario</p>
@@ -178,7 +178,7 @@ export function VehiclesGrid({ vehicles: initialVehicles, investors }: VehiclesG
                         <Button
                             onClick={resetForm}
                             size="lg"
-                            className="h-12 px-6 rounded-xl font-black uppercase tracking-widest text-xs shadow-2xl shadow-primary/20"
+                            className="h-12 w-full sm:w-auto px-6 rounded-xl font-black uppercase tracking-widest text-xs shadow-2xl shadow-primary/20"
                         >
                             <Plus className="mr-2 h-5 w-5" /> Adquirir Unidad
                         </Button>

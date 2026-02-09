@@ -14,7 +14,7 @@ export function Navbar() {
         >
             <div className="container mx-auto flex h-20 items-center justify-between px-6 sm:px-10">
                 <Link href="/" className="flex items-center space-x-2">
-                    <div className="relative w-40 h-10 md:w-64 md:h-16 transition-all">
+                    <div className="relative w-32 h-8 md:w-64 md:h-16 transition-all">
                         <Image
                             src="/logo-white.png"
                             alt="Miami Cars Investments"

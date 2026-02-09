@@ -54,8 +54,10 @@ export function SessionStatus() {
 
     // Always visible for now to help the user debug immediately without knowing shortcuts
     // In a real app we might hide this or use the shortcut logic
+    if (!isVisible) return null;
+
     return (
-        <div className="fixed bottom-0 right-0 p-2 bg-black/90 text-white text-xs z-[9999] opacity-80 hover:opacity-100 transition-opacity rounded-tl-lg pointer-events-none font-mono border-t border-l border-white/20">
+        <div className="fixed bottom-0 right-0 p-2 bg-black/90 text-white text-xs z-[9999] opacity-80 hover:opacity-100 transition-opacity rounded-tl-lg font-mono border-t border-l border-white/20">
             {status}
         </div>
     )
