@@ -139,7 +139,12 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
         seats: vehicle.seats || 5,
         transmission: vehicle.transmission || "automatic",
         fuel_type: vehicle.fuel_type || "nafta",
-        range: vehicle.range || 0
+        range: vehicle.range || 0,
+        expected_occupancy_days: vehicle.expected_occupancy_days || 240,
+        management_fee_percent: vehicle.management_fee_percent || 20,
+        management_fee_type: vehicle.management_fee_type || 'percentage',
+        management_fee_fixed_amount: vehicle.management_fee_fixed_amount || 0,
+        apply_management_fee: vehicle.apply_management_fee ?? true
     })
 
     const [isLoadingData, setIsLoadingData] = useState(false)
@@ -187,9 +192,14 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
     const router = useRouter()
 
     // Cálculos
-    const roi = formData.purchase_price > 0
-        ? ((formData.daily_rental_price * 240 / formData.purchase_price) * 100).toFixed(0)
+    const effectiveFee = formData.apply_management_fee
+        ? (formData.management_fee_type === 'percentage'
+            ? (formData.daily_rental_price * (formData.expected_occupancy_days || 240) * (formData.management_fee_percent || 20) / 100)
+            : (formData.management_fee_fixed_amount || 0))
         : 0
+    const grossIncome = formData.daily_rental_price * (formData.expected_occupancy_days || 240)
+    const netIncome = grossIncome - effectiveFee
+    const roi = formData.purchase_price > 0 ? ((netIncome / formData.purchase_price) * 100).toFixed(0) : 0
 
     const getStatusBadge = () => {
         const statusConfig = {
@@ -1115,6 +1125,80 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                                                     onChange={(val) => setFormData(prev => ({ ...prev, daily_rental_price: parseFloat(val) || 0 }))}
                                                     prefix="$"
                                                 />
+                                                <InfoRow
+                                                    label="Ocupación Anual (días)"
+                                                    value={formData.expected_occupancy_days?.toString() || '240'}
+                                                    isEditMode={isEditMode}
+                                                    type="number"
+                                                    onChange={(val) => setFormData(prev => ({ ...prev, expected_occupancy_days: parseInt(val) || 0 }))}
+                                                    suffix=" días"
+                                                />
+                                                <div className="space-y-4 pt-4 border-b border-border/30 pb-6 group">
+                                                    <div className="flex justify-between items-center mb-2">
+                                                        <span className="text-xs font-black text-muted-foreground dark:text-gray-400 uppercase tracking-widest group-hover:text-primary transition-colors">Fee de Gestión</span>
+                                                        {isEditMode ? (
+                                                            <button
+                                                                onClick={() => setFormData(prev => ({ ...prev, apply_management_fee: !prev.apply_management_fee }))}
+                                                                className={`relative w-12 h-6 rounded-full transition-all duration-300 p-1 ${formData.apply_management_fee ? 'bg-emerald-500 shadow-md' : 'bg-slate-700'}`}
+                                                            >
+                                                                <div className={`h-4 w-4 rounded-full bg-white transition-all duration-300 ${formData.apply_management_fee ? 'translate-x-6' : 'translate-x-0'}`} />
+                                                            </button>
+                                                        ) : (
+                                                            <div className={`h-2 w-2 rounded-full ${formData.apply_management_fee ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`} />
+                                                        )}
+                                                    </div>
+
+                                                    {formData.apply_management_fee && (
+                                                        <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                                                            {isEditMode ? (
+                                                                <div className="flex p-1 bg-slate-900/50 rounded-xl border border-white/5 h-10">
+                                                                    <button
+                                                                        onClick={() => setFormData(prev => ({ ...prev, management_fee_type: 'percentage' }))}
+                                                                        className={`flex-1 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${formData.management_fee_type === 'percentage' ? 'bg-emerald-500 text-black' : 'text-muted-foreground'}`}
+                                                                    >
+                                                                        %
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => setFormData(prev => ({ ...prev, management_fee_type: 'fixed' }))}
+                                                                        className={`flex-1 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${formData.management_fee_type === 'fixed' ? 'bg-emerald-500 text-black' : 'text-muted-foreground'}`}
+                                                                    >
+                                                                        $ Fijo
+                                                                    </button>
+                                                                </div>
+                                                            ) : (
+                                                                <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest opacity-50">
+                                                                    {formData.management_fee_type === 'percentage' ? 'Cálculo por Porcentaje' : 'Costo Fijo Aplicado'}
+                                                                </div>
+                                                            )}
+
+                                                            <div className="flex items-center gap-2">
+                                                                {formData.management_fee_type === 'percentage' ? (
+                                                                    <div className="flex-1 relative">
+                                                                        <input
+                                                                            type="number"
+                                                                            disabled={!isEditMode}
+                                                                            value={formData.management_fee_percent?.toString() || '0'}
+                                                                            onChange={(e) => setFormData(prev => ({ ...prev, management_fee_percent: parseFloat(e.target.value) || 0 }))}
+                                                                            className="w-full bg-transparent border-b border-white/10 py-2 text-xl font-black italic tracking-tight text-primary outline-none focus:border-primary transition-all"
+                                                                        />
+                                                                        <span className="absolute right-0 bottom-2 text-xs font-bold opacity-30">%</span>
+                                                                    </div>
+                                                                ) : (
+                                                                    <div className="flex-1 relative">
+                                                                        <input
+                                                                            type="number"
+                                                                            disabled={!isEditMode}
+                                                                            value={formData.management_fee_fixed_amount?.toString() || '0'}
+                                                                            onChange={(e) => setFormData(prev => ({ ...prev, management_fee_fixed_amount: parseFloat(e.target.value) || 0 }))}
+                                                                            className="w-full bg-transparent border-b border-white/10 py-2 text-xl font-black italic tracking-tight text-primary outline-none focus:border-primary transition-all"
+                                                                        />
+                                                                        <span className="absolute right-0 bottom-2 text-xs font-bold opacity-30">USD</span>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
                                                 <InfoRow label="ROI Estimado" value={`${roi}%`} className="text-primary font-black" />
                                                 <div className="flex justify-between items-center py-4 border-b border-border/30">
                                                     <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Inversor Socio</span>
@@ -2337,7 +2421,8 @@ function InfoRow({
     onChange,
     type = "text",
     className,
-    prefix
+    prefix,
+    suffix
 }: {
     label: string;
     value: string;
@@ -2346,6 +2431,7 @@ function InfoRow({
     type?: string;
     className?: string;
     prefix?: string;
+    suffix?: string;
 }) {
     return (
         <div className={cn("flex justify-between items-center py-4 border-b border-border/30 group transition-colors", className)}>
@@ -2355,14 +2441,15 @@ function InfoRow({
                     {prefix && <span className="text-sm font-bold opacity-50">{prefix}</span>}
                     <input
                         type={type}
-                        value={value}
+                        value={value.replace(/[^0-9.]/g, '')} // Clean value for numeric input if needed, but value is string here
                         onChange={(e) => onChange(e.target.value)}
                         className="h-10 text-right bg-primary/5 border-primary/20 rounded-lg font-black italic tracking-tight w-full px-3 outline-none"
                     />
+                    {suffix && <span className="text-sm font-bold opacity-50">{suffix}</span>}
                 </div>
             ) : (
-                <span className="text-base font-black italic tracking-tight">
-                    {prefix}{type === "number" && !isEditMode ? (parseFloat(value.replace(/,/g, '')) || 0).toLocaleString() : value}
+                <span className="text-sm font-black italic tracking-tight uppercase">
+                    {prefix}{type === "number" ? (parseFloat(value.replace(/,/g, '')) || 0).toLocaleString() : value}{suffix}
                 </span>
             )}
         </div>

@@ -56,6 +56,7 @@ export function FinancialTable({ records: initialRecords, vehicles }: FinancialT
         amount: "",
         date: new Date().toISOString().split('T')[0],
         description: "",
+        mileage_at_operation: "",
     })
 
     const resetForm = () => {
@@ -66,6 +67,7 @@ export function FinancialTable({ records: initialRecords, vehicles }: FinancialT
             amount: "",
             date: new Date().toISOString().split('T')[0],
             description: "",
+            mileage_at_operation: "",
         })
     }
 
@@ -77,6 +79,7 @@ export function FinancialTable({ records: initialRecords, vehicles }: FinancialT
                 .insert([{
                     ...formData,
                     amount: Number(formData.amount),
+                    mileage_at_operation: formData.mileage_at_operation ? Number(formData.mileage_at_operation) : null,
                 }])
                 .select(`
           *,
@@ -85,6 +88,19 @@ export function FinancialTable({ records: initialRecords, vehicles }: FinancialT
                 .single()
 
             if (error) throw error
+
+            // Update vehicle mileage if provided
+            if (formData.mileage_at_operation) {
+                const { error: vehicleError } = await supabase
+                    .from("vehicles")
+                    .update({ mileage: Number(formData.mileage_at_operation) })
+                    .eq("id", formData.vehicle_id)
+
+                if (vehicleError) {
+                    console.error("Error updating vehicle mileage:", vehicleError)
+                    // We don't throw here to not break the flow, but we log it
+                }
+            }
 
             setRecords([data, ...records])
             setIsAddOpen(false)
@@ -171,7 +187,7 @@ export function FinancialTable({ records: initialRecords, vehicles }: FinancialT
                                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary to-transparent opacity-50" />
                                 <DialogHeader>
                                     <DialogTitle className="text-3xl font-black italic tracking-tighter uppercase leading-none mb-3 text-slate-900 dark:text-white">
-                                        Registrar <span className="text-secondary text-glow font-black">Operación</span>
+                                        Registrar <span className="text-primary font-black">Operación</span>
                                     </DialogTitle>
                                     <DialogDescription className="text-[11px] font-black text-primary/60 uppercase tracking-[0.3em]">
                                         Inyectar datos financieros al sistema de flota
@@ -225,7 +241,7 @@ export function FinancialTable({ records: initialRecords, vehicles }: FinancialT
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-6">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                     <div className="space-y-3">
                                         <Label className="text-[11px] font-black uppercase tracking-widest text-primary">Categoría Operativa</Label>
                                         <Input
@@ -244,6 +260,17 @@ export function FinancialTable({ records: initialRecords, vehicles }: FinancialT
                                             value={formData.date}
                                             onChange={(e) => setFormData({ ...formData, date: e.target.value })}
                                             className="h-12 bg-slate-200/50 dark:bg-primary/5 border-primary/20 rounded-xl font-bold italic text-sm"
+                                        />
+                                    </div>
+                                    <div className="space-y-3">
+                                        <Label className="text-[11px] font-black uppercase tracking-widest text-primary">Millaje (ODO)</Label>
+                                        <Input
+                                            id="mileage_at_operation"
+                                            type="number"
+                                            value={formData.mileage_at_operation}
+                                            onChange={(e) => setFormData({ ...formData, mileage_at_operation: e.target.value })}
+                                            className="h-12 bg-slate-200/50 dark:bg-primary/5 border-primary/20 rounded-xl font-bold italic text-sm"
+                                            placeholder="Millas actuales..."
                                         />
                                     </div>
                                 </div>
@@ -397,6 +424,9 @@ export function FinancialTable({ records: initialRecords, vehicles }: FinancialT
                                                         {selectedRecord.vehicle?.make} {selectedRecord.vehicle?.model}
                                                     </p>
                                                     <p className="text-[10px] font-bold opacity-60">PLACA: {selectedRecord.vehicle?.license_plate || 'SIN PLACA'}</p>
+                                                    {selectedRecord.mileage_at_operation && (
+                                                        <p className="text-[10px] font-bold text-emerald-500 mt-1">MILLAS REGISTRADAS: {selectedRecord.mileage_at_operation.toLocaleString()} MI</p>
+                                                    )}
                                                 </div>
                                             </div>
 

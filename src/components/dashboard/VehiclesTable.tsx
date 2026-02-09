@@ -44,6 +44,11 @@ const vehicleSchema = z.object({
     transmission: z.string().optional(),
     fuel_type: z.string().optional(),
     range: z.coerce.number().min(0).optional().nullable(),
+    expected_occupancy_days: z.coerce.number().min(0).max(365).optional().default(240),
+    management_fee_percent: z.coerce.number().min(0).max(100).optional().default(20),
+    management_fee_type: z.enum(["percentage", "fixed"]).optional().default("percentage"),
+    management_fee_fixed_amount: z.coerce.number().min(0).optional().default(0),
+    apply_management_fee: z.boolean().optional().default(true),
 })
 
 type VehicleFormValues = z.infer<typeof vehicleSchema>
@@ -78,6 +83,11 @@ export function VehiclesGrid({ vehicles: initialVehicles, investors }: VehiclesG
             location: "",
             image_url: "",
             daily_rental_price: 0,
+            expected_occupancy_days: 240,
+            management_fee_percent: 20,
+            management_fee_type: "percentage",
+            management_fee_fixed_amount: 0,
+            apply_management_fee: true,
         },
     })
 
@@ -100,6 +110,11 @@ export function VehiclesGrid({ vehicles: initialVehicles, investors }: VehiclesG
                 daily_rental_price: values.daily_rental_price ? Number(values.daily_rental_price) : null,
                 assigned_investor_id: values.assigned_investor_id === "none" ? null : (values.assigned_investor_id || null),
                 image_url: finalImageUrl,
+                expected_occupancy_days: Number(values.expected_occupancy_days) || 240,
+                management_fee_percent: Number(values.management_fee_percent) || 20,
+                management_fee_type: values.management_fee_type || 'percentage',
+                management_fee_fixed_amount: Number(values.management_fee_fixed_amount) || 0,
+                apply_management_fee: values.apply_management_fee ?? true,
             }
 
             const { data, error } = await supabase

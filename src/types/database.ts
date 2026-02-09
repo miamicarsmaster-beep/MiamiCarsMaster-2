@@ -38,6 +38,11 @@ export interface Vehicle {
     transmission?: string | null
     fuel_type?: string | null
     range?: number | null
+    expected_occupancy_days?: number | null
+    management_fee_percent?: number | null
+    management_fee_type?: 'percentage' | 'fixed' | null
+    management_fee_fixed_amount?: number | null
+    apply_management_fee?: boolean | null
     created_at: string
     updated_at: string
     // Relations
@@ -53,6 +58,7 @@ export interface FinancialRecord {
     date: string
     description: string | null
     proof_image_url: string | null
+    mileage_at_operation: number | null
     created_by: string | null
     created_at: string
     updated_at: string

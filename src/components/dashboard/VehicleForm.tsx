@@ -258,7 +258,7 @@ export function VehicleForm({ investors }: VehicleFormProps) {
                         <FormItem>
                             <FormLabel className="text-[10px] font-black uppercase tracking-widest text-foreground/70">Precio Compra ($)</FormLabel>
                             <FormControl>
-                                <Input {...field} value={field.value ?? ""} type="number" className="bg-white/5 border-border/60 focus:bg-white/10 transition-all" onChange={e => field.onChange(e.target.valueAsNumber || null)} />
+                                <Input {...field} value={field.value ?? ""} type="number" className="bg-white/5 border-border/60 focus:bg-white/10 transition-all font-medium" onChange={e => field.onChange(e.target.valueAsNumber || null)} />
                             </FormControl>
                             <FormMessage />
                         </FormItem>
@@ -266,12 +266,12 @@ export function VehicleForm({ investors }: VehicleFormProps) {
                 />
                 <FormField
                     control={form.control}
-                    name="mileage"
+                    name="daily_rental_price"
                     render={({ field }) => (
                         <FormItem>
-                            <FormLabel className="text-[10px] font-black uppercase tracking-widest text-foreground/70">Millaje</FormLabel>
+                            <FormLabel className="text-[10px] font-black uppercase tracking-widest text-foreground/70">Tarifa Diaria ($)</FormLabel>
                             <FormControl>
-                                <Input {...field} value={field.value ?? ""} type="number" className="bg-white/5 border-border/60 focus:bg-white/10 transition-all" onChange={e => field.onChange(e.target.valueAsNumber)} />
+                                <Input {...field} value={field.value ?? ""} type="number" className="bg-white/5 border-border/60 focus:bg-white/10 transition-all font-medium" onChange={e => field.onChange(e.target.valueAsNumber || null)} />
                             </FormControl>
                             <FormMessage />
                         </FormItem>
@@ -279,19 +279,141 @@ export function VehicleForm({ investors }: VehicleFormProps) {
                 />
             </div>
 
-            <FormField
-                control={form.control}
-                name="location"
-                render={({ field }) => (
-                    <FormItem>
-                        <FormLabel className="text-[10px] font-black uppercase tracking-widest text-foreground/70">Ubicación</FormLabel>
-                        <FormControl>
-                            <Input {...field} placeholder="Miami..." className="bg-white/5 border-border/60 focus:bg-white/10 transition-all font-medium" />
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
+            {/* ROI & Fee Configuration Section */}
+            <div className="mt-4 p-6 rounded-3xl bg-primary/5 border border-primary/10 space-y-6">
+                <div className="flex items-center justify-between">
+                    <div className="space-y-1">
+                        <h4 className="text-xs font-black uppercase tracking-tight italic">Configuración <span className="text-primary italic text-[10px]">ROI & FEES</span></h4>
+                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest leading-none">Ajustes de rentabilidad proyectada</p>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                        control={form.control}
+                        name="expected_occupancy_days"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel className="text-[10px] font-black uppercase tracking-widest text-foreground/70">Ocupación Anual (días)</FormLabel>
+                                <FormControl>
+                                    <Input {...field} value={field.value ?? 240} type="number" className="bg-white/10 border-border/30 focus:bg-white/20 transition-all font-medium h-12 rounded-xl" onChange={e => field.onChange(e.target.valueAsNumber || 240)} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="apply_management_fee"
+                        render={({ field }) => (
+                            <FormItem className="flex flex-col justify-end">
+                                <FormLabel className="text-[10px] font-black uppercase tracking-widest text-foreground/70 mb-2">Fee de Gestión</FormLabel>
+                                <FormControl>
+                                    <div className="flex items-center gap-3 h-12">
+                                        <button
+                                            type="button"
+                                            onClick={() => field.onChange(!field.value)}
+                                            className={`relative w-12 h-6 rounded-full transition-all duration-300 p-1 ${field.value ? 'bg-emerald-500 shadow-md shadow-emerald-500/20' : 'bg-slate-700'}`}
+                                        >
+                                            <div className={`h-4 w-4 rounded-full bg-white transition-all duration-300 ${field.value ? 'translate-x-6' : 'translate-x-0'}`} />
+                                        </button>
+                                        <span className="text-[10px] font-black uppercase tracking-widest opacity-60">
+                                            {field.value ? 'HABILITADO' : 'DESACTIVADO'}
+                                        </span>
+                                    </div>
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                </div>
+
+                {form.watch("apply_management_fee") && (
+                    <div className="grid grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                        <FormField
+                            control={form.control}
+                            name="management_fee_type"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel className="text-[10px] font-black uppercase tracking-widest text-foreground/70">Tipo de Fee</FormLabel>
+                                    <div className="flex p-1 bg-slate-900/40 rounded-xl border border-white/5 h-12">
+                                        <button
+                                            type="button"
+                                            onClick={() => field.onChange('percentage')}
+                                            className={`flex-1 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${field.value === 'percentage' ? 'bg-emerald-500 text-black shadow-lg shadow-emerald-500/10' : 'text-muted-foreground'}`}
+                                        >
+                                            %
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => field.onChange('fixed')}
+                                            className={`flex-1 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${field.value === 'fixed' ? 'bg-emerald-500 text-black shadow-lg shadow-emerald-500/10' : 'text-muted-foreground'}`}
+                                        >
+                                            $ Fijo
+                                        </button>
+                                    </div>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name={form.watch("management_fee_type") === 'percentage' ? "management_fee_percent" : "management_fee_fixed_amount"}
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel className="text-[10px] font-black uppercase tracking-widest text-foreground/70">
+                                        {form.watch("management_fee_type") === 'percentage' ? 'Comisión (%)' : 'Monto Fijo ($)'}
+                                    </FormLabel>
+                                    <FormControl>
+                                        <div className="relative">
+                                            <Input
+                                                {...field}
+                                                value={field.value ?? (form.watch("management_fee_type") === 'percentage' ? 20 : 0)}
+                                                type="number"
+                                                className="bg-white/10 border-border/30 focus:bg-white/20 transition-all font-black italic tracking-tight text-lg h-12 rounded-xl pr-10"
+                                                onChange={e => field.onChange(parseFloat(e.target.value) || 0)}
+                                            />
+                                            <div className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-muted-foreground italic">
+                                                {form.watch("management_fee_type") === 'percentage' ? '%' : 'USD'}
+                                            </div>
+                                        </div>
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    </div>
                 )}
-            />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+                <FormField
+                    control={form.control}
+                    name="mileage"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel className="text-[10px] font-black uppercase tracking-widest text-foreground/70">Millaje</FormLabel>
+                            <FormControl>
+                                <Input {...field} value={field.value ?? ""} type="number" className="bg-white/5 border-border/60 focus:bg-white/10 transition-all font-medium" onChange={e => field.onChange(e.target.valueAsNumber)} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="location"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel className="text-[10px] font-black uppercase tracking-widest text-foreground/70">Ubicación</FormLabel>
+                            <FormControl>
+                                <Input {...field} placeholder="Miami..." className="bg-white/5 border-border/60 focus:bg-white/10 transition-all font-medium" />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+            </div>
 
             <div className="grid grid-cols-2 gap-4">
                 <FormField

@@ -29,6 +29,11 @@ interface Vehicle {
     purchase_price: number | null
     image_url: string | null
     assigned_investor_id: string | null
+    expected_occupancy_days: number | null
+    management_fee_percent: number | null
+    management_fee_type: 'percentage' | 'fixed' | null
+    management_fee_fixed_amount: number | null
+    apply_management_fee: boolean | null
 }
 
 interface VehiclePhoto {
@@ -330,14 +335,56 @@ export default function InvestorVehicleDetailPage() {
                                     </div>
                                 </Card>
 
-                                <Card className="bg-white dark:bg-slate-900/50 backdrop-blur-xl border-border/50 rounded-[2rem] p-6 group hover:border-orange-500/30 transition-all shadow-xl hover:shadow-orange-500/5">
-                                    <div className="flex items-center gap-4">
-                                        <div className="h-14 w-14 rounded-2xl bg-orange-500/10 flex items-center justify-center text-orange-500 group-hover:scale-110 group-hover:rotate-6 transition-all">
-                                            <ShieldCheck className="h-7 w-7" />
+                                <Card className="bg-gradient-to-br from-emerald-500/20 to-transparent backdrop-blur-3xl border-emerald-500/20 rounded-[2.5rem] p-8 group shadow-2xl relative overflow-hidden">
+                                    <div className="absolute top-0 right-0 h-32 w-32 bg-emerald-500/20 -mr-16 -mt-16 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-700" />
+                                    <div className="flex items-center gap-6">
+                                        <div className="h-16 w-16 rounded-[1.5rem] bg-emerald-500 text-black flex items-center justify-center group-hover:scale-110 group-hover:rotate-6 transition-all duration-500 shadow-lg shadow-emerald-500/20">
+                                            <TrendingUp className="h-8 w-8" />
                                         </div>
                                         <div>
-                                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-1">Status de Salud</p>
-                                            <p className="text-2xl font-black italic tracking-tighter uppercase text-emerald-500">Impecable</p>
+                                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-1">Rentabilidad Proyectada (ROI)</p>
+                                            <p className="text-4xl font-black italic tracking-tighter text-emerald-500">
+                                                {(() => {
+                                                    const gross = (vehicle.daily_rental_price || 0) * (vehicle.expected_occupancy_days || 240);
+                                                    let feeAmount = 0;
+
+                                                    if (vehicle.apply_management_fee) {
+                                                        if (vehicle.management_fee_type === 'fixed') {
+                                                            feeAmount = vehicle.management_fee_fixed_amount || 0;
+                                                        } else {
+                                                            feeAmount = gross * (vehicle.management_fee_percent || 20) / 100;
+                                                        }
+                                                    }
+
+                                                    if (vehicle.purchase_price && vehicle.purchase_price > 0) {
+                                                        const net = gross - feeAmount;
+                                                        return ((net / vehicle.purchase_price) * 100).toFixed(1);
+                                                    }
+                                                    return "0";
+                                                })()}%
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="mt-8 pt-6 border-t border-emerald-500/10 grid grid-cols-3 gap-4">
+                                        <div className="space-y-1">
+                                            <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground opacity-50">Ocupación</p>
+                                            <p className="text-[11px] font-bold uppercase tracking-tight">{vehicle.expected_occupancy_days || 240} días/año</p>
+                                        </div>
+                                        <div className="space-y-1 text-center">
+                                            <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground opacity-50">Fee Gestión</p>
+                                            <p className={cn("text-[11px] font-bold uppercase tracking-tight", !vehicle.apply_management_fee && "line-through text-red-500/50")}>
+                                                {vehicle.apply_management_fee ? (
+                                                    vehicle.management_fee_type === 'fixed'
+                                                        ? `$${vehicle.management_fee_fixed_amount?.toLocaleString()}`
+                                                        : `${vehicle.management_fee_percent || 20}%`
+                                                ) : 'OFF'}
+                                            </p>
+                                        </div>
+                                        <div className="space-y-1 text-right">
+                                            <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground opacity-50">Cálculo</p>
+                                            <p className="text-[11px] font-bold uppercase tracking-tight text-emerald-500">
+                                                {vehicle.management_fee_type === 'fixed' ? 'Fijo' : 'Variable'}
+                                            </p>
                                         </div>
                                     </div>
                                 </Card>

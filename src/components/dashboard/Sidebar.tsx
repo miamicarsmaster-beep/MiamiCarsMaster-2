@@ -11,6 +11,7 @@ import {
     LogOut,
     BadgeDollarSign,
     Calendar,
+    Settings2,
 } from "lucide-react"
 
 const adminRoutes = [
