@@ -18,6 +18,21 @@ export async function deleteInvestor(userId: string) {
         }
     })
 
+    // 1. Unassign vehicles first to avoid FK issues
+    try {
+        const { error: updateError } = await supabase
+            .from('vehicles')
+            .update({ assigned_investor_id: null })
+            .eq('assigned_investor_id', userId)
+
+        if (updateError) {
+            console.error('Error unassigning vehicles:', updateError)
+        }
+    } catch (e) {
+        console.error('Exception unassigning vehicles:', e)
+    }
+
+    // 2. Delete user from auth (this should trigger profile deletion if cascade is set)
     const { error } = await supabase.auth.admin.deleteUser(userId)
 
     if (error) {

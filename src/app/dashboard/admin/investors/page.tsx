@@ -16,6 +16,7 @@ import Link from "next/link"
 import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
 import { CreateInvestorDialog } from "@/components/dashboard/CreateInvestorDialog"
+import { DeleteInvestorButton } from "@/components/dashboard/DeleteInvestorButton"
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic'
@@ -277,12 +278,18 @@ export default async function InvestorsFinancePage() {
                                                 </div>
                                             </td>
                                             <td className="py-4 px-4 text-right">
-                                                <Link href={`/dashboard/admin/investors/${investor.investorId}`}>
-                                                    <Button variant="outline" size="sm" className="h-8 rounded-lg font-black uppercase text-[9px] tracking-widest border-primary/20 hover:bg-primary hover:text-white transition-all group-hover:border-primary">
-                                                        Ver informe
-                                                        <ChevronRight className="ml-1.5 h-3 w-3" />
-                                                    </Button>
-                                                </Link>
+                                                <div className="flex items-center justify-end gap-2">
+                                                    <Link href={`/dashboard/admin/investors/${investor.investorId}`}>
+                                                        <Button variant="outline" size="sm" className="h-8 rounded-lg font-black uppercase text-[9px] tracking-widest border-primary/20 hover:bg-primary hover:text-white transition-all group-hover:border-primary">
+                                                            Ver informe
+                                                            <ChevronRight className="ml-1.5 h-3 w-3" />
+                                                        </Button>
+                                                    </Link>
+                                                    <DeleteInvestorButton
+                                                        investorId={investor.investorId}
+                                                        investorName={investor.investorName || investor.investorEmail}
+                                                    />
+                                                </div>
                                             </td>
                                         </tr>
                                     ))}
