@@ -1,7 +1,7 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { Send, Mail, MessageCircle, ArrowRight } from "lucide-react"
+import { MessageCircle } from "lucide-react"
 import { motion } from "framer-motion"
 
 export function ContactSection() {
@@ -39,13 +39,7 @@ export function ContactSection() {
                                 <MessageCircle className="mr-3 h-6 w-6" /> WhatsApp Premium Support
                             </a>
                         </Button>
-                        <Button
-                            variant="outline"
-                            size="lg"
-                            className="h-20 px-12 text-xs font-black uppercase tracking-widest rounded-2xl border-white/10 bg-white/5 backdrop-blur-md text-white hover:bg-white/10 hover:border-white/30 transition-all uppercase italic"
-                        >
-                            <Mail className="mr-3 h-6 w-6 text-primary" /> Enviar Mensaje <ArrowRight className="ml-3 h-4 w-4" />
-                        </Button>
+
                     </div>
 
                     <div className="pt-20 grid grid-cols-2 lg:grid-cols-4 gap-8 opacity-40">
