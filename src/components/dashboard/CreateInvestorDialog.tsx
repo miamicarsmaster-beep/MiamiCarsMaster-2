@@ -89,28 +89,28 @@ export function CreateInvestorDialog() {
                     <span className="tracking-widest text-[10px]">Crear Inversor</span>
                 </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px] glass-card border-border/20">
-                <DialogHeader>
-                    <DialogTitle className="text-2xl font-black uppercase italic tracking-tighter">
+            <DialogContent className="sm:max-w-[425px] bg-white border-0 shadow-2xl rounded-[32px]">
+                <DialogHeader className="space-y-4">
+                    <DialogTitle className="text-3xl font-black uppercase italic tracking-tighter text-slate-900 leading-none">
                         Crear <span className="text-primary">Nuevo Inversor</span>
                     </DialogTitle>
-                    <DialogDescription className="text-xs font-bold uppercase tracking-widest opacity-60">
-                        Ingresa los datos del nuevo inversor. Se le enviará un correo de confirmación.
+                    <DialogDescription className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 leading-relaxed">
+                        Ingresa los datos del nuevo inversor. <br />Se le enviará un correo de confirmación.
                     </DialogDescription>
                 </DialogHeader>
                 <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5 pt-4">
                         <div className="grid grid-cols-2 gap-4">
                             <FormField
                                 control={form.control}
                                 name="firstName"
                                 render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Nombre</FormLabel>
+                                    <FormItem className="space-y-1.5">
+                                        <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Nombre</FormLabel>
                                         <FormControl>
-                                            <Input placeholder="Juan" {...field} className="bg-white/5 border-border/20 rounded-xl uppercase font-bold text-xs" />
+                                            <Input placeholder="JUAN" {...field} className="h-12 bg-slate-50 border-0 rounded-2xl uppercase font-bold text-xs text-slate-900 placeholder:text-slate-300 focus-visible:ring-1 focus-visible:ring-primary/30 transition-all shadow-sm" />
                                         </FormControl>
-                                        <FormMessage className="text-[9px] font-bold" />
+                                        <FormMessage className="text-[9px] font-bold text-red-500" />
                                     </FormItem>
                                 )}
                             />
@@ -118,12 +118,12 @@ export function CreateInvestorDialog() {
                                 control={form.control}
                                 name="lastName"
                                 render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Apellido</FormLabel>
+                                    <FormItem className="space-y-1.5">
+                                        <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Apellido</FormLabel>
                                         <FormControl>
-                                            <Input placeholder="Pérez" {...field} className="bg-white/5 border-border/20 rounded-xl uppercase font-bold text-xs" />
+                                            <Input placeholder="PÉREZ" {...field} className="h-12 bg-slate-50 border-0 rounded-2xl uppercase font-bold text-xs text-slate-900 placeholder:text-slate-300 focus-visible:ring-1 focus-visible:ring-primary/30 transition-all shadow-sm" />
                                         </FormControl>
-                                        <FormMessage className="text-[9px] font-bold" />
+                                        <FormMessage className="text-[9px] font-bold text-red-500" />
                                     </FormItem>
                                 )}
                             />
@@ -133,12 +133,12 @@ export function CreateInvestorDialog() {
                             control={form.control}
                             name="email"
                             render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Correo Electrónico</FormLabel>
+                                <FormItem className="space-y-1.5">
+                                    <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Correo Electrónico</FormLabel>
                                     <FormControl>
-                                        <Input type="email" placeholder="juan@ejemplo.com" {...field} className="bg-white/5 border-border/20 rounded-xl font-bold text-xs" />
+                                        <Input type="email" placeholder="JUAN@EJEMPLO.COM" {...field} className="h-12 bg-slate-50 border-0 rounded-2xl font-bold text-xs text-slate-900 placeholder:text-slate-300 focus-visible:ring-1 focus-visible:ring-primary/30 transition-all shadow-sm" />
                                     </FormControl>
-                                    <FormMessage className="text-[9px] font-bold" />
+                                    <FormMessage className="text-[9px] font-bold text-red-500" />
                                 </FormItem>
                             )}
                         />
@@ -147,12 +147,12 @@ export function CreateInvestorDialog() {
                             control={form.control}
                             name="country"
                             render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">País</FormLabel>
+                                <FormItem className="space-y-1.5">
+                                    <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">País</FormLabel>
                                     <FormControl>
-                                        <Input placeholder="Argentina" {...field} className="bg-white/5 border-border/20 rounded-xl uppercase font-bold text-xs" />
+                                        <Input placeholder="ARGENTINA" {...field} className="h-12 bg-slate-50 border-0 rounded-2xl uppercase font-bold text-xs text-slate-900 placeholder:text-slate-300 focus-visible:ring-1 focus-visible:ring-primary/30 transition-all shadow-sm" />
                                     </FormControl>
-                                    <FormMessage className="text-[9px] font-bold" />
+                                    <FormMessage className="text-[9px] font-bold text-red-500" />
                                 </FormItem>
                             )}
                         />
@@ -161,22 +161,22 @@ export function CreateInvestorDialog() {
                             control={form.control}
                             name="password"
                             render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Contraseña</FormLabel>
+                                <FormItem className="space-y-1.5">
+                                    <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Contraseña</FormLabel>
                                     <FormControl>
-                                        <Input type="password" {...field} className="bg-white/5 border-border/20 rounded-xl font-bold text-xs text-primary" />
+                                        <Input type="password" {...field} className="h-12 bg-slate-50 border-0 rounded-2xl font-bold text-xs text-slate-900 focus-visible:ring-1 focus-visible:ring-primary/30 transition-all shadow-sm" />
                                     </FormControl>
-                                    <FormMessage className="text-[9px] font-bold" />
+                                    <FormMessage className="text-[9px] font-bold text-red-500" />
                                 </FormItem>
                             )}
                         />
 
-                        <DialogFooter className="pt-4">
-                            <Button type="submit" disabled={isLoading} className="w-full h-12 rounded-xl font-black uppercase italic tracking-widest bg-primary text-primary-foreground hover:scale-[1.02] transition-all">
+                        <DialogFooter className="pt-6">
+                            <Button type="submit" disabled={isLoading} className="w-full h-14 rounded-2xl font-black uppercase italic tracking-[0.15em] bg-primary text-primary-foreground hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl shadow-primary/25 text-[11px]">
                                 {isLoading ? (
                                     <span className="flex items-center gap-2">
                                         <span className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                        Procesando...
+                                        PROCESANDO...
                                     </span>
                                 ) : "Crear Cuenta de Inversor"}
                             </Button>
