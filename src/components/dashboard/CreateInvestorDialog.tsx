@@ -89,7 +89,7 @@ export function CreateInvestorDialog() {
                     <span className="tracking-widest text-[10px]">Crear Inversor</span>
                 </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px] bg-white border-0 shadow-2xl rounded-[32px]">
+            <DialogContent className="sm:max-w-[425px] !bg-white border-0 shadow-2xl rounded-[32px] z-[201]">
                 <DialogHeader className="space-y-4">
                     <DialogTitle className="text-3xl font-black uppercase italic tracking-tighter text-slate-900 leading-none">
                         Crear <span className="text-primary">Nuevo Inversor</span>
