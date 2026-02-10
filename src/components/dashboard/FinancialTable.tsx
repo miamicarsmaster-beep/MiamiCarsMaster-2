@@ -31,7 +31,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
-import { Plus, TrendingUp, TrendingDown, Loader2, Save, Eye, Calendar, DollarSign, FileText, X } from "lucide-react"
+import { Plus, TrendingUp, TrendingDown, Loader2, Save, Eye, Calendar, DollarSign, FileText, X, Trash2 } from "lucide-react"
 import { ImageWithFallback } from "@/components/ui/image-with-fallback"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
@@ -74,23 +74,40 @@ export function FinancialTable({ records: initialRecords, vehicles }: FinancialT
     const handleAdd = async () => {
         setIsLoading(true)
         try {
+            const { data: { user } } = await supabase.auth.getUser()
+
+            // First, filter out empty fields and clean up the payload
+            const insertData: any = {
+                vehicle_id: formData.vehicle_id,
+                type: formData.type,
+                category: formData.category,
+                amount: Number(formData.amount),
+                date: formData.date,
+                description: formData.description || null,
+                created_by: user?.id || null,
+            }
+
+            // Only add mileage_at_operation if it's not empty
+            if (formData.mileage_at_operation.trim() !== "") {
+                insertData.mileage_at_operation = Number(formData.mileage_at_operation)
+            }
+
             const { data, error } = await supabase
                 .from("financial_records")
-                .insert([{
-                    ...formData,
-                    amount: Number(formData.amount),
-                    mileage_at_operation: formData.mileage_at_operation ? Number(formData.mileage_at_operation) : null,
-                }])
+                .insert([insertData])
                 .select(`
           *,
           vehicle:vehicles(id, make, model, year, license_plate)
         `)
                 .single()
 
-            if (error) throw error
+            if (error) {
+                console.error("Supabase Error detail:", error)
+                throw new Error(error.message)
+            }
 
-            // Update vehicle mileage if provided
-            if (formData.mileage_at_operation) {
+            // Update vehicle mileage ONLY if mileage_at_operation was provided and is not empty
+            if (formData.mileage_at_operation.trim() !== "") {
                 const { error: vehicleError } = await supabase
                     .from("vehicles")
                     .update({ mileage: Number(formData.mileage_at_operation) })
@@ -98,7 +115,6 @@ export function FinancialTable({ records: initialRecords, vehicles }: FinancialT
 
                 if (vehicleError) {
                     console.error("Error updating vehicle mileage:", vehicleError)
-                    // We don't throw here to not break the flow, but we log it
                 }
             }
 
@@ -106,9 +122,32 @@ export function FinancialTable({ records: initialRecords, vehicles }: FinancialT
             setIsAddOpen(false)
             resetForm()
             router.refresh()
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error adding financial record:", error)
-            alert("Error al agregar registro financiero")
+            alert(`Error al agregar registro: ${error.message || "Verifica la conexión o los campos"}`)
+        } finally {
+            setIsLoading(false)
+        }
+    }
+
+    const handleDelete = async (id: string) => {
+        if (!window.confirm("¿Estás seguro de eliminar esta operación? Esta acción no se puede deshacer.")) return
+
+        setIsLoading(true)
+        try {
+            const { error } = await supabase
+                .from("financial_records")
+                .delete()
+                .eq("id", id)
+
+            if (error) throw error
+
+            setRecords(records.filter(r => r.id !== id))
+            if (selectedRecord?.id === id) setSelectedRecord(null)
+            router.refresh()
+        } catch (error: any) {
+            console.error("Error deleting financial record:", error)
+            alert(`Error al eliminar: ${error.message}`)
         } finally {
             setIsLoading(false)
         }
@@ -348,7 +387,7 @@ export function FinancialTable({ records: initialRecords, vehicles }: FinancialT
                                         </TableCell>
                                         <TableCell>
                                             <Badge variant="outline" className={`rounded-full border-0 px-3 py-1 text-[11px] uppercase font-black italic tracking-widest shadow-lg text-white
-                                            ${record.type === 'income' ? 'bg-emerald-600' : 'bg-red-600'}`}>
+                                                ${record.type === 'income' ? 'bg-emerald-600' : 'bg-red-600'}`}>
                                                 {record.category}
                                             </Badge>
                                         </TableCell>
@@ -359,14 +398,24 @@ export function FinancialTable({ records: initialRecords, vehicles }: FinancialT
                                             {record.type === 'income' ? '+' : '-'}${Number(record.amount).toLocaleString()}
                                         </TableCell>
                                         <TableCell className="text-right px-6">
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                onClick={() => setSelectedRecord(record)}
-                                                className="h-9 w-9 rounded-lg hover:bg-primary/20 hover:text-primary transition-colors"
-                                            >
-                                                <Eye className="h-4 w-4" />
-                                            </Button>
+                                            <div className="flex justify-end gap-2">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={() => setSelectedRecord(record)}
+                                                    className="h-9 w-9 rounded-lg hover:bg-primary/20 hover:text-primary transition-colors"
+                                                >
+                                                    <Eye className="h-4 w-4" />
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={() => handleDelete(record.id)}
+                                                    className="h-9 w-9 rounded-lg hover:bg-red-500/10 hover:text-red-500 transition-colors"
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </div>
                                         </TableCell>
                                     </TableRow>
                                 ))
@@ -387,7 +436,7 @@ export function FinancialTable({ records: initialRecords, vehicles }: FinancialT
                                     <div className="flex flex-col md:flex-row justify-between items-start gap-4">
                                         <div>
                                             <Badge className={`rounded-full border-0 px-3 py-1 text-[10px] uppercase font-black italic tracking-widest shadow-lg text-white mb-4
-                                                ${selectedRecord.type === 'income' ? 'bg-emerald-600' : 'bg-red-600'}`}>
+                                                    ${selectedRecord.type === 'income' ? 'bg-emerald-600' : 'bg-red-600'}`}>
                                                 {selectedRecord.category}
                                             </Badge>
                                             <DialogTitle className="text-2xl md:text-4xl font-black italic tracking-tighter uppercase leading-none text-slate-900 dark:text-white mb-2">
@@ -492,3 +541,4 @@ export function FinancialTable({ records: initialRecords, vehicles }: FinancialT
         </div>
     )
 }
+
