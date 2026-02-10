@@ -32,13 +32,13 @@ export function BenefitsSection() {
     ]
 
     return (
-        <section id="beneficios" className="py-32 bg-white dark:bg-slate-950 overflow-hidden">
+        <section id="beneficios" className="py-32 bg-background overflow-hidden transition-colors duration-500">
             <div className="container mx-auto px-6">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
                     <div className="space-y-8">
                         <div>
                             <span className="text-[10px] font-black uppercase tracking-[0.4em] text-primary italic">Ventaja Tecnológica</span>
-                            <h2 className="text-4xl md:text-6xl font-black tracking-tighter uppercase italic leading-none mt-4">
+                            <h2 className="text-4xl md:text-6xl font-black tracking-tighter uppercase italic leading-none mt-4 text-foreground">
                                 Tu Dashboard <br />
                                 <span className="text-primary italic">tu tranquilidad.</span>
                             </h2>
@@ -68,12 +68,12 @@ export function BenefitsSection() {
                                 whileInView={{ opacity: 1, scale: 1 }}
                                 viewport={{ once: true }}
                                 transition={{ duration: 0.5, delay: index * 0.1 }}
-                                className="p-8 rounded-[2rem] border border-border/40 bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl shadow-2xl shadow-slate-200/50 dark:shadow-none hover:border-primary/30 transition-all group relative z-10"
+                                className="p-8 rounded-[2rem] border border-border/40 bg-card/50 backdrop-blur-xl shadow-2xl hover:border-primary/30 transition-all group relative z-10"
                             >
-                                <div className={`h-14 w-14 rounded-2xl bg-white dark:bg-slate-800 shadow-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform ${feature.color}`}>
+                                <div className={`h-14 w-14 rounded-2xl bg-background shadow-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform ${feature.color}`}>
                                     <feature.icon className="h-7 w-7" />
                                 </div>
-                                <h3 className="text-xs font-black uppercase tracking-widest mb-3 italic leading-tight">{feature.title}</h3>
+                                <h3 className="text-xs font-black uppercase tracking-widest mb-3 italic leading-tight text-foreground">{feature.title}</h3>
                                 <p className="text-[10px] font-bold text-muted-foreground leading-relaxed uppercase opacity-70 italic tracking-tight">
                                     {feature.description}
                                 </p>

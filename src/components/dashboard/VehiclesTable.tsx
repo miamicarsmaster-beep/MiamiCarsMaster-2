@@ -174,9 +174,9 @@ export function VehiclesGrid({ vehicles: initialVehicles, investors }: VehiclesG
                 <div className="absolute inset-0 z-50 bg-background/40 backdrop-blur-xl flex items-center justify-center rounded-3xl">
                     <div className="flex flex-col items-center gap-4">
                         <div className="flex gap-2">
-                            <div className="h-3 w-3 bg-primary rounded-full animate-bounce [animation-delay:-0.3s] shadow-[0_0_15px_oklch(0.8_0.18_185)]"></div>
-                            <div className="h-3 w-3 bg-primary rounded-full animate-bounce [animation-delay:-0.15s] shadow-[0_0_15px_oklch(0.8_0.18_185)]"></div>
-                            <div className="h-3 w-3 bg-primary rounded-full animate-bounce shadow-[0_0_15px_oklch(0.8_0.18_185)]"></div>
+                            <div className="h-3 w-3 bg-primary rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                            <div className="h-3 w-3 bg-primary rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                            <div className="h-3 w-3 bg-primary rounded-full animate-bounce"></div>
                         </div>
                         <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary animate-pulse">Sincronizando</p>
                     </div>
@@ -185,7 +185,7 @@ export function VehiclesGrid({ vehicles: initialVehicles, investors }: VehiclesG
 
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 px-2">
                 <div className="flex flex-col gap-1">
-                    <h3 className="text-xl font-black italic tracking-tight uppercase">Activos <span className="text-primary">Operativos</span></h3>
+                    <h3 className="text-xl font-black italic tracking-tight uppercase text-foreground">Activos <span className="text-primary">Operativos</span></h3>
                     <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">{vehicles.length} Unidades en inventario</p>
                 </div>
                 <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
@@ -198,30 +198,32 @@ export function VehiclesGrid({ vehicles: initialVehicles, investors }: VehiclesG
                             <Plus className="mr-2 h-5 w-5" /> Adquirir Unidad
                         </Button>
                     </DialogTrigger>
-                    <DialogContent className="bg-white dark:bg-slate-900/95 backdrop-blur-2xl border-border/40 shadow-2xl max-w-2xl max-h-[90vh] rounded-[3rem]">
+                    <DialogContent className="bg-card border-border shadow-2xl max-w-2xl max-h-[90vh] rounded-[3rem] p-8 overflow-hidden">
                         <DialogHeader>
-                            <DialogTitle className="text-2xl font-black italic uppercase tracking-tight">Registro de <span className="text-primary">Nueva Unidad</span></DialogTitle>
-                            <DialogDescription className="text-xs font-bold uppercase tracking-widest opacity-60">
+                            <DialogTitle className="text-2xl font-black italic uppercase tracking-tight text-foreground">Registro de <span className="text-primary">Nueva Unidad</span></DialogTitle>
+                            <DialogDescription className="text-xs font-bold uppercase tracking-widest opacity-60 text-muted-foreground">
                                 Introducir especificaciones técnicas y financieras
                             </DialogDescription>
                         </DialogHeader>
-                        <Form {...form}>
-                            <div className="contents">
-                                <VehicleForm investors={investors} />
-                                <DialogFooter className="mt-8 gap-3 sm:gap-0">
-                                    <Button variant="ghost" type="button" onClick={() => setIsAddOpen(false)} className="rounded-xl font-bold uppercase text-xs tracking-widest">
-                                        Abortar
-                                    </Button>
-                                    <Button
-                                        onClick={form.handleSubmit(onSubmit)}
-                                        disabled={form.formState.isSubmitting}
-                                        className="px-8 rounded-xl font-black uppercase text-xs tracking-widest shadow-xl shadow-primary/20"
-                                    >
-                                        {form.formState.isSubmitting ? "Formalizando..." : "Registrar Activo"}
-                                    </Button>
-                                </DialogFooter>
-                            </div>
-                        </Form>
+                        <div className="overflow-y-auto max-h-[60vh] pr-4 custom-scrollbar lg:pr-2">
+                            <Form {...form}>
+                                <div className="space-y-6 pt-6">
+                                    <VehicleForm investors={investors} />
+                                </div>
+                            </Form>
+                        </div>
+                        <DialogFooter className="mt-8 gap-3 sm:gap-0 border-t border-border pt-6">
+                            <Button variant="ghost" type="button" onClick={() => setIsAddOpen(false)} className="rounded-xl font-bold uppercase text-xs tracking-widest">
+                                Abortar
+                            </Button>
+                            <Button
+                                onClick={form.handleSubmit(onSubmit)}
+                                disabled={form.formState.isSubmitting}
+                                className="px-8 rounded-xl font-black uppercase text-xs tracking-widest shadow-xl shadow-primary/20"
+                            >
+                                {form.formState.isSubmitting ? "Formalizando..." : "Registrar Activo"}
+                            </Button>
+                        </DialogFooter>
                     </DialogContent>
                 </Dialog>
             </div>

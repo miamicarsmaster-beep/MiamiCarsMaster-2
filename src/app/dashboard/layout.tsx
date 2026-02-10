@@ -13,6 +13,7 @@ export default function DashboardLayout({
                 <Sidebar />
             </div>
             <main className="md:pl-80 h-full min-h-screen bg-background relative flex flex-col">
+                <DashboardHeader />
                 <div className="absolute top-0 left-0 w-full h-96 bg-primary/5 blur-[120px] rounded-full -translate-y-1/2 pointer-events-none" />
                 <div className="flex-1 p-4 md:p-10 h-full overflow-y-auto relative scroll-smooth">
                     {children}

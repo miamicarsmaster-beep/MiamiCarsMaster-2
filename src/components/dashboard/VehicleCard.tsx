@@ -60,16 +60,16 @@ export function VehicleCard({ vehicle, onDelete, onManage, onUpdate }: VehicleCa
     }
 
     const statuses: { value: Vehicle["status"]; label: string; className: string }[] = [
-        { value: "available", label: "DISPONIBLE", className: "bg-emerald-500/90 hover:bg-emerald-600 shadow-emerald-500/20" },
-        { value: "rented", label: "ALQUILADO", className: "bg-blue-600/90 hover:bg-blue-700 shadow-blue-500/20" },
-        { value: "maintenance", label: "SERVICE", className: "bg-amber-500/90 hover:bg-amber-600 shadow-amber-500/20" },
-        { value: "inactive", label: "INACTIVO", className: "bg-slate-700/90 hover:bg-slate-800 shadow-slate-500/20" },
+        { value: "available", label: "DISPONIBLE", className: "bg-emerald-500 hover:bg-emerald-600 shadow-lg shadow-emerald-500/10" },
+        { value: "rented", label: "ALQUILADO", className: "bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/10" },
+        { value: "maintenance", label: "SERVICE", className: "bg-amber-500 hover:bg-amber-600 shadow-lg shadow-amber-500/10" },
+        { value: "inactive", label: "INACTIVO", className: "bg-slate-700 hover:bg-slate-800 shadow-lg shadow-slate-500/10" },
     ]
 
     const currentStatus = statuses.find(s => s.value === vehicle.status) || statuses[0]
 
     return (
-        <div className="glass-card group overflow-hidden border-border/30 hover:border-primary/40 transition-all duration-500 hover:-translate-y-2 shadow-2xl hover:shadow-primary/20 rounded-[2.5rem]">
+        <div className="glass-card group overflow-hidden border-border/30 hover:border-primary/40 transition-all duration-500 hover:-translate-y-2 shadow-2xl hover:shadow-primary/10 rounded-[2.5rem]">
             <div className="aspect-[16/10] relative overflow-hidden rounded-t-[2.5rem]">
                 <ImageWithFallback
                     src={vehicle.image_url || generatePlaceholderImage(vehicle.make, vehicle.model)}
@@ -79,7 +79,7 @@ export function VehicleCard({ vehicle, onDelete, onManage, onUpdate }: VehicleCa
                     className="object-cover transition-transform duration-1000 group-hover:scale-110"
                     sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/20 to-transparent opacity-80" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent opacity-80" />
 
                 {/* Status Badge Over Image - Now Interactive */}
                 <div className="absolute top-6 right-6 scale-110 z-20">
@@ -104,9 +104,9 @@ export function VehicleCard({ vehicle, onDelete, onManage, onUpdate }: VehicleCa
                         </DropdownMenuTrigger>
                         <DropdownMenuContent
                             align="end"
-                            className="bg-white/90 dark:bg-slate-900/95 backdrop-blur-2xl border-primary/20 rounded-[1.5rem] p-3 min-w-[180px] shadow-[0_20px_50px_rgba(0,0,0,0.3)] animate-in zoom-in-95 duration-200"
+                            className="bg-popover/90 backdrop-blur-2xl border-border rounded-[1.5rem] p-3 min-w-[180px] shadow-2xl animate-in zoom-in-95 duration-200"
                         >
-                            <p className="text-[10px] font-black text-primary/40 uppercase tracking-[0.2em] px-3 pb-2 mb-2 border-b border-primary/10">Cambiar Disponibilidad</p>
+                            <p className="text-[10px] font-black text-primary uppercase tracking-[0.2em] px-3 pb-2 mb-2 border-b border-border">Cambiar Disponibilidad</p>
                             {statuses.map((s) => (
                                 <DropdownMenuItem
                                     key={s.value}
@@ -131,10 +131,10 @@ export function VehicleCard({ vehicle, onDelete, onManage, onUpdate }: VehicleCa
 
                 {/* Hero Info */}
                 <div className="absolute bottom-6 left-6 sm:left-8 flex flex-col gap-1">
-                    <span className="text-primary text-[10px] sm:text-xs font-black uppercase tracking-[0.3em] drop-shadow-sm">
+                    <span className="text-primary text-[10px] sm:text-xs font-black uppercase tracking-[0.3em]">
                         {vehicle.year} MODEL • {vehicle.license_plate || "SN"}
                     </span>
-                    <h3 className="text-white text-2xl sm:text-3xl font-black italic tracking-tighter uppercase leading-none drop-shadow-xl">
+                    <h3 className="text-white text-2xl sm:text-3xl font-black italic tracking-tighter uppercase leading-none">
                         {vehicle.make} <span className="text-white/80">{vehicle.model}</span>
                     </h3>
                 </div>
@@ -143,42 +143,42 @@ export function VehicleCard({ vehicle, onDelete, onManage, onUpdate }: VehicleCa
             <div className="p-6 sm:p-8 space-y-6">
                 <div className="grid grid-cols-2 gap-6">
                     <div className="flex items-center gap-4">
-                        <div className="h-10 w-10 rounded-xl bg-primary/5 border border-primary/20 flex items-center justify-center shadow-inner">
+                        <div className="h-10 w-10 rounded-xl bg-primary/5 border border-primary/10 flex items-center justify-center">
                             <Settings className="h-5 w-5 text-primary" />
                         </div>
                         <div className="flex flex-col">
-                            <span className="text-xs font-black uppercase tracking-widest text-muted-foreground opacity-60 italic">Transmisión</span>
-                            <span className="text-sm font-black uppercase tracking-tight capitalize">{vehicle.transmission || "N/A"}</span>
+                            <span className="text-xs font-black uppercase tracking-widest text-muted-foreground opacity-60 italic leading-none">Transmisión</span>
+                            <span className="text-sm font-black uppercase tracking-tight capitalize mt-1 text-foreground">{vehicle.transmission || "N/A"}</span>
                         </div>
                     </div>
                     <div className="flex items-center gap-4">
-                        <div className="h-10 w-10 rounded-xl bg-primary/5 border border-primary/10 flex items-center justify-center shadow-inner">
+                        <div className="h-10 w-10 rounded-xl bg-primary/5 border border-primary/10 flex items-center justify-center">
                             <Gauge className="h-5 w-5 text-primary" />
                         </div>
                         <div className="flex flex-col">
-                            <span className="text-xs font-black uppercase tracking-widest text-muted-foreground opacity-60 italic">Recorrido</span>
-                            <span className="text-sm font-black uppercase tracking-tight">{vehicle.mileage?.toLocaleString() || 0} MI</span>
+                            <span className="text-xs font-black uppercase tracking-widest text-muted-foreground opacity-60 italic leading-none">Recorrido</span>
+                            <span className="text-sm font-black uppercase tracking-tight mt-1 text-foreground">{vehicle.mileage?.toLocaleString() || 0} MI</span>
                         </div>
                     </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-6">
                     <div className="flex items-center gap-4">
-                        <div className="h-10 w-10 rounded-xl bg-primary/5 border border-primary/20 flex items-center justify-center shadow-inner">
+                        <div className="h-10 w-10 rounded-xl bg-primary/5 border border-primary/10 flex items-center justify-center">
                             <User className="h-5 w-5 text-primary" />
                         </div>
                         <div className="flex flex-col">
-                            <span className="text-xs font-black uppercase tracking-widest text-muted-foreground opacity-60 italic">Asientos</span>
-                            <span className="text-sm font-black uppercase tracking-tight">{vehicle.seats || "N/A"}</span>
+                            <span className="text-xs font-black uppercase tracking-widest text-muted-foreground opacity-60 italic leading-none">Asientos</span>
+                            <span className="text-sm font-black uppercase tracking-tight mt-1 text-foreground">{vehicle.seats || "N/A"}</span>
                         </div>
                     </div>
                     <div className="flex items-center gap-4">
-                        <div className="h-10 w-10 rounded-xl bg-primary/5 border border-primary/20 flex items-center justify-center shadow-inner">
+                        <div className="h-10 w-10 rounded-xl bg-primary/5 border border-primary/10 flex items-center justify-center">
                             <Fuel className="h-5 w-5 text-primary" />
                         </div>
                         <div className="flex flex-col">
-                            <span className="text-xs font-black uppercase tracking-widest text-muted-foreground opacity-60 italic">Combustible</span>
-                            <span className="text-sm font-black uppercase tracking-tight capitalize">{vehicle.fuel_type || "N/A"}</span>
+                            <span className="text-xs font-black uppercase tracking-widest text-muted-foreground opacity-60 italic leading-none">Combustible</span>
+                            <span className="text-sm font-black uppercase tracking-tight capitalize mt-1 text-foreground">{vehicle.fuel_type || "N/A"}</span>
                         </div>
                     </div>
                 </div>
@@ -187,14 +187,14 @@ export function VehicleCard({ vehicle, onDelete, onManage, onUpdate }: VehicleCa
                     <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
                         <MapPin className="h-4 w-4 text-primary" />
                     </div>
-                    <span className="text-xs font-black uppercase tracking-widest opacity-80">{vehicle.location || "Ubicación No Definida"}</span>
+                    <span className="text-xs font-black uppercase tracking-widest opacity-80 text-foreground">{vehicle.location || "Ubicación No Definida"}</span>
                 </div>
 
                 {vehicle.assigned_investor && (
                     <div className="p-5 rounded-2xl bg-primary/[0.03] border border-primary/10 flex flex-col gap-2 relative overflow-hidden group/investor">
                         <div className="absolute top-0 right-0 w-24 h-24 bg-primary/5 rounded-full blur-3xl -mr-12 -mt-12" />
                         <p className="text-xs font-black uppercase tracking-widest text-primary italic relative z-10">Inversor Socio</p>
-                        <p className="text-sm font-black uppercase tracking-tighter truncate text-foreground/90 relative z-10">
+                        <p className="text-sm font-black uppercase tracking-tighter truncate text-foreground relative z-10">
                             {vehicle.assigned_investor.full_name || vehicle.assigned_investor.email}
                         </p>
                     </div>
@@ -204,7 +204,7 @@ export function VehicleCard({ vehicle, onDelete, onManage, onUpdate }: VehicleCa
             <div className="px-5 sm:px-6 pb-8 flex gap-2 sm:gap-3">
                 <Button
                     onClick={() => onManage?.(vehicle)}
-                    className="flex-1 h-14 rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground font-black uppercase tracking-widest text-xs shadow-xl shadow-primary/30 transition-all hover:scale-[1.02] active:scale-95"
+                    className="flex-1 h-14 rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground font-black uppercase tracking-widest text-[10px] shadow-xl shadow-primary/20 transition-all hover:scale-[1.02] active:scale-95"
                 >
                     <Settings className="h-4 w-4 mr-2" />
                     Administrar Vehículo
@@ -212,7 +212,7 @@ export function VehicleCard({ vehicle, onDelete, onManage, onUpdate }: VehicleCa
                 <Button
                     variant="ghost"
                     onClick={() => onDelete(vehicle.id)}
-                    className="w-14 h-14 rounded-2xl text-red-500 hover:bg-red-500/10 hover:text-red-600 border border-transparent hover:border-red-500/20 transition-all"
+                    className="w-14 h-14 rounded-2xl text-red-500 hover:bg-red-500/10 hover:text-red-600 border border-transparent hover:border-red-500/10 transition-all"
                 >
                     <Trash2 className="h-5 w-5" />
                 </Button>

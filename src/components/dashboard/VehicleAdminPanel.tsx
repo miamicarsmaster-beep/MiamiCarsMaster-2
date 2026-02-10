@@ -15,14 +15,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea"
 import {
     Camera, Gauge, MapPin, Wrench, X, CalendarDays, CheckCircle2, Edit3, Save,
-    DollarSign, Trash2, Plus, FileText, Loader2, TrendingUp, AlertCircle, Upload, Eye, ChevronLeft, ChevronRight, Activity, Image as ImageIcon, FileBadge, FileBox, ChevronDown
-} from "lucide-react"
+    DollarSign, Trash2, Plus, FileText, Loader2, TrendingUp, AlertCircle, Upload,
+    Eye, ChevronLeft, ChevronRight, Activity, Image as ImageIcon, FileBadge,
+    FileBox, ChevronDown, Settings, CarFront
+} from "lucide-react";
 import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
     DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from "@/components/ui/dropdown-menu";
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
 import { ImageWithFallback } from "@/components/ui/image-with-fallback"
@@ -820,1034 +822,948 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
 
     return (
         <>
-            <div className="fixed inset-0 z-40 md:left-80 bg-slate-50 dark:bg-slate-950 flex flex-col animate-in slide-in-from-bottom-4 fade-in duration-300 shadow-2xl">
-                {/* HEADER */}
-                <div className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/40 px-4 md:px-6 py-3 md:py-4 flex-shrink-0">
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-                        <div className="flex items-center gap-3 md:gap-4">
-                            <div className="flex flex-col">
-                                <h1 className="text-lg md:text-2xl font-black italic tracking-tighter uppercase leading-none">
-                                    {formData.make} <span className="text-primary">{formData.model}</span>
-                                </h1>
-                                <p className="text-[9px] md:text-xs font-bold text-muted-foreground uppercase tracking-[0.2em] mt-1">
-                                    Expediente Técnico {formData.year} • {formData.license_plate || 'SIN MATRÍCULA'}
-                                </p>
-                            </div>
-                            <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                    <Button
-                                        variant="ghost"
-                                        disabled={isSaving}
-                                        className={`h-auto p-0 rounded-full border-0 shadow-lg transition-transform hover:scale-105 active:scale-95 ${statusBadge.className}`}
-                                    >
-                                        <Badge className="bg-transparent hover:bg-transparent text-white px-2 md:px-3 py-1 text-[9px] md:text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 border-0">
-                                            {isSaving ? (
-                                                <Loader2 className="h-2.5 w-2.5 animate-spin" />
-                                            ) : (
-                                                <>
-                                                    {statusBadge.label}
-                                                    <ChevronDown className="h-2.5 w-2.5 opacity-50" />
-                                                </>
-                                            )}
-                                        </Badge>
-                                    </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="start" className="glass-card border-primary/20 rounded-2xl p-2 min-w-[160px] animate-in slide-in-from-top-2 duration-300 z-[100]">
-                                    {[
-                                        { value: "available", label: "DISPONIBLE", color: "bg-emerald-500" },
-                                        { value: "rented", label: "ALQUILADO", color: "bg-blue-500" },
-                                        { value: "maintenance", label: "MANTENIMIENTO", color: "bg-orange-500" },
-                                        { value: "inactive", label: "INACTIVO", color: "bg-slate-500" },
-                                    ].map((s) => (
-                                        <DropdownMenuItem
-                                            key={s.value}
-                                            onClick={() => handleQuickStatusUpdate(s.value as Vehicle["status"])}
-                                            className={`rounded-xl px-4 py-3 text-xs font-black tracking-widest uppercase cursor-pointer mb-1 last:mb-0 transition-colors
-                                                ${formData.status === s.value ? 'bg-primary/10 text-primary' : 'hover:bg-primary/5'}`}
-                                        >
-                                            <div className="flex items-center justify-between w-full">
-                                                <div className="flex items-center gap-3">
-                                                    <div className={`h-2 w-2 rounded-full ${s.color}`} />
-                                                    {s.label}
-                                                </div>
-                                                {formData.status === s.value && <CheckCircle2 className="h-4 w-4 text-primary" />}
-                                            </div>
-                                        </DropdownMenuItem>
-                                    ))}
-                                </DropdownMenuContent>
-                            </DropdownMenu>
-                        </div>
-                        <div className="flex items-center gap-2 md:gap-3 ml-auto md:ml-0">
-                            {isEditMode ? (
-                                <>
-                                    <Button variant="outline" size="sm" onClick={() => setIsEditMode(false)} className="rounded-xl font-bold uppercase text-[10px] tracking-widest h-9 px-4">Cancelar</Button>
-                                    <Button size="sm" onClick={handleSave} disabled={isSaving} className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-black uppercase text-[10px] tracking-[0.15em] h-9 px-6 shadow-lg shadow-emerald-500/40 border-0 transition-all hover:scale-[1.02] active:scale-95">
-                                        {isSaving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
-                                        Actualizar
-                                    </Button>
-                                </>
-                            ) : (
-                                <Button
-                                    size="sm"
-                                    onClick={() => setIsEditMode(true)}
-                                    className="rounded-xl border-2 border-primary bg-primary text-white hover:bg-primary/90 font-black uppercase text-[10px] tracking-[0.15em] h-9 px-6 shadow-lg shadow-primary/40 transition-all hover:scale-[1.02] active:scale-95 group/editbtn"
-                                >
-                                    <Edit3 className="h-4 w-4 mr-2 group-hover:rotate-12 transition-transform" />
-                                    EDITAR
-                                </Button>
-                            )}
-                            <div className="w-[1px] h-6 bg-border/40 mx-1 hidden md:block" />
-                            <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8 md:h-9 md:w-9 rounded-lg hover:bg-red-500/10 hover:text-red-500 transition-all group">
-                                <X className="h-4 w-4 md:h-5 md:w-5 group-hover:rotate-90 transition-transform duration-300" />
-                            </Button>
-                        </div>
-                    </div>
-                </div>
+            <Dialog open={true} onOpenChange={() => onClose()}>
+                <DialogContent className="max-w-[100vw] h-[100vh] w-full p-0 border-0 bg-transparent flex items-center justify-center p-0 md:p-8 animate-in zoom-in-95 duration-300">
+                    <div className="bg-background w-full h-full md:h-[95vh] rounded-none md:rounded-[3rem] shadow-2xl flex flex-col md:flex-row overflow-hidden border border-border shadow-[0_0_100px_rgba(0,0,0,0.4)] relative">
 
-                {/* MAIN CONTENT */}
-                <div className="flex-1 overflow-y-auto">
-                    <div className="max-w-[1600px] mx-auto p-3 md:p-5">
-
-                        {/* HERO SECTION - 2 COLUMNAS */}
-                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 mb-5">
-
-                            {/* COLUMNA IZQUIERDA - IMAGEN */}
-                            <div className="lg:col-span-7 space-y-4">
-                                <div className="relative aspect-[16/9] rounded-2xl overflow-hidden shadow-xl group bg-slate-200">
-                                    <ImageWithFallback
-                                        src={formData.image_url || `https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=1200&h=800&fit=crop`}
-                                        fallbackSrc="/placeholder-car.svg"
-                                        alt="Vehicle"
-                                        fill
-                                        className="object-cover transition-transform duration-700 group-hover:scale-105"
-                                    />
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
-                                    <div className="absolute bottom-6 left-6 right-6">
-                                        <div className="flex items-end justify-between">
-                                            <div className="text-white">
-                                                <p className="text-sm font-medium opacity-90 mb-1">Placa: {formData.license_plate || 'N/A'}</p>
-                                                <p className="text-xs opacity-75">VIN: {formData.vin || 'N/A'}</p>
-                                            </div>
-                                            <div>
-                                                <input type="file" id="hero-upload" accept="image/*" className="hidden" onChange={handleChangeHeroImage} disabled={isUploadingHeroImage} />
-                                                <label htmlFor="hero-upload">
-                                                    <Button size="icon" variant="secondary" className="h-11 w-11 rounded-full bg-white/95 hover:bg-white text-slate-900 shadow-lg cursor-pointer" asChild>
-                                                        <span>{isUploadingHeroImage ? <Loader2 className="h-5 w-5 animate-spin" /> : <Camera className="h-5 w-5" />}</span>
-                                                    </Button>
-                                                </label>
-                                            </div>
+                        {/* Left Navigation Sidebar */}
+                        <div className="w-full md:w-[280px] bg-secondary/50 border-r border-border p-6 flex flex-col gap-6 relative flex-shrink-0">
+                            {/* Header Profile - Mobile minimized */}
+                            <div className="flex flex-col gap-5 pt-4">
+                                <div className="flex items-center gap-4">
+                                    <div className="h-16 w-16 rounded-[1.5rem] bg-background border-2 border-primary/20 p-1 flex-shrink-0 relative group">
+                                        <div className="absolute inset-0 bg-primary/10 rounded-[1.2rem] opacity-0 group-hover:opacity-100 transition-opacity" />
+                                        <ImageWithFallback
+                                            src={formData.image_url || "/placeholder-car.svg"}
+                                            fallbackSrc="/placeholder-car.svg"
+                                            alt="Car Hero"
+                                            className="w-full h-full object-cover rounded-[1.1rem]"
+                                        />
+                                        {isEditMode && (
+                                            <label className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-[1.1rem] cursor-pointer group hover:bg-black/60 transition-all opacity-0 group-hover:opacity-100">
+                                                <Camera className="h-5 w-5 text-white" />
+                                                <input type="file" className="hidden" accept="image/*" onChange={handleChangeHeroImage} />
+                                            </label>
+                                        )}
+                                    </div>
+                                    <div className="flex flex-col min-w-0">
+                                        <h2 className="text-xl font-black italic tracking-tighter uppercase leading-none truncate text-foreground">
+                                            {formData.make}
+                                        </h2>
+                                        <p className="text-sm font-bold text-primary truncate uppercase">{formData.model}</p>
+                                        <div className="flex items-center gap-2 mt-2">
+                                            <Badge className={`rounded-full px-2 py-0 border-0 text-[9px] uppercase font-black italic tracking-widest ${getStatusBadge().className}`}>
+                                                {getStatusBadge().label}
+                                            </Badge>
                                         </div>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-3 pb-4 border-b border-border/10">
+                                    <div className="p-3 rounded-2xl bg-background border border-border shadow-inner">
+                                        <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground opacity-50 mb-1">Millaje Act.</p>
+                                        <p className="text-xs font-black italic text-foreground tracking-tighter">{(formData.mileage || 0).toLocaleString()} MI</p>
+                                    </div>
+                                    <div className="p-3 rounded-2xl bg-background border border-border shadow-inner">
+                                        <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground opacity-50 mb-1">Año Mod.</p>
+                                        <p className="text-xs font-black italic text-foreground tracking-tighter">{formData.year}</p>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* COLUMNA DERECHA - KPI CARDS */}
-                            <div className="lg:col-span-5 grid grid-cols-2 gap-3">
-                                <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg p-4 text-white shadow-md">
-                                    <DollarSign className="h-6 w-6 mb-2 opacity-80" />
-                                    <p className="text-[10px] uppercase font-black opacity-90 mb-0.5">Tarifa Diaria</p>
-                                    <p className="text-2xl font-bold">${formData.daily_rental_price}</p>
-                                    <p className="text-[10px] opacity-75 mt-0.5">Por día</p>
-                                </div>
-
-                                <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg p-4 text-white shadow-md">
-                                    <TrendingUp className="h-6 w-6 mb-2 opacity-80" />
-                                    <p className="text-[10px] uppercase font-black opacity-90 mb-0.5">ROI Estimado</p>
-                                    <p className="text-2xl font-bold">{roi}%</p>
-                                    <p className="text-[10px] opacity-75 mt-0.5">Retorno anual</p>
-                                </div>
-
-                                <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-lg p-4 text-white shadow-md">
-                                    <Gauge className="h-6 w-6 mb-2 opacity-80" />
-                                    <p className="text-[10px] uppercase font-black opacity-90 mb-0.5">Millaje</p>
-                                    <p className="text-2xl font-bold">{(formData.mileage / 1000).toFixed(1)}k</p>
-                                    <p className="text-[10px] opacity-75 mt-0.5">Millas totales</p>
-                                </div>
-
-                                <div className="bg-gradient-to-br from-slate-700 to-slate-800 rounded-lg p-4 text-white shadow-md">
-                                    <DollarSign className="h-6 w-6 mb-2 opacity-80" />
-                                    <p className="text-[10px] uppercase font-black opacity-90 mb-0.5">Inversión</p>
-                                    <p className="text-xl font-bold">${(formData.purchase_price / 1000).toFixed(0)}k</p>
-                                    <p className="text-[10px] opacity-75 mt-0.5">Valor de compra</p>
-                                </div>
-                            </div>
-                        </div>
-
-
-
-                        {/* TABS */}
-                        <Tabs value={activeTab} onValueChange={setActiveTab} className="glass-card shadow-2xl overflow-hidden mt-8">
-                            <TabsList className="w-full justify-start border-b border-border/40 bg-sidebar-accent/10 p-0 h-auto rounded-none flex-nowrap overflow-x-auto no-scrollbar">
+                            {/* Navigation Items */}
+                            <div className="flex flex-col gap-1.5 flex-1">
                                 {[
-                                    { id: "general", label: "General", icon: FileText },
-                                    { id: "galeria", label: "Galería", icon: Camera },
-                                    { id: "millaje", label: "Millaje", icon: Gauge },
+                                    { id: "general", label: "Información Base", icon: Activity },
+                                    { id: "galeria", label: "Galería Vault", icon: ImageIcon },
+                                    { id: "millaje", label: "Track de Millaje", icon: Gauge },
                                     { id: "mantenimiento", label: "Mantenimiento", icon: Wrench },
-                                    { id: "alquileres", label: "Alquileres", icon: CalendarDays },
-                                    { id: "documentos", label: "Documentos", icon: FileText },
-                                ].map(tab => (
-                                    <TabsTrigger
-                                        key={tab.id}
-                                        value={tab.id}
-                                        className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary transition-all px-6 md:px-8 py-4 md:py-6 text-xs md:text-sm font-bold uppercase tracking-widest whitespace-nowrap flex items-center gap-2"
+                                    { id: "documentos", label: "Vault Documental", icon: FileBadge },
+                                    { id: "alquileres", label: "Adm. Avanzada", icon: CalendarDays }
+                                ].map((item) => (
+                                    <button
+                                        key={item.id}
+                                        onClick={() => setActiveTab(item.id)}
+                                        className={cn(
+                                            "flex items-center gap-3 px-4 py-3.5 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all relative overflow-hidden group",
+                                            activeTab === item.id
+                                                ? "bg-primary text-white shadow-lg shadow-primary/20 translate-x-1"
+                                                : "text-muted-foreground hover:bg-primary/5 hover:text-primary hover:translate-x-1"
+                                        )}
                                     >
-                                        <tab.icon className="h-4 w-4 hidden sm:block" />
-                                        {tab.label}
-                                    </TabsTrigger>
+                                        <item.icon className={cn("h-4 w-4", activeTab === item.id ? "text-white" : "text-primary group-hover:scale-110 transition-transform")} />
+                                        {item.label}
+                                    </button>
                                 ))}
-                            </TabsList>
+                            </div>
 
-                            <div className="p-6 md:p-10">
-                                <TabsContent value="general" className="mt-0 outline-none">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-                                        <div className="space-y-6">
-                                            <div className="flex items-center gap-2 mb-2">
-                                                <div className="h-1 w-6 bg-primary rounded-full"></div>
-                                                <h3 className="text-base font-black uppercase tracking-widest">Especificaciones Técnicas</h3>
-                                            </div>
-                                            <div className="space-y-1">
-                                                <InfoRow
-                                                    label="Marca"
-                                                    value={formData.make}
-                                                    isEditMode={isEditMode}
-                                                    onChange={(val) => setFormData(prev => ({ ...prev, make: val }))}
-                                                />
-                                                <InfoRow
-                                                    label="Modelo"
-                                                    value={formData.model}
-                                                    isEditMode={isEditMode}
-                                                    onChange={(val) => setFormData(prev => ({ ...prev, model: val }))}
-                                                />
-                                                <InfoRow
-                                                    label="Año"
-                                                    value={formData.year.toString()}
-                                                    isEditMode={isEditMode}
-                                                    type="number"
-                                                    onChange={(val) => setFormData(prev => ({ ...prev, year: parseInt(val) || 2024 }))}
-                                                />
-                                                <InfoRow
-                                                    label="VIN / Serial"
-                                                    value={formData.vin || ''}
-                                                    isEditMode={isEditMode}
-                                                    onChange={(val) => setFormData(prev => ({ ...prev, vin: val }))}
-                                                />
-                                                <InfoRow
-                                                    label="Matrícula"
-                                                    value={formData.license_plate || ''}
-                                                    isEditMode={isEditMode}
-                                                    onChange={(val) => setFormData(prev => ({ ...prev, license_plate: val }))}
-                                                />
-                                                <InfoRow
-                                                    label="Localización"
-                                                    value={formData.location || ''}
-                                                    isEditMode={isEditMode}
-                                                    onChange={(val) => setFormData(prev => ({ ...prev, location: val }))}
-                                                />
-                                                <InfoRow
-                                                    label="Asientos"
-                                                    value={formData.seats?.toString() || '5'}
-                                                    isEditMode={isEditMode}
-                                                    type="number"
-                                                    onChange={(val) => setFormData(prev => ({ ...prev, seats: parseInt(val) || 5 }))}
-                                                />
-                                                <div className="flex justify-between items-center py-4 border-b border-border/30">
-                                                    <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Transmisión</span>
-                                                    {isEditMode ? (
-                                                        <Select
-                                                            value={formData.transmission || "automatic"}
-                                                            onValueChange={(val) => setFormData(prev => ({ ...prev, transmission: val }))}
-                                                        >
-                                                            <SelectTrigger className="w-[200px] h-10 border-primary/20 bg-primary/5 rounded-xl">
-                                                                <SelectValue placeholder="Seleccionar..." />
-                                                            </SelectTrigger>
-                                                            <SelectContent className="z-[500] bg-white dark:bg-slate-900 shadow-2xl">
-                                                                <SelectItem value="automatic">Automática</SelectItem>
-                                                                <SelectItem value="manual">Manual</SelectItem>
-                                                            </SelectContent>
-                                                        </Select>
-                                                    ) : (
-                                                        <span className="text-sm font-black italic tracking-tight capitalize">
-                                                            {formData.transmission === 'automatic' ? 'Automática' : 'Manual'}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                <div className="flex justify-between items-center py-4 border-b border-border/30">
-                                                    <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Combustible</span>
-                                                    {isEditMode ? (
-                                                        <Select
-                                                            value={formData.fuel_type || "nafta"}
-                                                            onValueChange={(val) => setFormData(prev => ({ ...prev, fuel_type: val }))}
-                                                        >
-                                                            <SelectTrigger className="w-[200px] h-10 border-primary/20 bg-primary/5 rounded-xl">
-                                                                <SelectValue placeholder="Seleccionar..." />
-                                                            </SelectTrigger>
-                                                            <SelectContent className="z-[500] bg-white dark:bg-slate-900 shadow-2xl">
-                                                                <SelectItem value="nafta">Nafta</SelectItem>
-                                                                <SelectItem value="gasoil">Gasoil</SelectItem>
-                                                                <SelectItem value="electric">Eléctrico</SelectItem>
-                                                                <SelectItem value="hybrid">Híbrido</SelectItem>
-                                                            </SelectContent>
-                                                        </Select>
-                                                    ) : (
-                                                        <span className="text-sm font-black italic tracking-tight capitalize">
-                                                            {formData.fuel_type}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                <InfoRow
-                                                    label="Autonomía (mi/km)"
-                                                    value={formData.range?.toString() || '0'}
-                                                    isEditMode={isEditMode}
-                                                    type="number"
-                                                    onChange={(val) => setFormData(prev => ({ ...prev, range: parseInt(val) || 0 }))}
-                                                />
-                                            </div>
-                                        </div>
-                                        <div className="space-y-6">
-                                            <div className="flex items-center gap-2 mb-2">
-                                                <div className="h-1 w-6 bg-primary rounded-full"></div>
-                                                <h3 className="text-sm font-black uppercase tracking-widest">Inversión & Rendimiento</h3>
-                                            </div>
-                                            <div className="space-y-1">
-                                                <InfoRow
-                                                    label="Precio Compra"
-                                                    value={formData.purchase_price.toLocaleString()}
-                                                    isEditMode={isEditMode}
-                                                    type="number"
-                                                    onChange={(val) => setFormData(prev => ({ ...prev, purchase_price: parseFloat(val) || 0 }))}
-                                                    prefix="$"
-                                                />
-                                                <InfoRow
-                                                    label="Precio Día"
-                                                    value={formData.daily_rental_price.toLocaleString()}
-                                                    isEditMode={isEditMode}
-                                                    type="number"
-                                                    onChange={(val) => setFormData(prev => ({ ...prev, daily_rental_price: parseFloat(val) || 0 }))}
-                                                    prefix="$"
-                                                />
-                                                <InfoRow
-                                                    label="Ocupación Anual (días)"
-                                                    value={formData.expected_occupancy_days?.toString() || '240'}
-                                                    isEditMode={isEditMode}
-                                                    type="number"
-                                                    onChange={(val) => setFormData(prev => ({ ...prev, expected_occupancy_days: parseInt(val) || 0 }))}
-                                                    suffix=" días"
-                                                />
-                                                <div className="space-y-4 pt-4 border-b border-border/30 pb-6 group">
-                                                    <div className="flex justify-between items-center mb-2">
-                                                        <span className="text-xs font-black text-muted-foreground dark:text-gray-400 uppercase tracking-widest group-hover:text-primary transition-colors">Fee de Gestión</span>
-                                                        {isEditMode ? (
-                                                            <button
-                                                                onClick={() => setFormData(prev => ({ ...prev, apply_management_fee: !prev.apply_management_fee }))}
-                                                                className={`relative w-12 h-6 rounded-full transition-all duration-300 p-1 ${formData.apply_management_fee ? 'bg-emerald-500 shadow-md' : 'bg-slate-700'}`}
-                                                            >
-                                                                <div className={`h-4 w-4 rounded-full bg-white transition-all duration-300 ${formData.apply_management_fee ? 'translate-x-6' : 'translate-x-0'}`} />
-                                                            </button>
-                                                        ) : (
-                                                            <div className={`h-2 w-2 rounded-full ${formData.apply_management_fee ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`} />
-                                                        )}
-                                                    </div>
+                            <div className="mt-auto">
+                                <Button
+                                    variant="outline"
+                                    onClick={() => onClose()}
+                                    className="w-full h-12 rounded-2xl border-border hover:bg-background/80 font-black uppercase tracking-widest text-[10px] hidden md:flex"
+                                >
+                                    <X className="h-4 w-4 mr-2" /> Salir del Panel
+                                </Button>
+                            </div>
+                        </div>
 
-                                                    {formData.apply_management_fee && (
-                                                        <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
-                                                            {isEditMode ? (
-                                                                <div className="flex p-1 bg-slate-900/50 rounded-xl border border-white/5 h-10">
-                                                                    <button
-                                                                        onClick={() => setFormData(prev => ({ ...prev, management_fee_type: 'percentage' }))}
-                                                                        className={`flex-1 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${formData.management_fee_type === 'percentage' ? 'bg-emerald-500 text-black' : 'text-muted-foreground'}`}
-                                                                    >
-                                                                        %
-                                                                    </button>
-                                                                    <button
-                                                                        onClick={() => setFormData(prev => ({ ...prev, management_fee_type: 'fixed' }))}
-                                                                        className={`flex-1 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${formData.management_fee_type === 'fixed' ? 'bg-emerald-500 text-black' : 'text-muted-foreground'}`}
-                                                                    >
-                                                                        $ Fijo
-                                                                    </button>
-                                                                </div>
-                                                            ) : (
-                                                                <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest opacity-50">
-                                                                    {formData.management_fee_type === 'percentage' ? 'Cálculo por Porcentaje' : 'Costo Fijo Aplicado'}
-                                                                </div>
-                                                            )}
+                        {/* Main Content Area */}
+                        <div className="flex-1 flex flex-col min-w-0 bg-background overflow-hidden relative">
+                            {/* Header Dynamic */}
+                            <div className="h-[80px] md:h-24 px-6 md:px-10 border-b border-border flex items-center justify-between bg-background sticky top-0 z-20">
+                                <div>
+                                    <h3 className="text-sm md:text-lg font-black italic uppercase tracking-tighter text-foreground">
+                                        Explorador de <span className="text-primary">Activo</span>
+                                        <span className="mx-3 opacity-20 font-light">/</span>
+                                        <span className="text-muted-foreground opacity-40 uppercase text-xs tracking-widest">
+                                            {activeTab === 'general' ? 'Resumen Operativo' :
+                                                activeTab === 'galeria' ? 'Galería de Estado' :
+                                                    activeTab === 'millaje' ? 'Lectura Sensor' :
+                                                        activeTab === 'maintenance' ? 'Service Log' :
+                                                            activeTab === 'documents' ? 'Expediente Legal' : 'Configuraciones'}
+                                        </span>
+                                    </h3>
+                                </div>
 
-                                                            <div className="flex items-center gap-2">
-                                                                {formData.management_fee_type === 'percentage' ? (
-                                                                    <div className="flex-1 relative">
-                                                                        <input
-                                                                            type="number"
-                                                                            disabled={!isEditMode}
-                                                                            value={formData.management_fee_percent?.toString() || '0'}
-                                                                            onChange={(e) => setFormData(prev => ({ ...prev, management_fee_percent: parseFloat(e.target.value) || 0 }))}
-                                                                            className="w-full bg-transparent border-b border-white/10 py-2 text-xl font-black italic tracking-tight text-primary outline-none focus:border-primary transition-all"
-                                                                        />
-                                                                        <span className="absolute right-0 bottom-2 text-xs font-bold opacity-30">%</span>
-                                                                    </div>
-                                                                ) : (
-                                                                    <div className="flex-1 relative">
-                                                                        <input
-                                                                            type="number"
-                                                                            disabled={!isEditMode}
-                                                                            value={formData.management_fee_fixed_amount?.toString() || '0'}
-                                                                            onChange={(e) => setFormData(prev => ({ ...prev, management_fee_fixed_amount: parseFloat(e.target.value) || 0 }))}
-                                                                            className="w-full bg-transparent border-b border-white/10 py-2 text-xl font-black italic tracking-tight text-primary outline-none focus:border-primary transition-all"
-                                                                        />
-                                                                        <span className="absolute right-0 bottom-2 text-xs font-bold opacity-30">USD</span>
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                                <InfoRow label="ROI Estimado" value={`${roi}%`} className="text-primary font-black" />
-                                                <div className="flex justify-between items-center py-4 border-b border-border/30">
-                                                    <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Inversor Socio</span>
-                                                    {isEditMode ? (
-                                                        <Select
-                                                            value={formData.assigned_investor_id || "none"}
-                                                            onValueChange={(val) => setFormData(prev => ({ ...prev, assigned_investor_id: val }))}
-                                                        >
-                                                            <SelectTrigger className="w-[200px] h-10 border-primary/20 bg-primary/5 rounded-xl">
-                                                                <SelectValue placeholder="Seleccionar inversor" />
-                                                            </SelectTrigger>
-                                                            <SelectContent className="z-[500] bg-white dark:bg-slate-900 border-primary/20 shadow-2xl">
-                                                                <SelectItem value="none">Sin asignar</SelectItem>
-                                                                {investors && investors.length > 0 ? (
-                                                                    investors.map(investor => (
-                                                                        <SelectItem key={investor.id} value={investor.id}>
-                                                                            {investor.full_name || investor.email}
-                                                                        </SelectItem>
-                                                                    ))
-                                                                ) : (
-                                                                    <SelectItem value="none" disabled>No hay inversores disponibles</SelectItem>
-                                                                )}
-                                                            </SelectContent>
-                                                        </Select>
-                                                    ) : (
-                                                        <span className="text-sm font-black italic tracking-tight">
-                                                            {investors.find(i => i.id === formData.assigned_investor_id)?.full_name || 'PENDIENTE ASIGNACIÓN'}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </TabsContent>
-
-                                <TabsContent value="galeria" className="mt-0 outline-none">
-                                    <div className="space-y-10">
-                                        <div className="flex justify-between items-center px-1">
-                                            <div className="flex items-center gap-4">
-                                                <div className="h-14 w-14 rounded-2xl cyber-gradient flex items-center justify-center text-primary-foreground shadow-lg shadow-primary/20">
-                                                    <Camera className="h-7 w-7" />
-                                                </div>
-                                                <div>
-                                                    <h3 className="text-2xl font-black italic tracking-tighter uppercase">Archivo <span className="text-primary">Visual</span></h3>
-                                                    <p className="text-[10px] text-muted-foreground font-black uppercase tracking-[0.2em]">{photos.length} Capturas registradas</p>
-                                                </div>
-                                            </div>
-                                            <div className="flex gap-4">
-                                                <input
-                                                    type="file"
-                                                    id="gallery-upload"
-                                                    className="hidden"
-                                                    multiple
-                                                    accept="image/*"
-                                                    onChange={handlePhotoUpload}
-                                                />
-                                                <Label htmlFor="gallery-upload">
-                                                    <Button variant="outline" size="lg" className="h-12 border-primary/20 bg-primary/5 hover:bg-primary hover:text-primary-foreground transition-all rounded-xl cursor-pointer" asChild>
-                                                        <span>
-                                                            {isUploadingPhoto ? <Loader2 className="h-5 w-5 mr-3 animate-spin" /> : <Upload className="h-5 w-5 mr-3" />}
-                                                            Gestionar Archivos
-                                                        </span>
-                                                    </Button>
-                                                </Label>
-                                            </div>
-                                        </div>
-
-                                        {isLoadingData ? (
-                                            <div className="flex flex-col items-center justify-center py-20 gap-4">
-                                                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                                                <p className="text-[10px] font-black uppercase tracking-widest animate-pulse">Cargando Galería...</p>
-                                            </div>
-                                        ) : photos.length === 0 ? (
-                                            <div className="text-center py-24 glass-card rounded-3xl border-dashed border-primary/20 bg-primary/2 group hover:bg-primary/5 transition-colors">
-                                                <div className="bg-primary/10 w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform">
-                                                    <Camera className="h-10 w-10 text-primary" />
-                                                </div>
-                                                <h3 className="text-xl font-black uppercase tracking-widest mb-2">Sin Contenido Visual</h3>
-                                                <p className="text-muted-foreground max-w-sm mx-auto mb-8 font-medium">Documenta el estado impecable del vehículo subiendo fotografías de alta resolución.</p>
-                                                <Label htmlFor="gallery-upload">
-                                                    <Button className="h-12 px-8 rounded-xl shadow-xl shadow-primary/20 cursor-pointer" asChild>
-                                                        <span>Iniciar Carga</span>
-                                                    </Button>
-                                                </Label>
-                                            </div>
-                                        ) : (
-                                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                                                {photos.map((photo) => (
-                                                    <div key={photo.id} className="group relative aspect-[4/5] rounded-2xl overflow-hidden bg-sidebar-accent/30 border border-border/30 shadow-xl transition-all hover:-translate-y-1">
-                                                        <ImageWithFallback
-                                                            src={photo.image_url}
-                                                            fallbackSrc="/placeholder-car.svg"
-                                                            alt={photo.caption || "Foto del vehículo"}
-                                                            fill
-                                                            className="object-cover transition-transform duration-700 group-hover:scale-110 cursor-pointer"
-                                                            onClick={() => setSelectedPhoto(photo)}
-                                                        />
-                                                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-center p-6 gap-3">
-                                                            <Button
-                                                                size="icon"
-                                                                variant="secondary"
-                                                                className="h-10 w-10 rounded-xl glass hover:bg-white hover:text-black transition-all"
-                                                                onClick={() => setSelectedPhoto(photo)}
-                                                            >
-                                                                <Eye className="h-5 w-5" />
-                                                            </Button>
-                                                            <Button
-                                                                size="icon"
-                                                                variant="destructive"
-                                                                className="h-10 w-10 rounded-xl shadow-lg"
-                                                                onClick={(e) => handleDeletePhoto(photo.id, e)}
-                                                            >
-                                                                <Trash2 className="h-5 w-5" />
-                                                            </Button>
-                                                        </div>
-                                                        {photo.is_primary && (
-                                                            <div className="absolute top-4 left-4 cyber-gradient text-white text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full shadow-lg">
-                                                                Primary
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-                                </TabsContent>
-
-                                <TabsContent value="millaje" className="mt-0 outline-none">
-                                    <div className="space-y-10">
-                                        <div className="glass-card p-10 bg-gradient-to-br from-primary/5 to-transparent relative overflow-hidden group">
-                                            <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 -mr-32 -mt-32 rounded-full blur-3xl group-hover:bg-primary/10 transition-colors" />
-                                            <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-8">
-                                                <div className="flex items-center gap-8">
-                                                    <div className="h-20 w-20 rounded-2xl cyber-gradient flex items-center justify-center text-primary-foreground shadow-xl shadow-primary/20 rotate-3 group-hover:rotate-0 transition-transform duration-500">
-                                                        <Gauge className="h-10 w-10" />
-                                                    </div>
-                                                    <div>
-                                                        <p className="text-xs font-black uppercase tracking-[0.2em] text-primary mb-2">Kilometraje Registrado</p>
-                                                        <div className="flex items-baseline gap-2">
-                                                            <span className="text-5xl font-black italic tracking-tighter text-glow">
-                                                                {formData.mileage.toLocaleString()}
-                                                            </span>
-                                                            <span className="text-lg font-bold text-muted-foreground uppercase tracking-wider">mi</span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <Button
-                                                    onClick={() => setIsMileageDialogOpen(true)}
-                                                    size="lg"
-                                                    className="h-14 px-8 rounded-xl shadow-xl shadow-primary/20 font-black uppercase tracking-widest text-xs italic"
-                                                >
-                                                    <Plus className="h-5 w-5 mr-3" /> Registrar Lectura
-                                                </Button>
-                                            </div>
-                                        </div>
-
-                                        {mileageHistory.length > 0 && (
-                                            <div className="glass-card p-8 border-l-4 border-l-primary/40">
-                                                <h4 className="text-sm font-black uppercase tracking-widest mb-10 flex items-center gap-3">
-                                                    <Activity className="h-5 w-5 text-primary" /> Tendencia de Uso <span className="text-muted-foreground opacity-50 font-medium tracking-normal text-xs">(Analítica Temporal)</span>
-                                                </h4>
-                                                <div className="h-[350px] w-full">
-                                                    <ResponsiveContainer width="100%" height="100%">
-                                                        <AreaChart data={[...mileageHistory].reverse()}>
-                                                            <defs>
-                                                                <linearGradient id="colorMileage" x1="0" y1="0" x2="0" y2="1">
-                                                                    <stop offset="5%" stopColor="oklch(0.8 0.18 185)" stopOpacity={0.4} />
-                                                                    <stop offset="95%" stopColor="oklch(0.8 0.18 185)" stopOpacity={0} />
-                                                                </linearGradient>
-                                                            </defs>
-                                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="oklch(1 0 0 / 8%)" />
-                                                            <XAxis
-                                                                dataKey="date"
-                                                                tickFormatter={(date) => new Date(date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                                                                stroke="#64748b"
-                                                                fontSize={12}
-                                                                tickLine={false}
-                                                                axisLine={false}
-                                                            />
-                                                            <YAxis
-                                                                stroke="#64748b"
-                                                                fontSize={12}
-                                                                tickLine={false}
-                                                                axisLine={false}
-                                                                tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
-                                                            />
-                                                            <Tooltip
-                                                                contentStyle={{ backgroundColor: 'rgba(255, 255, 255, 0.9)', borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                                                                labelFormatter={(date) => new Date(date).toLocaleDateString()}
-                                                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                                                                formatter={(value: any) => [`${value.toLocaleString()} mi`, 'Millaje']}
-                                                            />
-                                                            <Area
-                                                                type="monotone"
-                                                                dataKey="mileage"
-                                                                stroke="oklch(0.8 0.18 185)"
-                                                                strokeWidth={4}
-                                                                fillOpacity={1}
-                                                                fill="url(#colorMileage)"
-                                                            />
-                                                        </AreaChart>
-                                                    </ResponsiveContainer>
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {isLoadingData ? (
-                                            <div className="flex flex-col items-center justify-center py-20 gap-4">
-                                                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                                                <p className="text-[10px] font-black uppercase tracking-widest animate-pulse">Sincronizando Telemetría...</p>
-                                            </div>
-                                        ) : mileageHistory.length === 0 ? (
-                                            <div className="text-center py-24 glass-card border-dashed border-primary/20 bg-primary/2 group hover:bg-primary/5 transition-colors">
-                                                <div className="bg-primary/10 w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform">
-                                                    <Gauge className="h-10 w-10 text-primary" />
-                                                </div>
-                                                <h3 className="text-xl font-black uppercase tracking-widest mb-2">Sin métricas de uso</h3>
-                                                <p className="text-muted-foreground max-w-sm mx-auto font-medium">No se han registrado lecturas de odómetro para este activo.</p>
-                                            </div>
-                                        ) : (
-                                            <div className="glass-card overflow-hidden">
-                                                <Table>
-                                                    <TableHeader className="bg-sidebar-accent/30">
-                                                        <TableRow className="hover:bg-transparent border-border/40">
-                                                            <TableHead className="font-bold uppercase text-[10px] tracking-widest py-4">Fecha</TableHead>
-                                                            <TableHead className="font-bold uppercase text-[10px] tracking-widest py-4">Odómetro</TableHead>
-                                                            <TableHead className="font-bold uppercase text-[10px] tracking-widest py-4">Observaciones</TableHead>
-                                                        </TableRow>
-                                                    </TableHeader>
-                                                    <TableBody>
-                                                        {mileageHistory.map((log) => (
-                                                            <TableRow key={log.id} className="group hover:bg-primary/5 border-border/20 transition-all">
-                                                                <TableCell className="py-4 text-xs font-bold uppercase opacity-60">
-                                                                    {new Date(log.date).toLocaleDateString()}
-                                                                </TableCell>
-                                                                <TableCell className="font-black italic text-base tracking-tight py-4">
-                                                                    {log.mileage.toLocaleString()} mi
-                                                                </TableCell>
-                                                                <TableCell className="text-muted-foreground italic text-xs py-4">
-                                                                    {log.notes || "—"}
-                                                                </TableCell>
-                                                            </TableRow>
-                                                        ))}
-                                                    </TableBody>
-                                                </Table>
-                                            </div>
-                                        )}
-                                    </div>
-                                </TabsContent>
-
-                                <TabsContent value="mantenimiento" className="mt-0 outline-none">
-                                    <div className="space-y-10">
-                                        <div className="flex justify-between items-end px-2">
-                                            <div className="flex flex-col gap-1">
-                                                <h3 className="text-2xl font-black italic tracking-tight uppercase">Historial de <span className="text-primary">Servicio</span></h3>
-                                                <p className="text-xs text-muted-foreground font-bold uppercase tracking-wider">Log de mantenimientos técnicos</p>
-                                            </div>
+                                <div className="flex items-center gap-3">
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
                                             <Button
-                                                variant="outline"
-                                                size="lg"
-                                                className="h-12 border-primary/20 bg-primary/5 hover:bg-primary hover:text-primary-foreground transition-all rounded-xl"
-                                                onClick={() => {
-                                                    setMaintenanceForm(prev => ({ ...prev, current_mileage: vehicle.mileage.toString() }))
-                                                    setIsMaintenanceDialogOpen(true)
-                                                }}
+                                                variant="ghost"
+                                                className="h-10 px-4 rounded-xl bg-secondary/50 border border-border/30 hover:border-primary/40 font-black uppercase text-[10px] tracking-widest flex items-center gap-2 group"
                                             >
-                                                <Plus className="h-5 w-5 mr-3" /> Registrar Servicio
+                                                <div className={cn("h-2 w-2 rounded-full", getStatusBadge().className)} />
+                                                {getStatusBadge().label}
+                                                <ChevronDown className="h-3 w-3 opacity-40 group-hover:rotate-180 transition-transform" />
                                             </Button>
-                                        </div>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent className="z-[300] bg-popover/95 backdrop-blur-xl border-border rounded-2xl p-2 w-[200px] shadow-2xl">
+                                            {["available", "rented", "maintenance", "inactive"].map((s) => (
+                                                <DropdownMenuItem
+                                                    key={s}
+                                                    onClick={() => handleQuickStatusUpdate(s as Vehicle["status"])}
+                                                    className="rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest cursor-pointer hover:bg-primary/10 hover:text-primary transition-all mb-1 last:mb-0"
+                                                >
+                                                    <div className="flex items-center gap-3">
+                                                        <div className={cn("h-2 w-2 rounded-full",
+                                                            s === 'available' ? 'bg-emerald-500' :
+                                                                s === 'rented' ? 'bg-blue-500' :
+                                                                    s === 'maintenance' ? 'bg-orange-500' : 'bg-slate-500'
+                                                        )} />
+                                                        {s.toUpperCase()}
+                                                    </div>
+                                                </DropdownMenuItem>
+                                            ))}
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
 
-                                        {isLoadingData ? (
-                                            <div className="flex flex-col items-center justify-center py-20 gap-4">
-                                                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                                                <p className="text-[10px] font-black uppercase tracking-widest animate-pulse">Accediendo a Historial Técnico...</p>
-                                            </div>
-                                        ) : maintenanceHistory.length === 0 ? (
-                                            <div className="text-center py-24 glass-card border-dashed border-primary/20 bg-primary/2 group hover:bg-primary/5 transition-colors">
-                                                <div className="bg-primary/10 w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform">
-                                                    <Wrench className="h-10 w-10 text-primary" />
+                                    {activeTab === 'general' && (
+                                        <Button
+                                            onClick={isEditMode ? handleSave : () => setIsEditMode(true)}
+                                            className={cn(
+                                                "h-10 px-6 rounded-xl font-black uppercase text-[10px] tracking-widest shadow-xl transition-all hover:scale-105 active:scale-95",
+                                                isEditMode ? "bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/20" : "bg-primary shadow-primary/20"
+                                            )}
+                                        >
+                                            {isSaving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : isEditMode ? <Save className="h-4 w-4 mr-2" /> : <Edit3 className="h-4 w-4 mr-2" />}
+                                            {isEditMode ? "Comprometer Datos" : "Modificar Activo"}
+                                        </Button>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Scrollable Area Content */}
+                            <div className="flex-1 overflow-y-auto p-6 md:p-10 custom-scrollbar focus-visible:outline-none">
+                                <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full">
+                                    <TabsContent value="general" className="m-0 focus-visible:outline-none">
+                                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+                                            {/* Financial Glance */}
+                                            <div className="lg:col-span-8 space-y-10">
+                                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                                                    <div className="glass-card p-6 border-emerald-500/10 bg-gradient-to-br from-emerald-500/[0.03] to-transparent relative overflow-hidden group">
+                                                        <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                                                            <TrendingUp className="h-16 w-16 text-emerald-500" />
+                                                        </div>
+                                                        <p className="text-[10px] font-black uppercase tracking-widest text-emerald-500/60 mb-1">ROI Proyectado (ANUAL)</p>
+                                                        <p className="text-4xl font-black italic tracking-tighter text-emerald-500 leading-none">{roi}%</p>
+                                                        <div className="mt-4 flex items-center gap-2">
+                                                            <div className="h-1 w-full bg-emerald-500/10 rounded-full overflow-hidden">
+                                                                <div className="h-full bg-emerald-500" style={{ width: `${roi}%` }} />
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="glass-card p-6 border-blue-500/10 bg-gradient-to-br from-blue-500/[0.03] to-transparent relative overflow-hidden group">
+                                                        <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                                                            <Activity className="h-16 w-16 text-blue-500" />
+                                                        </div>
+                                                        <p className="text-[10px] font-black uppercase tracking-widest text-blue-500/60 mb-1">Precio Compra</p>
+                                                        <p className="text-3xl font-black italic tracking-tighter text-blue-500 leading-none">${formData.purchase_price?.toLocaleString() || '0'}</p>
+                                                        <p className="text-[9px] font-bold text-muted-foreground mt-2 uppercase">Inversión Inicial Asset</p>
+                                                    </div>
                                                 </div>
-                                                <h3 className="text-xl font-black uppercase tracking-widest mb-2">Sin actividad técnica</h3>
-                                                <p className="text-muted-foreground max-w-sm mx-auto font-medium">Este activo no registra intervenciones mecánicas o preventivas aún.</p>
+
+                                                <div className="space-y-6">
+                                                    <h4 className="text-[11px] font-black uppercase tracking-[0.3em] text-primary flex items-center gap-3">
+                                                        <div className="h-2 w-10 bg-primary/20 rounded-full" />
+                                                        Especificaciones del Activo
+                                                    </h4>
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                                        <div className="space-y-6 p-8 rounded-[2rem] bg-secondary/30 border border-border/40">
+                                                            <div className="grid grid-cols-1 gap-6">
+                                                                <div className="space-y-3">
+                                                                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Marca / Fabricante</Label>
+                                                                    <div className="relative group">
+                                                                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-primary opacity-40 group-focus-within:opacity-100 transition-opacity">
+                                                                            <CarFront className="h-4 w-4" />
+                                                                        </div>
+                                                                        <Input
+                                                                            disabled={!isEditMode}
+                                                                            value={formData.make}
+                                                                            onChange={(e) => setFormData({ ...formData, make: e.target.value })}
+                                                                            className="h-12 pl-12 bg-background border-border rounded-xl font-black italic text-lg uppercase tracking-tight focus:border-primary/50"
+                                                                        />
+                                                                    </div>
+                                                                </div>
+                                                                <div className="space-y-3">
+                                                                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Línea / Modelo</Label>
+                                                                    <Input
+                                                                        disabled={!isEditMode}
+                                                                        value={formData.model}
+                                                                        onChange={(e) => setFormData({ ...formData, model: e.target.value })}
+                                                                        className="h-12 bg-background border-border rounded-xl font-black italic text-lg uppercase tracking-tight focus:border-primary/50"
+                                                                    />
+                                                                </div>
+                                                                <div className="grid grid-cols-2 gap-6">
+                                                                    <div className="space-y-3">
+                                                                        <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Placa (Plate)</Label>
+                                                                        <Input
+                                                                            disabled={!isEditMode}
+                                                                            value={formData.license_plate}
+                                                                            onChange={(e) => setFormData({ ...formData, license_plate: e.target.value })}
+                                                                            className="h-12 bg-background border-border rounded-xl font-black italic text-lg uppercase tracking-tight focus:border-primary/50"
+                                                                        />
+                                                                    </div>
+                                                                    <div className="space-y-3">
+                                                                        <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">ID Inversor</Label>
+                                                                        {isEditMode ? (
+                                                                            <Select
+                                                                                value={formData.assigned_investor_id}
+                                                                                onValueChange={(v) => setFormData({ ...formData, assigned_investor_id: v })}
+                                                                            >
+                                                                                <SelectTrigger className="h-12 bg-background border-border rounded-xl font-bold italic text-xs uppercase tracking-tight">
+                                                                                    <SelectValue />
+                                                                                </SelectTrigger>
+                                                                                <SelectContent className="z-[350] bg-popover/95 border-border shadow-2xl rounded-2xl p-2">
+                                                                                    <SelectItem value="none" className="font-bold uppercase text-[10px] tracking-widest">Sin asignar Socio</SelectItem>
+                                                                                    {investors.map((inv) => (
+                                                                                        <SelectItem key={inv.id} value={inv.id} className="font-bold uppercase text-[10px] tracking-widest">
+                                                                                            {inv.full_name || inv.email}
+                                                                                        </SelectItem>
+                                                                                    ))}
+                                                                                </SelectContent>
+                                                                            </Select>
+                                                                        ) : (
+                                                                            <div className="h-12 flex items-center px-4 bg-background border border-border rounded-xl font-black italic text-sm text-foreground">
+                                                                                {investors.find(i => i.id === formData.assigned_investor_id)?.full_name || 'PENDIENTE ASIGNACIÓN'}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="space-y-6 pt-2">
+                                                            <div className="grid grid-cols-2 gap-6">
+                                                                <div className="space-y-3">
+                                                                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Año Fabricación</Label>
+                                                                    <Input
+                                                                        type="number"
+                                                                        disabled={!isEditMode}
+                                                                        value={formData.year}
+                                                                        onChange={(e) => setFormData({ ...formData, year: parseInt(e.target.value) })}
+                                                                        className="h-12 bg-secondary/20 border-border rounded-xl font-black italic text-lg tracking-tighter"
+                                                                    />
+                                                                </div>
+                                                                <div className="space-y-3">
+                                                                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Millaje Actual</Label>
+                                                                    <div className="relative">
+                                                                        <Input
+                                                                            type="number"
+                                                                            disabled={!isEditMode}
+                                                                            value={formData.mileage}
+                                                                            onChange={(e) => setFormData({ ...formData, mileage: parseInt(e.target.value) })}
+                                                                            className="h-12 bg-secondary/20 border-border rounded-xl font-black italic text-lg tracking-tighter pr-12"
+                                                                        />
+                                                                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[9px] font-black text-muted-foreground uppercase opacity-40">MI</span>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+
+                                                            <div className="space-y-3">
+                                                                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Número VIN (Chasis)</Label>
+                                                                <div className="relative group">
+                                                                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-primary opacity-40 group-focus-within:opacity-100 transition-opacity">
+                                                                        <FileText className="h-4 w-4" />
+                                                                    </div>
+                                                                    <Input
+                                                                        disabled={!isEditMode}
+                                                                        value={formData.vin}
+                                                                        onChange={(e) => setFormData({ ...formData, vin: e.target.value })}
+                                                                        className="h-12 pl-12 bg-secondary/20 border-border rounded-xl font-bold text-sm tracking-widest uppercase"
+                                                                    />
+                                                                </div>
+                                                            </div>
+
+                                                            <div className="space-y-3">
+                                                                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Ubicación Estacionamiento</Label>
+                                                                <div className="relative group">
+                                                                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-primary opacity-40 group-focus-within:opacity-100 transition-opacity">
+                                                                        <MapPin className="h-4 w-4" />
+                                                                    </div>
+                                                                    <Input
+                                                                        disabled={!isEditMode}
+                                                                        value={formData.location}
+                                                                        onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                                                                        className="h-12 pl-12 bg-secondary/20 border-border rounded-xl font-bold italic text-sm text-foreground"
+                                                                    />
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
                                             </div>
-                                        ) : (
-                                            <div className="glass-card overflow-hidden">
-                                                <Table>
-                                                    <TableHeader className="bg-sidebar-accent/30">
-                                                        <TableRow className="hover:bg-transparent border-border/40">
-                                                            <TableHead className="font-bold uppercase text-[10px] tracking-widest py-4">Fecha</TableHead>
-                                                            <TableHead className="font-bold uppercase text-[10px] tracking-widest py-4">Tipo de Servicio</TableHead>
-                                                            <TableHead className="font-bold uppercase text-[10px] tracking-widest py-4">Carga Operativa</TableHead>
-                                                            <TableHead className="font-bold uppercase text-[10px] tracking-widest py-4">Inversión</TableHead>
-                                                            <TableHead className="text-right font-bold uppercase text-[10px] tracking-widest py-4 px-6">Acciones</TableHead>
-                                                        </TableRow>
-                                                    </TableHeader>
-                                                    <TableBody>
-                                                        {maintenanceHistory.map((record) => (
-                                                            <TableRow key={record.id} className="group hover:bg-primary/5 border-border/20 transition-all">
-                                                                <TableCell className="py-5 text-xs font-bold uppercase opacity-60">
-                                                                    {new Date(record.date).toLocaleDateString()}
-                                                                </TableCell>
-                                                                <TableCell className="py-5">
-                                                                    <div className="flex flex-col">
-                                                                        <span className="font-black italic text-sm tracking-tight group-hover:text-primary transition-colors uppercase">
-                                                                            {record.service_type}
-                                                                        </span>
-                                                                        <span className="text-[10px] font-bold text-muted-foreground tracking-widest opacity-60 truncate max-w-[200px]">
-                                                                            {record.display_notes || record.notes || "Servicio estándar sin incidencias"}
-                                                                        </span>
-                                                                    </div>
-                                                                </TableCell>
-                                                                <TableCell className="py-5">
-                                                                    <div className="flex flex-col">
-                                                                        <span className="font-black italic text-sm tracking-tighter opacity-80 uppercase text-primary">
-                                                                            {record.mileage_at_service?.toLocaleString() || "-"} MI
-                                                                        </span>
-                                                                        {record.next_service_mileage && (
-                                                                            <span className="text-[9px] font-black text-muted-foreground uppercase tracking-tighter">Next @ {record.next_service_mileage.toLocaleString()}</span>
-                                                                        )}
-                                                                    </div>
-                                                                </TableCell>
-                                                                <TableCell className="py-5">
-                                                                    <span className="font-black italic text-sm tracking-tighter text-glow text-primary">${record.cost?.toLocaleString()}</span>
-                                                                </TableCell>
-                                                                <TableCell className="text-right px-6 py-5">
-                                                                    <div className="flex justify-end gap-2">
-                                                                        {record.receipt_images && record.receipt_images.length > 0 && (
-                                                                            record.receipt_images.length === 1 ? (
-                                                                                <Button
-                                                                                    variant="ghost"
-                                                                                    size="icon"
-                                                                                    className="h-9 w-9 rounded-xl bg-primary/5 text-primary hover:bg-primary hover:text-primary-foreground transition-all"
-                                                                                    onClick={() => window.open(record.receipt_images![0], '_blank')}
-                                                                                >
-                                                                                    <FileText className="h-4 w-4" />
-                                                                                </Button>
-                                                                            ) : (
-                                                                                <DropdownMenu>
-                                                                                    <DropdownMenuTrigger asChild>
-                                                                                        <Button
-                                                                                            variant="ghost"
-                                                                                            size="icon"
-                                                                                            className="h-9 w-9 rounded-xl bg-primary/5 text-primary hover:bg-primary hover:text-primary-foreground transition-all"
-                                                                                        >
-                                                                                            <span className="flex items-center justify-center relative">
-                                                                                                <FileText className="h-4 w-4" />
-                                                                                                <span className="absolute -top-1 -right-1 bg-primary text-white text-[8px] rounded-full w-3 h-3 flex items-center justify-center border-white border">
-                                                                                                    {record.receipt_images.length}
-                                                                                                </span>
-                                                                                            </span>
-                                                                                        </Button>
-                                                                                    </DropdownMenuTrigger>
-                                                                                    <DropdownMenuContent align="end" className="w-48 bg-white dark:bg-slate-900 border-primary/20">
-                                                                                        <div className="px-3 py-2 border-b border-border/50 mb-1">
-                                                                                            <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Documentos Adjuntos</span>
-                                                                                        </div>
-                                                                                        {record.receipt_images.map((img, i) => (
-                                                                                            <DropdownMenuItem
-                                                                                                key={i}
-                                                                                                className="text-[10px] font-bold uppercase tracking-tight py-2 cursor-pointer"
-                                                                                                onClick={() => window.open(img, '_blank')}
-                                                                                            >
-                                                                                                <FileText className="h-3 w-3 mr-2 opacity-50" />
-                                                                                                Documento #{i + 1}
-                                                                                            </DropdownMenuItem>
-                                                                                        ))}
-                                                                                    </DropdownMenuContent>
-                                                                                </DropdownMenu>
-                                                                            )
-                                                                        )}
+                                        </div>
+                                    </TabsContent>
+
+                                    <TabsContent value="galeria" className="m-0 focus-visible:outline-none">
+                                        <div className="p-8 space-y-8">
+                                            <div className="flex justify-between items-end px-2">
+                                                <div className="flex flex-col gap-1">
+                                                    <h3 className="text-2xl font-black italic tracking-tight uppercase">Bóveda de <span className="text-primary">Imágenes</span></h3>
+                                                    <p className="text-xs text-muted-foreground font-bold uppercase tracking-wider">Documentación visual del activo</p>
+                                                </div>
+                                                <div className="flex items-center gap-3">
+                                                    <Button
+                                                        variant="outline"
+                                                        size="lg"
+                                                        className="h-12 border-primary/20 bg-primary/5 hover:bg-primary hover:text-primary-foreground transition-all rounded-xl shadow-lg shadow-primary/5 relative"
+                                                        onClick={() => document.getElementById('photo-upload-tab')?.click()}
+                                                        disabled={isUploadingPhoto}
+                                                    >
+                                                        {isUploadingPhoto ? <Loader2 className="h-5 w-5 animate-spin mr-3" /> : <Camera className="h-5 w-5 mr-3" />}
+                                                        {isUploadingPhoto ? "Subiendo..." : "Añadir Multimedia"}
+                                                        <input
+                                                            id="photo-upload-tab"
+                                                            type="file"
+                                                            multiple
+                                                            accept="image/*"
+                                                            className="hidden"
+                                                            onChange={handlePhotoUpload}
+                                                        />
+                                                    </Button>
+                                                </div>
+                                            </div>
+
+                                            {isLoadingData ? (
+                                                <div className="flex flex-col items-center justify-center py-20 gap-4">
+                                                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                                                    <p className="text-[10px] font-black uppercase tracking-widest animate-pulse">Revelando boveda...</p>
+                                                </div>
+                                            ) : photos.length === 0 ? (
+                                                <div className="text-center py-24 glass-card border-dashed border-primary/20 bg-primary/2 group hover:bg-primary/5 transition-colors border-border/40">
+                                                    <div className="bg-primary/10 w-20 h-20 rounded-3xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform">
+                                                        <ImageIcon className="h-10 w-10 text-primary" />
+                                                    </div>
+                                                    <h3 className="text-xl font-black uppercase tracking-widest mb-2">Galería Vacía</h3>
+                                                    <p className="text-muted-foreground max-w-sm mx-auto font-medium mb-10 text-sm">No se han cargado registros visuales para esta unidad.</p>
+                                                    <Button
+                                                        variant="outline"
+                                                        onClick={() => document.getElementById('photo-upload-tab')?.click()}
+                                                        className="rounded-xl font-black uppercase text-[10px] tracking-widest border-primary/20 hover:bg-primary hover:text-white h-11 px-8"
+                                                    >
+                                                        Capturar Primera Imagen
+                                                    </Button>
+                                                </div>
+                                            ) : (
+                                                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                                                    {photos.map((photo) => (
+                                                        <div
+                                                            key={photo.id}
+                                                            className="group relative h-48 rounded-[2rem] overflow-hidden bg-muted border border-border/40 cursor-pointer shadow-xl hover:shadow-2xl transition-all duration-500 scale-100 hover:scale-[1.02]"
+                                                            onClick={() => setSelectedPhoto(photo)}
+                                                        >
+                                                            <img
+                                                                src={photo.image_url}
+                                                                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                                                                alt="Vehicle"
+                                                            />
+                                                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-5">
+                                                                <div className="flex justify-between items-center">
+                                                                    <div className="flex gap-2">
                                                                         <Button
                                                                             variant="ghost"
                                                                             size="icon"
-                                                                            className="h-9 w-9 rounded-xl hover:bg-red-500/10 hover:text-red-500 transition-colors"
-                                                                            onClick={() => handleDeleteMaintenance(record.id)}
+                                                                            className="h-8 w-8 rounded-lg bg-white/10 backdrop-blur-md text-white hover:bg-red-500 hover:text-white transition-colors"
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                handleDeletePhoto(photo.id, e);
+                                                                            }}
                                                                         >
                                                                             <Trash2 className="h-4 w-4" />
                                                                         </Button>
                                                                     </div>
-                                                                </TableCell>
-                                                            </TableRow>
-                                                        ))}
-                                                    </TableBody>
-                                                </Table>
-                                            </div>
-                                        )}
-                                    </div>
-                                </TabsContent>
-
-                                <TabsContent value="alquileres" className="mt-0 outline-none">
-                                    <div className="space-y-10">
-                                        <div className="flex justify-between items-end px-2">
-                                            <div className="flex flex-col gap-1">
-                                                <h3 className="text-2xl font-black italic tracking-tight uppercase">Calendario <span className="text-primary">& Operaciones</span></h3>
-                                                <p className="text-xs text-muted-foreground font-bold uppercase tracking-wider">Flujo de reservas y disponibilidad</p>
-                                            </div>
-                                            <Button
-                                                variant="outline"
-                                                size="lg"
-                                                className="h-12 border-primary/20 bg-primary/5 hover:bg-primary hover:text-primary-foreground transition-all rounded-xl shadow-lg shadow-primary/5"
-                                                onClick={() => setIsRentalDialogOpen(true)}
-                                            >
-                                                <Plus className="h-5 w-5 mr-3" /> Nueva Reserva
-                                            </Button>
-                                        </div>
-
-                                        <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
-                                            {/* CALENDAR VIEW */}
-                                            <div className="md:col-span-12 lg:col-span-5">
-                                                <div className="glass-card p-8 bg-gradient-to-b from-primary/5 to-transparent relative overflow-hidden group border-border/40">
-                                                    <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-3xl -mr-16 -mt-16" />
-                                                    <h4 className="font-black italic uppercase tracking-tighter mb-8 flex items-center gap-3 text-lg">
-                                                        <CalendarDays className="h-5 w-5 text-primary" /> Disponibilidad Real
-                                                    </h4>
-                                                    <div className="flex justify-center bg-sidebar-accent/20 rounded-2xl p-6 border border-border/20 backdrop-blur-sm">
-                                                        <Calendar
-                                                            mode="single"
-                                                            modifiers={{ booked: getBookedDates() }}
-                                                            modifiersStyles={{
-                                                                booked: { backgroundColor: 'oklch(0.8 0.18 185)', color: 'white', fontWeight: '900', borderRadius: '12px' }
-                                                            }}
-                                                            locale={es}
-                                                            className="rounded-md border-0 [--cell-size:44px]"
-                                                        />
-                                                    </div>
-                                                    <div className="mt-8 flex gap-8 text-[10px] font-black uppercase tracking-widest justify-center">
-                                                        <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-primary shadow-[0_0_8px_oklch(0.8_0.18_185)]"></div> Ocupado</div>
-                                                        <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-border/40"></div> Disponible</div>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            {/* HISTORY LIST */}
-                                            <div className="md:col-span-12 lg:col-span-7 space-y-6">
-                                                <div className="flex items-center gap-2 px-2">
-                                                    <div className="h-1 w-6 bg-primary rounded-full"></div>
-                                                    <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground italic">Historial Operativo</h4>
-                                                </div>
-
-                                                {isLoadingData ? (
-                                                    <div className="flex flex-col items-center justify-center py-20 gap-4">
-                                                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                                                        <p className="text-[10px] font-black uppercase tracking-widest animate-pulse">Consultando Calendario...</p>
-                                                    </div>
-                                                ) : rentalHistory.length === 0 ? (
-                                                    <div className="text-center py-24 glass-card border-dashed border-primary/20 bg-primary/2 group hover:bg-primary/5 transition-colors border-border/40">
-                                                        <div className="bg-primary/10 w-20 h-20 rounded-3xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform">
-                                                            <CalendarDays className="h-10 w-10 text-primary" />
+                                                                    <div className="bg-primary/95 text-white text-[8px] font-black uppercase px-2 py-1 rounded-sm tracking-widest">DETALLES</div>
+                                                                </div>
+                                                            </div>
+                                                            {photo.is_primary && (
+                                                                <div className="absolute top-4 left-4 bg-emerald-500 text-white text-[8px] font-black uppercase px-3 py-1.5 rounded-full shadow-lg shadow-emerald-500/20 flex items-center gap-1.5 border border-emerald-400/50">
+                                                                    <div className="w-1 h-1 rounded-full bg-white animate-pulse" />
+                                                                    Principal
+                                                                </div>
+                                                            )}
+                                                            {photo.has_damage && (
+                                                                <div className="absolute top-4 right-4 bg-red-500 text-white text-[8px] font-black uppercase px-3 py-1.5 rounded-full shadow-lg shadow-red-500/20 border border-red-400/50">
+                                                                    Daño Detectado
+                                                                </div>
+                                                            )}
                                                         </div>
-                                                        <h3 className="text-xl font-black uppercase tracking-widest mb-2">Activo en Reposo</h3>
-                                                        <p className="text-muted-foreground max-w-sm mx-auto font-medium mb-10 text-sm">No se han detectado reservas en el sistema para esta unidad.</p>
-                                                        <Button
-                                                            variant="outline"
-                                                            onClick={() => setIsRentalDialogOpen(true)}
-                                                            className="rounded-xl font-black uppercase text-[10px] tracking-widest border-primary/20 hover:bg-primary hover:text-white h-11 px-8"
-                                                        >
-                                                            Registrar Evento
-                                                        </Button>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </TabsContent>
+
+                                    <TabsContent value="millaje" className="m-0 focus-visible:outline-none">
+                                        <div className="p-8 space-y-10">
+                                            <div className="flex justify-between items-end px-2">
+                                                <div className="flex flex-col gap-1">
+                                                    <h3 className="text-2xl font-black italic tracking-tight uppercase">Monitor de <span className="text-primary">Kilometraje</span></h3>
+                                                    <p className="text-xs text-muted-foreground font-bold uppercase tracking-wider">Histórico de uso y proyecciones</p>
+                                                </div>
+                                                <Button
+                                                    variant="outline"
+                                                    size="lg"
+                                                    className="h-12 border-primary/20 bg-primary/5 hover:bg-primary hover:text-primary-foreground transition-all rounded-xl shadow-lg shadow-primary/5"
+                                                    onClick={() => setIsMileageDialogOpen(true)}
+                                                >
+                                                    <Gauge className="h-5 w-5 mr-3" /> Registrar Lectura
+                                                </Button>
+                                            </div>
+
+                                            <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
+                                                <div className="md:col-span-12 lg:col-span-8">
+                                                    <div className="glass-card p-8 h-[400px] border-border/40 relative group">
+                                                        <div className="flex items-center justify-between mb-8">
+                                                            <div className="flex items-center gap-3">
+                                                                <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                                                                    <TrendingUp className="h-5 w-5 text-primary" />
+                                                                </div>
+                                                                <div>
+                                                                    <h4 className="font-black italic uppercase tracking-tighter text-sm">Curva de Uso</h4>
+                                                                    <p className="text-[9px] font-bold text-muted-foreground uppercase opacity-60">Últimas 10 lecturas certificadas</p>
+                                                                </div>
+                                                            </div>
+                                                            <div className="bg-background border border-border px-4 py-2 rounded-xl">
+                                                                <span className="text-[10px] font-black uppercase text-primary">Consumo Promedio: <span className="text-foreground">{(mileageHistory.length > 1 ? (Math.max(...mileageHistory.map(m => m.mileage)) - Math.min(...mileageHistory.map(m => m.mileage))) / (mileageHistory.length - 1) : 0).toFixed(0)} MI/Mes</span></span>
+                                                            </div>
+                                                        </div>
+
+                                                        {mileageHistory.length > 1 ? (
+                                                            <div className="h-64 w-full">
+                                                                <ResponsiveContainer width="100%" height="100%">
+                                                                    <AreaChart data={[...mileageHistory].reverse().slice(-10)}>
+                                                                        <defs>
+                                                                            <linearGradient id="colorMileage" x1="0" y1="0" x2="0" y2="1">
+                                                                                <stop offset="5%" stopColor="oklch(var(--primary))" stopOpacity={0.3} />
+                                                                                <stop offset="95%" stopColor="oklch(var(--primary))" stopOpacity={0} />
+                                                                            </linearGradient>
+                                                                        </defs>
+                                                                        <CartesianGrid strokeDasharray="3 3" stroke="oklch(var(--border))" vertical={false} opacity={0.3} />
+                                                                        <XAxis
+                                                                            dataKey="date"
+                                                                            tick={{ fontSize: 9, fontWeight: 900 }}
+                                                                            tickFormatter={(str) => new Date(str).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                                                                            stroke="oklch(var(--muted-foreground))"
+                                                                            axisLine={false}
+                                                                            tickLine={false}
+                                                                        />
+                                                                        <YAxis
+                                                                            hide
+                                                                            domain={['dataMin - 500', 'auto']}
+                                                                        />
+                                                                        <Tooltip
+                                                                            content={({ active, payload }) => {
+                                                                                if (active && payload && payload.length) {
+                                                                                    return (
+                                                                                        <div className="bg-slate-900 border border-primary/20 p-3 rounded-xl shadow-2xl">
+                                                                                            <p className="text-[10px] font-black uppercase text-primary mb-1">Lectura Certificada</p>
+                                                                                            <p className="text-xl font-black italic text-white tracking-tighter">{payload[0].value?.toLocaleString()} MI</p>
+                                                                                            <p className="text-[8px] font-bold text-slate-500 mt-1">{new Date(payload[0].payload.date).toLocaleDateString()}</p>
+                                                                                        </div>
+                                                                                    );
+                                                                                }
+                                                                                return null;
+                                                                            }}
+                                                                        />
+                                                                        <Area
+                                                                            type="monotone"
+                                                                            dataKey="mileage"
+                                                                            stroke="oklch(var(--primary))"
+                                                                            strokeWidth={4}
+                                                                            fillOpacity={1}
+                                                                            fill="url(#colorMileage)"
+                                                                        />
+                                                                    </AreaChart>
+                                                                </ResponsiveContainer>
+                                                            </div>
+                                                        ) : (
+                                                            <div className="flex flex-col items-center justify-center h-64 gap-3 bg-secondary/10 rounded-2xl border border-dashed border-border">
+                                                                <TrendingUp className="h-8 w-8 opacity-10" />
+                                                                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Datos insuficientes para graficar</p>
+                                                            </div>
+                                                        )}
                                                     </div>
-                                                ) : (
-                                                    <div className="glass-card overflow-hidden border-border/40">
-                                                        <Table>
-                                                            <TableHeader className="bg-sidebar-accent/30">
-                                                                <TableRow className="hover:bg-transparent border-border/40">
-                                                                    <TableHead className="font-bold uppercase text-[10px] tracking-widest py-4">Cliente</TableHead>
-                                                                    <TableHead className="font-bold uppercase text-[10px] tracking-widest py-4">Período</TableHead>
-                                                                    <TableHead className="font-bold uppercase text-[10px] tracking-widest py-4">Estado</TableHead>
-                                                                    <TableHead className="text-right font-bold uppercase text-[10px] tracking-widest py-4 px-6">Ingreso</TableHead>
+                                                </div>
+
+                                                <div className="md:col-span-12 lg:col-span-4 space-y-6">
+                                                    <div className="flex items-center justify-between px-2">
+                                                        <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Historial Reciente</h4>
+                                                        <div className="h-1 w-8 bg-primary/20 rounded-full"></div>
+                                                    </div>
+
+                                                    <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                                                        {mileageHistory.length === 0 ? (
+                                                            <div className="p-8 text-center bg-secondary/5 rounded-2xl border border-dashed border-border">
+                                                                <p className="text-[10px] font-black uppercase text-muted-foreground opacity-40">Sin lecturas previas</p>
+                                                            </div>
+                                                        ) : (
+                                                            mileageHistory.map((log) => (
+                                                                <div key={log.id} className="flex items-center justify-between p-4 glass-card border-border/20 group hover:bg-primary/5 transition-all">
+                                                                    <div className="flex items-center gap-4">
+                                                                        <div className="h-10 w-10 rounded-xl bg-background border border-border flex items-center justify-center shadow-inner group-hover:scale-110 transition-transform">
+                                                                            <Gauge className="h-4 w-4 text-primary" />
+                                                                        </div>
+                                                                        <div>
+                                                                            <p className="text-sm font-black italic tracking-tight">{log.mileage.toLocaleString()} MI</p>
+                                                                            <p className="text-[9px] font-black text-muted-foreground uppercase opacity-60">Verified: {new Date(log.date).toLocaleDateString()}</p>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex flex-col items-end gap-1">
+                                                                        <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_oklch(0.7_0.2_150)]"></div>
+                                                                        <span className="text-[8px] font-bold text-muted-foreground opacity-40">CERT</span>
+                                                                    </div>
+                                                                </div>
+                                                            ))
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </TabsContent>
+
+                                    <TabsContent value="mantenimiento" className="m-0 focus-visible:outline-none">
+                                        <div className="p-8 space-y-8">
+                                            <div className="flex justify-between items-end px-2">
+                                                <div className="flex flex-col gap-1">
+                                                    <h3 className="text-2xl font-black italic tracking-tight uppercase">Historial de <span className="text-primary">Mantenimiento</span></h3>
+                                                    <p className="text-xs text-muted-foreground font-bold uppercase tracking-wider">Registro técnico y preventivo</p>
+                                                </div>
+                                                <Button
+                                                    variant="outline"
+                                                    size="lg"
+                                                    className="h-12 border-primary/20 bg-primary/5 hover:bg-primary hover:text-primary-foreground transition-all rounded-xl shadow-lg shadow-primary/5"
+                                                    onClick={() => setIsMaintenanceDialogOpen(true)}
+                                                >
+                                                    <Plus className="h-5 w-5 mr-3" /> Nuevo Registro
+                                                </Button>
+                                            </div>
+
+                                            {isLoadingData ? (
+                                                <div className="flex flex-col items-center justify-center py-20 gap-4">
+                                                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                                                    <p className="text-[10px] font-black uppercase tracking-widest animate-pulse">Consultando historial...</p>
+                                                </div>
+                                            ) : maintenanceHistory.length === 0 ? (
+                                                <div className="text-center py-24 glass-card border-dashed border-primary/20 bg-primary/2 group hover:bg-primary/5 transition-colors border-border/40">
+                                                    <div className="bg-primary/10 w-20 h-20 rounded-3xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform">
+                                                        <Wrench className="h-10 w-10 text-primary" />
+                                                    </div>
+                                                    <h3 className="text-xl font-black uppercase tracking-widest mb-2">Sin registros técnicos</h3>
+                                                    <p className="text-muted-foreground max-w-sm mx-auto font-medium mb-10 text-sm">No se han detectado servicios realizados en esta unidad.</p>
+                                                    <Button
+                                                        variant="outline"
+                                                        onClick={() => setIsMaintenanceDialogOpen(true)}
+                                                        className="rounded-xl font-black uppercase text-[10px] tracking-widest border-primary/20 hover:bg-primary hover:text-white h-11 px-8"
+                                                    >
+                                                        Registrar Servicio
+                                                    </Button>
+                                                </div>
+                                            ) : (
+                                                <div className="glass-card overflow-hidden border-border/40">
+                                                    <Table>
+                                                        <TableHeader className="bg-sidebar-accent/30">
+                                                            <TableRow className="hover:bg-transparent border-border/40">
+                                                                <TableHead className="font-bold uppercase text-[10px] tracking-widest py-4">Fecha</TableHead>
+                                                                <TableHead className="font-bold uppercase text-[10px] tracking-widest py-4">Servicio</TableHead>
+                                                                <TableHead className="font-bold uppercase text-[10px] tracking-widest py-4">Kilometraje</TableHead>
+                                                                <TableHead className="font-bold uppercase text-[10px] tracking-widest py-4">Inversión</TableHead>
+                                                                <TableHead className="text-right font-bold uppercase text-[10px] tracking-widest py-4 px-6">Acciones</TableHead>
+                                                            </TableRow>
+                                                        </TableHeader>
+                                                        <TableBody>
+                                                            {maintenanceHistory.map((record) => (
+                                                                <TableRow key={record.id} className="group hover:bg-primary/5 border-border/20 transition-all">
+                                                                    <TableCell className="py-5 text-xs font-bold uppercase opacity-60">
+                                                                        {new Date(record.date).toLocaleDateString()}
+                                                                    </TableCell>
+                                                                    <TableCell className="py-5">
+                                                                        <div className="flex flex-col">
+                                                                            <span className="font-black italic text-sm tracking-tight group-hover:text-primary transition-colors uppercase">
+                                                                                {record.service_type}
+                                                                            </span>
+                                                                            <span className="text-[10px] font-bold text-muted-foreground tracking-widest opacity-60 truncate max-w-[200px]">
+                                                                                {record.display_notes || record.notes || "Servicio estándar sin incidencias"}
+                                                                            </span>
+                                                                        </div>
+                                                                    </TableCell>
+                                                                    <TableCell className="py-5">
+                                                                        <div className="flex flex-col">
+                                                                            <span className="font-black italic text-sm tracking-tighter opacity-80 uppercase text-primary">
+                                                                                {record.mileage_at_service?.toLocaleString() || "-"} MI
+                                                                            </span>
+                                                                            {record.next_service_mileage && (
+                                                                                <span className="text-[9px] font-black text-muted-foreground uppercase tracking-tighter">Next @ {record.next_service_mileage.toLocaleString()}</span>
+                                                                            )}
+                                                                        </div>
+                                                                    </TableCell>
+                                                                    <TableCell className="py-5">
+                                                                        <span className="font-black italic text-sm tracking-tighter text-primary">${record.cost?.toLocaleString()}</span>
+                                                                    </TableCell>
+                                                                    <TableCell className="text-right px-6 py-5">
+                                                                        <div className="flex justify-end gap-2">
+                                                                            {record.receipt_images && record.receipt_images.length > 0 && (
+                                                                                record.receipt_images.length === 1 ? (
+                                                                                    <Button
+                                                                                        variant="ghost"
+                                                                                        size="icon"
+                                                                                        className="h-9 w-9 rounded-xl bg-primary/5 text-primary hover:bg-primary hover:text-primary-foreground transition-all"
+                                                                                        onClick={() => window.open(record.receipt_images![0], '_blank')}
+                                                                                    >
+                                                                                        <FileText className="h-4 w-4" />
+                                                                                    </Button>
+                                                                                ) : (
+                                                                                    <DropdownMenu>
+                                                                                        <DropdownMenuTrigger asChild>
+                                                                                            <Button
+                                                                                                variant="ghost"
+                                                                                                size="icon"
+                                                                                                className="h-9 w-9 rounded-xl bg-primary/5 text-primary hover:bg-primary hover:text-primary-foreground transition-all"
+                                                                                            >
+                                                                                                <span className="flex items-center justify-center relative">
+                                                                                                    <FileText className="h-4 w-4" />
+                                                                                                    <span className="absolute -top-1 -right-1 bg-primary text-white text-[8px] rounded-full w-3 h-3 flex items-center justify-center border-white border">
+                                                                                                        {record.receipt_images.length}
+                                                                                                    </span>
+                                                                                                </span>
+                                                                                            </Button>
+                                                                                        </DropdownMenuTrigger>
+                                                                                        <DropdownMenuContent align="end" className="w-48 bg-popover dark:bg-slate-900 border-primary/20">
+                                                                                            <div className="px-3 py-2 border-b border-border/50 mb-1">
+                                                                                                <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Documentos Adjuntos</span>
+                                                                                            </div>
+                                                                                            {record.receipt_images.map((img, i) => (
+                                                                                                <DropdownMenuItem
+                                                                                                    key={i}
+                                                                                                    className="text-[10px] font-bold uppercase tracking-tight py-2 cursor-pointer"
+                                                                                                    onClick={() => window.open(img, '_blank')}
+                                                                                                >
+                                                                                                    <FileText className="h-3 w-3 mr-2 opacity-50" />
+                                                                                                    Documento #{i + 1}
+                                                                                                </DropdownMenuItem>
+                                                                                            ))}
+                                                                                        </DropdownMenuContent>
+                                                                                    </DropdownMenu>
+                                                                                )
+                                                                            )}
+                                                                            <Button
+                                                                                variant="ghost"
+                                                                                size="icon"
+                                                                                className="h-9 w-9 rounded-xl hover:bg-red-500/10 hover:text-red-500 transition-colors"
+                                                                                onClick={() => handleDeleteMaintenance(record.id)}
+                                                                            >
+                                                                                <Trash2 className="h-4 w-4" />
+                                                                            </Button>
+                                                                        </div>
+                                                                    </TableCell>
                                                                 </TableRow>
-                                                            </TableHeader>
-                                                            <TableBody>
-                                                                {rentalHistory.map((rental) => (
-                                                                    <TableRow key={rental.id} className="group hover:bg-primary/5 border-border/20 transition-all">
-                                                                        <TableCell className="py-5">
-                                                                            <div className="flex flex-col">
-                                                                                <span className="font-black italic text-sm tracking-tight group-hover:text-primary transition-colors uppercase">
-                                                                                    {rental.customer_name || 'Generic Client'}
-                                                                                </span>
-                                                                                <span className="text-[9px] font-bold text-muted-foreground tracking-widest opacity-60 uppercase">
-                                                                                    Platform: {rental.platform || 'Direct'}
-                                                                                </span>
-                                                                            </div>
-                                                                        </TableCell>
-                                                                        <TableCell className="py-5">
-                                                                            <div className="flex flex-col">
-                                                                                <span className="text-xs font-bold uppercase opacity-80">
-                                                                                    {new Date(rental.start_date).toLocaleDateString()}
-                                                                                </span>
-                                                                                <span className="text-[9px] font-bold text-primary/60 italic tracking-tighter uppercase whitespace-nowrap">
-                                                                                    → {new Date(rental.end_date).toLocaleDateString()}
-                                                                                </span>
-                                                                            </div>
-                                                                        </TableCell>
-                                                                        <TableCell className="py-5">
-                                                                            <Badge className={`
+                                                            ))}
+                                                        </TableBody>
+                                                    </Table>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </TabsContent>
+
+                                    <TabsContent value="alquileres" className="mt-0 outline-none">
+                                        <div className="space-y-10">
+                                            <div className="flex justify-between items-end px-2">
+                                                <div className="flex flex-col gap-1">
+                                                    <h3 className="text-2xl font-black italic tracking-tight uppercase">Calendario <span className="text-primary">& Operaciones</span></h3>
+                                                    <p className="text-xs text-muted-foreground font-bold uppercase tracking-wider">Flujo de reservas y disponibilidad</p>
+                                                </div>
+                                                <Button
+                                                    variant="outline"
+                                                    size="lg"
+                                                    className="h-12 border-primary/20 bg-primary/5 hover:bg-primary hover:text-primary-foreground transition-all rounded-xl shadow-lg shadow-primary/5"
+                                                    onClick={() => setIsRentalDialogOpen(true)}
+                                                >
+                                                    <Plus className="h-5 w-5 mr-3" /> Nueva Reserva
+                                                </Button>
+                                            </div>
+
+                                            <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
+                                                {/* CALENDAR VIEW */}
+                                                <div className="md:col-span-12 lg:col-span-5">
+                                                    <div className="glass-card p-8 bg-gradient-to-b from-primary/5 to-transparent relative overflow-hidden group border-border/40">
+                                                        <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-3xl -mr-16 -mt-16" />
+                                                        <h4 className="font-black italic uppercase tracking-tighter mb-8 flex items-center gap-3 text-lg">
+                                                            <CalendarDays className="h-5 w-5 text-primary" /> Disponibilidad Real
+                                                        </h4>
+                                                        <div className="flex justify-center bg-sidebar-accent/20 rounded-2xl p-6 border border-border/20 backdrop-blur-sm">
+                                                            <Calendar
+                                                                mode="single"
+                                                                locale={es}
+                                                                className="rounded-md border-0 [--cell-size:44px]"
+                                                                modifiers={{ booked: getBookedDates() }}
+                                                                modifiersClassNames={{ booked: "bg-primary text-primary-foreground rounded-full" }}
+                                                            />
+                                                        </div>
+                                                        <div className="mt-8 flex gap-8 text-[10px] font-black uppercase tracking-widest justify-center">
+                                                            <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-primary shadow-[0_0_8px_oklch(0.8_0.18_185)]"></div> Ocupado</div>
+                                                            <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-border/40"></div> Disponible</div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* HISTORY LIST */}
+                                                <div className="md:col-span-12 lg:col-span-7 space-y-6">
+                                                    <div className="flex items-center gap-2 px-2">
+                                                        <div className="h-1 w-6 bg-primary rounded-full"></div>
+                                                        <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground italic">Historial Operativo</h4>
+                                                    </div>
+
+                                                    {isLoadingData ? (
+                                                        <div className="flex flex-col items-center justify-center py-20 gap-4">
+                                                            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                                                            <p className="text-[10px] font-black uppercase tracking-widest animate-pulse">Consultando Calendario...</p>
+                                                        </div>
+                                                    ) : rentalHistory.length === 0 ? (
+                                                        <div className="text-center py-24 glass-card border-dashed border-primary/20 bg-primary/2 group hover:bg-primary/5 transition-colors border-border/40">
+                                                            <div className="bg-primary/10 w-20 h-20 rounded-3xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform">
+                                                                <CalendarDays className="h-10 w-10 text-primary" />
+                                                            </div>
+                                                            <h3 className="text-xl font-black uppercase tracking-widest mb-2">Activo en Reposo</h3>
+                                                            <p className="text-muted-foreground max-w-sm mx-auto font-medium mb-10 text-sm">No se han detectado reservas en el sistema para esta unidad.</p>
+                                                            <Button
+                                                                variant="outline"
+                                                                onClick={() => setIsRentalDialogOpen(true)}
+                                                                className="rounded-xl font-black uppercase text-[10px] tracking-widest border-primary/20 hover:bg-primary hover:text-white h-11 px-8"
+                                                            >
+                                                                Registrar Evento
+                                                            </Button>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="glass-card overflow-hidden border-border/40">
+                                                            <Table>
+                                                                <TableHeader className="bg-sidebar-accent/30">
+                                                                    <TableRow className="hover:bg-transparent border-border/40">
+                                                                        <TableHead className="font-bold uppercase text-[10px] tracking-widest py-4">Cliente</TableHead>
+                                                                        <TableHead className="font-bold uppercase text-[10px] tracking-widest py-4">Período</TableHead>
+                                                                        <TableHead className="font-bold uppercase text-[10px] tracking-widest py-4">Estado</TableHead>
+                                                                        <TableHead className="text-right font-bold uppercase text-[10px] tracking-widest py-4 px-6">Ingreso</TableHead>
+                                                                    </TableRow>
+                                                                </TableHeader>
+                                                                <TableBody>
+                                                                    {rentalHistory.map((rental) => (
+                                                                        <TableRow key={rental.id} className="group hover:bg-primary/5 border-border/20 transition-all">
+                                                                            <TableCell className="py-5">
+                                                                                <div className="flex flex-col">
+                                                                                    <span className="font-black italic text-sm tracking-tight group-hover:text-primary transition-colors uppercase">
+                                                                                        {rental.customer_name || 'Generic Client'}
+                                                                                    </span>
+                                                                                    <span className="text-[9px] font-bold text-muted-foreground tracking-widest opacity-60 uppercase">
+                                                                                        Platform: {rental.platform || 'Direct'}
+                                                                                    </span>
+                                                                                </div>
+                                                                            </TableCell>
+                                                                            <TableCell className="py-5">
+                                                                                <div className="flex flex-col">
+                                                                                    <span className="text-xs font-bold uppercase opacity-80">
+                                                                                        {new Date(rental.start_date).toLocaleDateString()}
+                                                                                    </span>
+                                                                                    <span className="text-[9px] font-bold text-primary/60 italic tracking-tighter uppercase whitespace-nowrap">
+                                                                                        → {new Date(rental.end_date).toLocaleDateString()}
+                                                                                    </span>
+                                                                                </div>
+                                                                            </TableCell>
+                                                                            <TableCell className="py-5">
+                                                                                <Badge className={`
                                                                                 uppercase text-[9px] font-black tracking-widest px-2 py-0.5 rounded-md shadow-sm border-0
                                                                                 ${rental.status === 'confirmed' ? 'bg-emerald-500/10 text-emerald-500' : ''}
                                                                                 ${rental.status === 'completed' ? 'bg-primary/10 text-primary' : ''}
                                                                                 ${rental.status === 'cancelled' ? 'bg-slate-500/10 text-slate-500' : ''}
                                                                             `}>
-                                                                                {rental.status === 'confirmed' ? 'Activo' : rental.status === 'completed' ? 'Finalizado' : 'Baja'}
-                                                                            </Badge>
-                                                                        </TableCell>
-                                                                        <TableCell className="text-right py-5 px-6">
-                                                                            <span className="font-black italic text-sm tracking-tighter text-glow text-primary">
-                                                                                ${rental.total_amount?.toLocaleString() || '0'}
-                                                                            </span>
-                                                                        </TableCell>
-                                                                    </TableRow>
-                                                                ))}
-                                                            </TableBody>
-                                                        </Table>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </TabsContent>
-
-                                <TabsContent value="documentos" className="mt-0 outline-none">
-                                    <div className="space-y-10">
-                                        <div className="flex justify-between items-end px-2">
-                                            <div className="flex flex-col gap-1">
-                                                <h3 className="text-2xl font-black italic tracking-tight uppercase">Bóveda de <span className="text-primary">Documentos</span></h3>
-                                                <p className="text-xs text-muted-foreground font-bold uppercase tracking-wider">Cumplimiento y registros legales</p>
-                                            </div>
-                                            <div className="flex gap-4">
-                                                <input
-                                                    type="file"
-                                                    id="document-upload"
-                                                    className="hidden"
-                                                    multiple
-                                                    accept="image/*,.pdf"
-                                                    onChange={handleDocumentUpload}
-                                                />
-                                                <Button
-                                                    variant="outline"
-                                                    size="lg"
-                                                    className="h-12 border-primary/20 bg-primary/5 hover:bg-primary hover:text-primary-foreground transition-all rounded-xl shadow-lg shadow-primary/5 px-8"
-                                                    onClick={() => document.getElementById('document-upload')?.click()}
-                                                    disabled={isUploadingDocument}
-                                                >
-                                                    {isUploadingDocument ? (
-                                                        <Loader2 className="h-5 w-5 mr-3 animate-spin" />
-                                                    ) : (
-                                                        <Plus className="h-5 w-5 mr-3" />
-                                                    )}
-                                                    Subir Archivos
-                                                </Button>
-                                            </div>
-                                        </div>
-
-                                        {documentsList.length === 0 ? (
-                                            <div className="text-center py-24 glass-card border-dashed border-primary/20 bg-primary/2 group hover:bg-primary/5 transition-colors border-border/40">
-                                                <div className="bg-primary/10 w-24 h-24 rounded-[2rem] flex items-center justify-center mx-auto mb-8 group-hover:scale-110 transition-transform shadow-inner border border-primary/20">
-                                                    <FileText className="h-12 w-12 text-primary" />
-                                                </div>
-                                                <h3 className="text-2xl font-black uppercase tracking-tighter mb-2">Bóveda Vacía</h3>
-                                                <p className="text-muted-foreground max-w-sm mx-auto font-medium mb-12 text-sm">No se han sincronizado registros legales. Almacena seguros, títulos o contratos en este espacio seguro.</p>
-                                                <Button
-                                                    onClick={() => document.getElementById('document-upload')?.click()}
-                                                    className="h-12 px-10 rounded-xl font-black tracking-widest text-[10px] uppercase shadow-2xl shadow-primary/20"
-                                                >
-                                                    Iniciar Sincronización
-                                                </Button>
-                                            </div>
-                                        ) : (
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                                                {documentsList.map((doc) => (
-                                                    <div
-                                                        key={doc.id}
-                                                        className="group relative glass-card p-6 hover:shadow-2xl hover:border-primary/40 transition-all duration-500 cursor-pointer overflow-hidden border-border/40"
-                                                        onClick={() => setSelectedDocument(doc)}
-                                                    >
-                                                        <div className="absolute top-0 right-0 w-16 h-16 bg-primary/5 rounded-bl-[2.5rem] flex items-center justify-center group-hover:bg-primary/10 transition-colors">
-                                                            <div className="mt-[-8px] mr-[-8px]">
-                                                                <FileBadge className="h-4 w-4 text-primary opacity-40 group-hover:opacity-100 transition-opacity" />
-                                                            </div>
+                                                                                    {rental.status === 'confirmed' ? 'Activo' : rental.status === 'completed' ? 'Finalizado' : 'Baja'}
+                                                                                </Badge>
+                                                                            </TableCell>
+                                                                            <TableCell className="text-right py-5 px-6">
+                                                                                <span className="font-black italic text-sm tracking-tighter text-glow text-primary">
+                                                                                    ${rental.total_amount?.toLocaleString() || '0'}
+                                                                                </span>
+                                                                            </TableCell>
+                                                                        </TableRow>
+                                                                    ))}
+                                                                </TableBody>
+                                                            </Table>
                                                         </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </TabsContent>
 
-                                                        <div className="flex flex-col gap-4">
-                                                            <div className={`w-full h-44 rounded-2xl flex items-center justify-center border shadow-2xl overflow-hidden transition-transform duration-500 group-hover:scale-[1.02] ${doc.file_url.toLowerCase().endsWith('.pdf') || doc.category?.toLowerCase() === 'pdf'
-                                                                ? 'bg-red-500/5 text-red-500 border-red-500/10'
-                                                                : 'bg-primary/5 text-primary border-primary/10'
-                                                                }`}>
-                                                                {doc.file_url.toLowerCase().endsWith('.pdf') || doc.category?.toLowerCase() === 'pdf' ? (
-                                                                    <div className="flex flex-col items-center gap-2">
-                                                                        <FileText className="h-12 w-12 opacity-40" />
-                                                                        <span className="text-[10px] font-black uppercase tracking-[0.2em] opacity-40">Vista PDF</span>
-                                                                    </div>
-                                                                ) : (
-                                                                    <img
-                                                                        src={doc.file_url}
-                                                                        alt={doc.title}
-                                                                        className="w-full h-full object-cover transition-all duration-700 group-hover:scale-110"
-                                                                        onError={(e) => {
-                                                                            (e.target as HTMLImageElement).style.display = 'none';
-                                                                            (e.target as HTMLImageElement).parentElement?.insertAdjacentHTML('beforeend', '<div class="flex flex-col items-center gap-2 opacity-20"><svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-image"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg><span class="text-[8px] font-black uppercase tracking-widest">Error de Carga</span></div>');
-                                                                        }}
-                                                                    />
-                                                                )}
-                                                            </div>
-                                                            <div className="space-y-1">
-                                                                <h4 className="font-black italic text-sm tracking-tight truncate group-hover:text-primary transition-colors uppercase">
-                                                                    {doc.title}
-                                                                </h4>
-                                                                <div className="flex items-center gap-2">
-                                                                    <span className="text-[10px] font-bold text-muted-foreground tracking-widest uppercase opacity-60">
-                                                                        {doc.type.replace('_', ' ')}
-                                                                    </span>
-                                                                    <div className="w-1 h-1 rounded-full bg-border" />
-                                                                    <span className="text-[8px] font-bold text-primary/60 uppercase tracking-tighter">
-                                                                        {(doc as any).category || 'FILE'}
-                                                                    </span>
+                                    <TabsContent value="documentos" className="mt-0 outline-none">
+                                        <div className="space-y-10">
+                                            <div className="flex justify-between items-end px-2">
+                                                <div className="flex flex-col gap-1">
+                                                    <h3 className="text-2xl font-black italic tracking-tight uppercase">Bóveda de <span className="text-primary">Documentos</span></h3>
+                                                    <p className="text-xs text-muted-foreground font-bold uppercase tracking-wider">Cumplimiento y registros legales</p>
+                                                </div>
+                                                <div className="flex gap-4">
+                                                    <input
+                                                        type="file"
+                                                        id="document-upload"
+                                                        className="hidden"
+                                                        multiple
+                                                        accept="image/*,.pdf"
+                                                        onChange={handleDocumentUpload}
+                                                    />
+                                                    <Button
+                                                        variant="outline"
+                                                        size="lg"
+                                                        className="h-12 border-primary/20 bg-primary/5 hover:bg-primary hover:text-primary-foreground transition-all rounded-xl shadow-lg shadow-primary/5 px-8"
+                                                        onClick={() => document.getElementById('document-upload')?.click()}
+                                                        disabled={isUploadingDocument}
+                                                    >
+                                                        {isUploadingDocument ? (
+                                                            <Loader2 className="h-5 w-5 mr-3 animate-spin" />
+                                                        ) : (
+                                                            <Plus className="h-5 w-5 mr-3" />
+                                                        )}
+                                                        Subir Archivos
+                                                    </Button>
+                                                </div>
+                                            </div>
+
+                                            {documentsList.length === 0 ? (
+                                                <div className="text-center py-24 glass-card border-dashed border-primary/20 bg-primary/2 group hover:bg-primary/5 transition-colors border-border/40">
+                                                    <div className="bg-primary/10 w-24 h-24 rounded-[2rem] flex items-center justify-center mx-auto mb-8 group-hover:scale-110 transition-transform shadow-inner border border-primary/20">
+                                                        <FileText className="h-12 w-12 text-primary" />
+                                                    </div>
+                                                    <h3 className="text-2xl font-black uppercase tracking-tighter mb-2">Bóveda Vacía</h3>
+                                                    <p className="text-muted-foreground max-w-sm mx-auto font-medium mb-12 text-sm">No se han sincronizado registros legales. Almacena seguros, títulos o contratos en este espacio seguro.</p>
+                                                    <Button
+                                                        onClick={() => document.getElementById('document-upload')?.click()}
+                                                        className="h-12 px-10 rounded-xl font-black tracking-widest text-[10px] uppercase shadow-2xl shadow-primary/20"
+                                                    >
+                                                        Iniciar Sincronización
+                                                    </Button>
+                                                </div>
+                                            ) : (
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                                                    {documentsList.map((doc) => (
+                                                        <div
+                                                            key={doc.id}
+                                                            className="group relative glass-card p-6 hover:shadow-2xl hover:border-primary/40 transition-all duration-500 cursor-pointer overflow-hidden border-border/40"
+                                                            onClick={() => setSelectedDocument(doc)}
+                                                        >
+                                                            <div className="absolute top-0 right-0 w-16 h-16 bg-primary/5 rounded-bl-[2.5rem] flex items-center justify-center group-hover:bg-primary/10 transition-colors">
+                                                                <div className="mt-[-8px] mr-[-8px]">
+                                                                    <FileBadge className="h-4 w-4 text-primary opacity-40 group-hover:opacity-100 transition-opacity" />
                                                                 </div>
                                                             </div>
-                                                        </div>
 
-                                                        <div className="absolute inset-x-0 bottom-0 h-1.5 bg-border/20">
-                                                            <div className="h-full bg-primary/40 w-0 group-hover:w-full transition-all duration-1000" />
-                                                        </div>
+                                                            <div className="flex flex-col gap-4">
+                                                                <div className={`w-full h-44 rounded-2xl flex items-center justify-center border shadow-2xl overflow-hidden transition-transform duration-500 group-hover:scale-[1.02] ${doc.file_url.toLowerCase().endsWith('.pdf') || doc.category?.toLowerCase() === 'pdf'
+                                                                    ? 'bg-red-500/5 text-red-500 border-red-500/10'
+                                                                    : 'bg-primary/5 text-primary border-primary/10'
+                                                                    }`}>
+                                                                    {doc.file_url.toLowerCase().endsWith('.pdf') || doc.category?.toLowerCase() === 'pdf' ? (
+                                                                        <div className="flex flex-col items-center gap-2">
+                                                                            <FileText className="h-12 w-12 opacity-40" />
+                                                                            <span className="text-[10px] font-black uppercase tracking-[0.2em] opacity-40">Vista PDF</span>
+                                                                        </div>
+                                                                    ) : (
+                                                                        <img
+                                                                            src={doc.file_url}
+                                                                            alt={doc.title}
+                                                                            className="w-full h-full object-cover transition-all duration-700 group-hover:scale-110"
+                                                                            onError={(e) => {
+                                                                                (e.target as HTMLImageElement).style.display = 'none';
+                                                                                (e.target as HTMLImageElement).parentElement?.insertAdjacentHTML('beforeend', '<div class="flex flex-col items-center gap-2 opacity-20"><svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-image"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg><span class="text-[8px] font-black uppercase tracking-widest">Error de Carga</span></div>');
+                                                                            }}
+                                                                        />
+                                                                    )}
+                                                                </div>
+                                                                <div className="space-y-1">
+                                                                    <h4 className="font-black italic text-sm tracking-tight truncate group-hover:text-primary transition-colors uppercase">
+                                                                        {doc.title}
+                                                                    </h4>
+                                                                    <div className="flex items-center gap-2">
+                                                                        <span className="text-[10px] font-bold text-muted-foreground tracking-widest uppercase opacity-60">
+                                                                            {doc.type.replace('_', ' ')}
+                                                                        </span>
+                                                                        <div className="w-1 h-1 rounded-full bg-border" />
+                                                                        <span className="text-[8px] font-bold text-primary/60 uppercase tracking-tighter">
+                                                                            {(doc as any).category || 'FILE'}
+                                                                        </span>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
 
-                                                        <div className="absolute top-4 right-4 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="icon"
-                                                                className="h-8 w-8 rounded-lg bg-background/80 backdrop-blur-sm shadow-sm hover:text-red-500 transition-colors"
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation()
-                                                                    handleDeleteDocument(doc.id, e)
-                                                                }}
-                                                            >
-                                                                <Trash2 className="h-4 w-4" />
-                                                            </Button>
+                                                            <div className="absolute inset-x-0 bottom-0 h-1.5 bg-border/20">
+                                                                <div className="h-full bg-primary/40 w-0 group-hover:w-full transition-all duration-1000" />
+                                                            </div>
+
+                                                            <div className="absolute top-4 right-4 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    className="h-8 w-8 rounded-lg bg-background/80 backdrop-blur-sm shadow-sm hover:text-red-500 transition-colors"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation()
+                                                                        handleDeleteDocument(doc.id, e)
+                                                                    }}
+                                                                >
+                                                                    <Trash2 className="h-4 w-4" />
+                                                                </Button>
+                                                            </div>
                                                         </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-                                </TabsContent>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </TabsContent>
+                                </Tabs>
                             </div>
-                        </Tabs>
+                        </div>
                     </div>
-                </div>
-            </div>
+                </DialogContent>
+            </Dialog>
 
             {/* CHECK-IN DIALOG */}
-            <Dialog open={isCheckInDialogOpen} onOpenChange={setIsCheckInDialogOpen}>
+            < Dialog open={isCheckInDialogOpen} onOpenChange={setIsCheckInDialogOpen} >
                 <DialogContent className="sm:max-w-[450px]">
                     <div className="space-y-6">
                         <div>
@@ -1876,10 +1792,10 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                         </div>
                     </div>
                 </DialogContent>
-            </Dialog>
+            </Dialog >
 
             {/* RENTAL DIALOG */}
-            <Dialog open={isRentalDialogOpen} onOpenChange={setIsRentalDialogOpen}>
+            < Dialog open={isRentalDialogOpen} onOpenChange={setIsRentalDialogOpen} >
                 <DialogContent className="sm:max-w-[500px]">
                     <div className="space-y-6">
                         <div>
@@ -1894,10 +1810,10 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                         </div>
                     </div>
                 </DialogContent>
-            </Dialog>
+            </Dialog >
 
             {/* MILEAGE DIALOG */}
-            <Dialog open={isMileageDialogOpen} onOpenChange={setIsMileageDialogOpen}>
+            < Dialog open={isMileageDialogOpen} onOpenChange={setIsMileageDialogOpen} >
                 <DialogContent className="sm:max-w-[400px]">
                     <div className="space-y-6">
                         <div>
@@ -1950,10 +1866,10 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                         </div>
                     </div>
                 </DialogContent>
-            </Dialog>
+            </Dialog >
 
             {/* MAINTENANCE DIALOG */}
-            <Dialog open={isMaintenanceDialogOpen} onOpenChange={setIsMaintenanceDialogOpen}>
+            < Dialog open={isMaintenanceDialogOpen} onOpenChange={setIsMaintenanceDialogOpen} >
                 <DialogContent className="sm:max-w-[600px] p-0 overflow-hidden border-0 bg-transparent shadow-none">
                     <div className="bg-slate-50 dark:bg-slate-950/95 border border-primary/20 flex flex-col max-h-[90vh] rounded-[2.5rem] shadow-[0_0_50px_rgba(0,0,0,0.5)]">
                         {/* Header Premium */}
@@ -2172,89 +2088,93 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                         </div>
                     </div>
                 </DialogContent>
-            </Dialog>
+            </Dialog >
 
             {/* LIGHTBOX LAYOUT */}
-            {selectedPhoto && (
-                <div className="fixed inset-0 z-[60] bg-black/95 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-300" onClick={() => setSelectedPhoto(null)}>
-                    {/* Close Button */}
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="absolute top-4 right-4 text-white/70 hover:text-white hover:bg-white/10 z-50 h-10 w-10 rounded-full"
-                        onClick={() => setSelectedPhoto(null)}
-                    >
-                        <X className="h-6 w-6" />
-                    </Button>
+            {
+                selectedPhoto && (
+                    <div className="fixed inset-0 z-[60] bg-black/95 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-300" onClick={() => setSelectedPhoto(null)}>
+                        {/* Close Button */}
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="absolute top-4 right-4 text-white/70 hover:text-white hover:bg-white/10 z-50 h-10 w-10 rounded-full"
+                            onClick={() => setSelectedPhoto(null)}
+                        >
+                            <X className="h-6 w-6" />
+                        </Button>
 
-                    {/* Navigation Buttons (if multiple photos) */}
-                    {photos.length > 1 && (
-                        <>
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                className="absolute left-4 top-1/2 -translate-y-1/2 text-white/70 hover:text-white hover:bg-white/10 h-12 w-12 rounded-full hidden md:flex"
-                                onClick={(e) => {
-                                    e.stopPropagation()
-                                    const currentIndex = photos.findIndex(p => p.id === selectedPhoto.id)
-                                    const prevIndex = (currentIndex - 1 + photos.length) % photos.length
-                                    setSelectedPhoto(photos[prevIndex])
-                                }}
-                            >
-                                <ChevronLeft className="h-8 w-8" />
-                            </Button>
-
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                className="absolute right-4 top-1/2 -translate-y-1/2 text-white/70 hover:text-white hover:bg-white/10 h-12 w-12 rounded-full hidden md:flex"
-                                onClick={(e) => {
-                                    e.stopPropagation()
-                                    const currentIndex = photos.findIndex(p => p.id === selectedPhoto.id)
-                                    const nextIndex = (currentIndex + 1) % photos.length
-                                    setSelectedPhoto(photos[nextIndex])
-                                }}
-                            >
-                                <ChevronRight className="h-8 w-8" />
-                            </Button>
-                        </>
-                    )}
-
-                    {/* Main Image Container */}
-                    <div className="relative max-w-7xl max-h-[85vh] w-full h-full flex flex-col items-center justify-center" onClick={e => e.stopPropagation()}>
-                        <div className="relative flex-1 w-full flex items-center justify-center">
-                            <img
-                                src={selectedPhoto.image_url}
-                                alt={selectedPhoto.caption || "Vehicle Photo"}
-                                className="max-w-full max-h-full object-contain shadow-2xl rounded-sm"
-                            />
-                        </div>
-
-                        {/* Caption / Info Footer */}
-                        <div className="mt-4 text-center">
-                            <p className="text-white/90 font-medium text-lg">{selectedPhoto.caption || "Sin título"}</p>
-                            <p className="text-white/50 text-sm">
-                                {new Date(selectedPhoto.created_at).toLocaleDateString()}
-                                {selectedPhoto.is_primary && <span className="ml-2 text-emerald-400 font-bold">• Principal</span>}
-                            </p>
-
-                            <div className="flex gap-2 justify-center mt-3 scale-90 opacity-70 hover:opacity-100 transition-opacity">
-                                {!selectedPhoto.is_primary && (
-                                    <Button variant="secondary" size="sm" onClick={() => handleSetPrimaryPhoto(selectedPhoto.id)}>
-                                        Hacer Principal
-                                    </Button>
-                                )}
-                                <Button variant="destructive" size="sm" onClick={(e) => {
-                                    handleDeletePhoto(selectedPhoto.id, e)
-                                    setSelectedPhoto(null)
-                                }}>
-                                    <Trash2 className="h-4 w-4 mr-1" /> Eliminar
+                        {/* Navigation Buttons (if multiple photos) */}
+                        {photos.length > 1 && (
+                            <>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="absolute left-4 top-1/2 -translate-y-1/2 text-white/70 hover:text-white hover:bg-white/10 h-12 w-12 rounded-full hidden md:flex"
+                                    onClick={(e) => {
+                                        e.stopPropagation()
+                                        const currentIndex = photos.findIndex(p => p.id === selectedPhoto?.id)
+                                        const prevIndex = (currentIndex - 1 + photos.length) % photos.length
+                                        setSelectedPhoto(photos[prevIndex])
+                                    }}
+                                >
+                                    <ChevronLeft className="h-8 w-8" />
                                 </Button>
+
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-white/70 hover:text-white hover:bg-white/10 h-12 w-12 rounded-full hidden md:flex"
+                                    onClick={(e) => {
+                                        e.stopPropagation()
+                                        const currentIndex = photos.findIndex(p => p.id === selectedPhoto?.id)
+                                        const nextIndex = (currentIndex + 1) % photos.length
+                                        setSelectedPhoto(photos[nextIndex])
+                                    }}
+                                >
+                                    <ChevronRight className="h-8 w-8" />
+                                </Button>
+                            </>
+                        )}
+
+                        {/* Main Image Container */}
+                        <div className="relative max-w-7xl max-h-[85vh] w-full h-full flex flex-col items-center justify-center" onClick={e => e.stopPropagation()}>
+                            <div className="relative flex-1 w-full flex items-center justify-center">
+                                <img
+                                    src={selectedPhoto?.image_url}
+                                    alt={selectedPhoto?.caption || "Vehicle Photo"}
+                                    className="max-w-full max-h-full object-contain shadow-2xl rounded-sm"
+                                />
+                            </div>
+
+                            {/* Caption / Info Footer */}
+                            <div className="mt-4 text-center">
+                                <p className="text-white/90 font-medium text-lg">{selectedPhoto?.caption || "Sin título"}</p>
+                                <p className="text-white/50 text-sm">
+                                    {selectedPhoto?.created_at ? new Date(selectedPhoto.created_at).toLocaleDateString() : ""}
+                                    {selectedPhoto?.is_primary && <span className="ml-2 text-emerald-400 font-bold">• Principal</span>}
+                                </p>
+
+                                <div className="flex gap-2 justify-center mt-3 scale-90 opacity-70 hover:opacity-100 transition-opacity">
+                                    {!selectedPhoto?.is_primary && (
+                                        <Button variant="secondary" size="sm" onClick={() => selectedPhoto && handleSetPrimaryPhoto(selectedPhoto.id)}>
+                                            Hacer Principal
+                                        </Button>
+                                    )}
+                                    <Button variant="destructive" size="sm" onClick={(e) => {
+                                        if (selectedPhoto) {
+                                            handleDeletePhoto(selectedPhoto.id, e)
+                                            setSelectedPhoto(null)
+                                        }
+                                    }}>
+                                        <Trash2 className="h-4 w-4 mr-1" /> Eliminar
+                                    </Button>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             {/* RENTAL DIALOG */}
             <Dialog open={isRentalDialogOpen} onOpenChange={setIsRentalDialogOpen}>
@@ -2296,7 +2216,7 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                                     <Label>Fecha de Fin</Label>
                                     <Input
                                         type="date"
-                                        value={rentalForm.end_date ? rentalForm.end_date.toISOString().split('T')[0] : ''}
+                                        value={rentalForm.end_date?.toISOString().split('T')[0] || ''}
                                         onChange={(e) => {
                                             const date = e.target.value ? new Date(e.target.value) : undefined
                                             setRentalForm(prev => ({ ...prev, end_date: date }))
@@ -2362,54 +2282,56 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
             </Dialog>
 
             {/* DOCUMENT VIEWER LIGHTBOX */}
-            {selectedDocument && (
-                <div className="fixed inset-0 z-[100] bg-slate-950/95 flex flex-col animate-in fade-in duration-300">
-                    <div className="p-4 flex items-center justify-between text-white border-b border-white/10">
-                        <div className="flex items-center gap-3">
-                            <div className="bg-white/10 p-2 rounded-lg">
-                                <FileText className="h-5 w-5" />
+            {
+                selectedDocument && (
+                    <div className="fixed inset-0 z-[100] bg-slate-950/95 flex flex-col animate-in fade-in duration-300">
+                        <div className="p-4 flex items-center justify-between text-white border-b border-white/10">
+                            <div className="flex items-center gap-3">
+                                <div className="bg-white/10 p-2 rounded-lg">
+                                    <FileText className="h-5 w-5" />
+                                </div>
+                                <div>
+                                    <h3 className="font-bold">{selectedDocument?.title}</h3>
+                                    <p className="text-xs text-white/50 lowercase">{selectedDocument?.type} • {selectedDocument?.created_at ? new Date(selectedDocument.created_at).toLocaleDateString() : ""}</p>
+                                </div>
                             </div>
-                            <div>
-                                <h3 className="font-bold">{selectedDocument.title}</h3>
-                                <p className="text-xs text-white/50 lowercase">{selectedDocument.type} • {new Date(selectedDocument.created_at).toLocaleDateString()}</p>
+                            <div className="flex gap-2">
+                                <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 h-10 w-10" asChild>
+                                    <a href={selectedDocument?.file_url} target="_blank" rel="noopener noreferrer">
+                                        <Upload className="h-5 w-5 rotate-90" />
+                                    </a>
+                                </Button>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="text-white hover:bg-white/20 rounded-full h-10 w-10"
+                                    onClick={() => setSelectedDocument(null)}
+                                >
+                                    <X className="h-6 w-6" />
+                                </Button>
                             </div>
                         </div>
-                        <div className="flex gap-2">
-                            <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 h-10 w-10" asChild>
-                                <a href={selectedDocument.file_url} target="_blank" rel="noopener noreferrer">
-                                    <Upload className="h-5 w-5 rotate-90" />
-                                </a>
-                            </Button>
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                className="text-white hover:bg-white/20 rounded-full h-10 w-10"
-                                onClick={() => setSelectedDocument(null)}
-                            >
-                                <X className="h-6 w-6" />
-                            </Button>
-                        </div>
-                    </div>
 
-                    <div className="flex-1 overflow-auto p-4 md:p-8 flex items-center justify-center">
-                        {selectedDocument.file_url.toLowerCase().endsWith('.pdf') || selectedDocument.category?.toLowerCase() === 'pdf' ? (
-                            <iframe
-                                src={selectedDocument.file_url}
-                                className="w-full h-full max-w-5xl bg-white rounded-xl shadow-2xl"
-                                title={selectedDocument.title}
-                            />
-                        ) : (
-                            <div className="relative group max-w-full max-h-full">
-                                <img
-                                    src={selectedDocument.file_url}
-                                    alt={selectedDocument.title}
-                                    className="max-w-full max-h-[80vh] object-contain rounded-lg shadow-2xl transition-transform duration-500 group-hover:scale-[1.02]"
+                        <div className="flex-1 overflow-auto p-4 md:p-8 flex items-center justify-center">
+                            {selectedDocument?.file_url?.toLowerCase().endsWith('.pdf') || selectedDocument?.category?.toLowerCase() === 'pdf' ? (
+                                <iframe
+                                    src={selectedDocument?.file_url}
+                                    className="w-full h-full max-w-5xl bg-white rounded-xl shadow-2xl"
+                                    title={selectedDocument?.title}
                                 />
-                            </div>
-                        )}
+                            ) : (
+                                <div className="relative group max-w-full max-h-full">
+                                    <img
+                                        src={selectedDocument?.file_url}
+                                        alt={selectedDocument?.title}
+                                        className="max-w-full max-h-[80vh] object-contain rounded-lg shadow-2xl transition-transform duration-500 group-hover:scale-[1.02]"
+                                    />
+                                </div>
+                            )}
+                        </div>
                     </div>
-                </div>
-            )}
+                )
+            }
         </>
     )
 }

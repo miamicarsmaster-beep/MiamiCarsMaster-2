@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { Outfit, Inter } from "next/font/google";
-import "./globals.css";
+import "./global.css";
 import { Toaster } from "@/components/ui/sonner";
+import { ThemeProvider } from "@/components/theme-provider";
 
 const outfit = Outfit({
   variable: "--font-outfit",
@@ -45,12 +46,19 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es">
+    <html lang="es" suppressHydrationWarning>
       <body
         className={`${outfit.variable} ${inter.variable} font-sans antialiased`}
       >
-        {children}
-        <Toaster />
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          {children}
+          <Toaster />
+        </ThemeProvider>
       </body>
     </html>
   );
