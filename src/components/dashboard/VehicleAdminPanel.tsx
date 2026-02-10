@@ -17,7 +17,7 @@ import {
     Camera, Gauge, MapPin, Wrench, X, CalendarDays, CheckCircle2, Edit3, Save,
     DollarSign, Trash2, Plus, FileText, Loader2, TrendingUp, AlertCircle, Upload,
     Eye, ChevronLeft, ChevronRight, Activity, Image as ImageIcon, FileBadge,
-    FileBox, ChevronDown, Settings, CarFront
+    FileBox, ChevronDown, Settings, CarFront, User
 } from "lucide-react";
 import {
     DropdownMenu,
@@ -39,7 +39,15 @@ import {
     createMaintenanceAction,
     createRentalAction,
     createDocumentAction,
-    deleteGeneralAction
+    deleteGeneralAction,
+    uploadGalleryPhotoAction,
+    uploadVehicleDocumentAction,
+    createFinancialRecordAction,
+    getVehiclePhotosAction,
+    getVehicleDocumentsAction,
+    getVehicleMaintenanceAction,
+    getVehicleMileageAction,
+    getVehicleRentalsAction
 } from "@/app/actions/vehicles"
 import { eachDayOfInterval, isSameDay, parseISO } from "date-fns"
 import { es } from "date-fns/locale"
@@ -253,15 +261,20 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
             const {
                 id: _id,
                 created_at: _ca,
-                assigned_investor_id: _ai_id,
+                // assigned_investor_id is needed, so don't exclude it here if we want to update it
                 ...dataToUpdate
             } = formData;
 
             const updateData: any = { ...dataToUpdate };
+            // Ensure assigned_investor_id is included from formData if it was excluded or if we need to explicitly set it
+            // Current formData structure includes it.
+            // The destructuring above: `...dataToUpdate` includes everything EXCEPT id, created_at, AND assigned_investor_id (because of `assigned_investor_id: _ai_id`).
+            // So we need to put it back.
 
-            // Manejar el caso de "Sin asignar" para el inversor
-            if (updateData.assigned_investor_id === 'none' || !updateData.assigned_investor_id) {
+            if (formData.assigned_investor_id === 'none' || !formData.assigned_investor_id) {
                 updateData.assigned_investor_id = null;
+            } else {
+                updateData.assigned_investor_id = formData.assigned_investor_id;
             }
 
             const { success, data, error } = await updateVehicleAction(vehicle.id, updateData)
@@ -303,30 +316,32 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
 
         setIsUploadingHeroImage(true)
         try {
-            const fileExt = file.name.split('.').pop()
-            const fileName = `${vehicle.id}-hero-${Date.now()}.${fileExt}`
-            const { error: uploadError } = await supabase.storage
-                .from('vehicle-images')
-                .upload(fileName, file)
+            const formData = new FormData()
+            formData.append('file', file)
 
-            if (uploadError) throw uploadError
+            const uploadResult = await uploadVehicleImageAction(formData)
 
-            const { data: { publicUrl } } = supabase.storage
-                .from('vehicle-images')
-                .getPublicUrl(fileName)
+            if (uploadResult.error || !uploadResult.publicUrl) {
+                throw new Error(uploadResult.error || "Error al subir imagen principal")
+            }
 
-            await supabase
-                .from('vehicles')
-                .update({ image_url: publicUrl })
-                .eq('id', vehicle.id)
+            const updateResult = await updateVehicleAction(vehicle.id, {
+                image_url: uploadResult.publicUrl
+            })
 
-            setFormData(prev => ({ ...prev, image_url: publicUrl }))
-            alert("Imagen actualizada")
-        } catch (error) {
+            if (updateResult.error) {
+                throw new Error(updateResult.error)
+            }
+
+            setFormData(prev => ({ ...prev, image_url: uploadResult.publicUrl }))
+            if (onUpdate) onUpdate({ ...vehicle, image_url: uploadResult.publicUrl })
+            toast.success("Imagen actualizada")
+        } catch (error: any) {
             console.error(error)
-            alert("Error al subir imagen")
+            toast.error(error.message || "Error al subir imagen")
         } finally {
             setIsUploadingHeroImage(false)
+            e.target.value = '' // Reset input so same file can be selected again
         }
     }
 
@@ -345,37 +360,32 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
 
             const uploadPromises = Array.from(files).map(async (file, index) => {
                 try {
-                    const fileExt = file.name.split('.').pop()
-                    const fileName = `${vehicle.id}-photo-${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
+                    const formData = new FormData()
+                    formData.append('file', file)
+                    formData.append('vehicleId', vehicle.id)
 
-                    const { error: uploadError } = await supabase.storage
-                        .from('vehicle-images')
-                        .upload(fileName, file)
+                    const uploadResult = await uploadGalleryPhotoAction(formData)
 
-                    if (uploadError) throw uploadError
+                    if (uploadResult.error || !uploadResult.publicUrl) {
+                        throw new Error(uploadResult.error || "Error al subir imagen")
+                    }
 
-                    const { data: { publicUrl } } = supabase.storage
-                        .from('vehicle-images')
-                        .getPublicUrl(fileName)
+                    const { data: newPhoto, error: dbError } = await createVehiclePhotoAction({
+                        vehicle_id: vehicle.id,
+                        image_url: uploadResult.publicUrl,
+                        caption: file.name.split('.')[0],
+                        photo_order: photos.length + successCount + index,
+                        is_primary: photos.length === 0 && index === 0,
+                        has_damage: false,
+                        damage_markers: []
+                    })
 
-                    const { data: newPhoto, error: dbError } = await supabase
-                        .from('vehicle_photos')
-                        .insert({
-                            vehicle_id: vehicle.id,
-                            image_url: publicUrl,
-                            caption: file.name.split('.')[0],
-                            photo_order: photos.length + successCount + index, // Estimate order
-                            is_primary: photos.length === 0 && index === 0,
-                            has_damage: false,
-                            damage_markers: []
-                        })
-                        .select()
-                        .single()
+                    if (dbError) throw new Error(dbError) // Use Error object for consistent handling
 
-                    if (dbError) throw dbError
-
-                    newPhotos.push(newPhoto as VehiclePhoto)
-                    successCount++
+                    if (newPhoto) {
+                        newPhotos.push(newPhoto as VehiclePhoto)
+                        successCount++
+                    }
                 } catch (error) {
                     console.error(`Error uploading ${file.name}:`, error)
                     failCount++
@@ -385,6 +395,8 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
             await Promise.all(uploadPromises)
 
             if (successCount > 0) {
+                // Sort by photo_order to prevent UI glitch if uploads finish out of order
+                newPhotos.sort((a, b) => a.photo_order - b.photo_order)
                 setPhotos(prev => [...prev, ...newPhotos])
                 toast.success(`${successCount} fotos subidas correctamente`)
             }
@@ -397,8 +409,10 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
             toast.error("Error general al subir fotos")
         } finally {
             setIsUploadingPhoto(false)
-            e.target.value = ''
+            e.target.value = '' // Reset input
         }
+
+
     }
 
     const handleSaveMileage = async () => {
@@ -409,25 +423,15 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
 
         setIsSaving(true)
         try {
-            // 1. Insert into history
-            const { error: historyError } = await supabase
-                .from('mileage_history')
-                .insert({
-                    vehicle_id: vehicle.id,
-                    mileage: mileage,
-                    date: new Date().toISOString(),
-                    notes: mileageNote || null
-                })
+            // 1. Create mileage log and update vehicle mileage via server action
+            const { error: actionError } = await createMileageLogAction({
+                vehicle_id: vehicle.id,
+                mileage: mileage,
+                date: new Date().toISOString(),
+                notes: mileageNote || null
+            })
 
-            if (historyError) throw historyError
-
-            // 2. Update vehicle current mileage
-            const { error: updateError } = await supabase
-                .from('vehicles')
-                .update({ mileage: mileage })
-                .eq('id', vehicle.id)
-
-            if (updateError) throw updateError
+            if (actionError) throw new Error(actionError)
 
             // Success
             toast.success("Lectura de millaje registrada")
@@ -462,54 +466,53 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
             // Upload receipts if they exist
             if (maintenanceReceipts.length > 0) {
                 const uploadPromises = maintenanceReceipts.map(async (file) => {
-                    const fileExt = file.name.split('.').pop()
-                    const fileName = `${vehicle.id}-maint-${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
+                    const formData = new FormData()
+                    formData.append('file', file)
+                    formData.append('vehicleId', vehicle.id)
 
-                    const { error: uploadError } = await supabase.storage
-                        .from('documents')
-                        .upload(`maintenance/${fileName}`, file)
+                    const uploadResult = await uploadVehicleDocumentAction(formData)
 
-                    if (uploadError) throw uploadError
+                    if (uploadResult.error || !uploadResult.publicUrl) {
+                        throw new Error(uploadResult.error || "Error al subir recibo")
+                    }
 
-                    const { data: { publicUrl } } = supabase.storage
-                        .from('documents')
-                        .getPublicUrl(`maintenance/${fileName}`)
-
-                    return publicUrl
+                    return uploadResult.publicUrl
                 })
 
                 receiptUrls = await Promise.all(uploadPromises)
             }
 
             const cost = parseFloat(maintenanceForm.cost)
-            const { error } = await supabase
-                .from('maintenances')
-                .insert({
-                    vehicle_id: vehicle.id,
-                    service_type: type,
-                    cost: cost,
-                    date: maintenanceForm.date,
-                    next_service_mileage: maintenanceForm.next_service_mileage ? parseInt(maintenanceForm.next_service_mileage) : null,
-                    notes: `${maintenanceForm.notes || ''} \n[Millaje al servicio: ${maintenanceForm.current_mileage}]`.trim(),
-                    status: 'completed',
-                    receipt_images: receiptUrls.length > 0 ? receiptUrls : null
-                })
+            const currentMileage = parseInt(maintenanceForm.current_mileage)
 
-            if (error) throw error
+            if (isNaN(cost)) return toast.error("Costo inválido")
+            if (isNaN(currentMileage)) return toast.error("Millaje inválido")
+
+            const { error } = await createMaintenanceAction({
+                vehicle_id: vehicle.id,
+                service_type: type,
+                cost: cost,
+                mileage_at_service: currentMileage,
+                date: maintenanceForm.date,
+                next_service_mileage: maintenanceForm.next_service_mileage ? parseInt(maintenanceForm.next_service_mileage) : null,
+                notes: `${maintenanceForm.notes || ''} \n[Millaje al servicio: ${maintenanceForm.current_mileage}]`.trim(),
+                status: 'completed',
+                receipt_images: receiptUrls.length > 0 ? receiptUrls : null
+            })
+
+            if (error) throw new Error(error)
 
             // Si hay un costo, registrarlo en financial_records
             if (cost > 0) {
-                const { error: finError } = await supabase
-                    .from('financial_records')
-                    .insert({
-                        vehicle_id: vehicle.id,
-                        type: 'expense',
-                        category: type,
-                        amount: cost,
-                        date: maintenanceForm.date,
-                        description: `MANTENIMIENTO: ${type}`.toUpperCase(),
-                        proof_image_url: receiptUrls.length > 0 ? receiptUrls[0] : null
-                    })
+                const { error: finError } = await createFinancialRecordAction({
+                    vehicle_id: vehicle.id,
+                    type: 'expense',
+                    category: type,
+                    amount: cost,
+                    date: maintenanceForm.date,
+                    description: `MANTENIMIENTO: ${type}`.toUpperCase(),
+                    proof_image_url: receiptUrls.length > 0 ? receiptUrls[0] : null
+                })
                 if (finError) console.error("Error al registrar gasto financiero:", finError)
             }
 
@@ -542,33 +545,33 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
         setIsSaving(true)
         try {
             const amount = parseFloat(rentalForm.amount)
-            const { error } = await supabase
-                .from('rentals')
-                .insert({
-                    vehicle_id: vehicle.id,
-                    customer_name: rentalForm.customer_name || 'Cliente',
-                    start_date: rentalForm.start_date.toISOString(),
-                    end_date: rentalForm.end_date.toISOString(),
-                    platform: rentalForm.platform,
-                    total_amount: amount,
-                    status: rentalForm.status,
-                    notes: rentalForm.notes
-                })
+            if (isNaN(amount)) return toast.error("Monto inválido")
 
-            if (error) throw error
 
-            // Registrar ingreso en financial_records
+            // 1. Create Rental
+            const { error: rentalError } = await createRentalAction({
+                vehicle_id: vehicle.id,
+                customer_name: rentalForm.customer_name || 'Cliente',
+                start_date: rentalForm.start_date.toISOString(),
+                end_date: rentalForm.end_date.toISOString(),
+                platform: rentalForm.platform,
+                total_amount: amount,
+                status: rentalForm.status,
+                notes: rentalForm.notes
+            })
+
+            if (rentalError) throw new Error(rentalError)
+
+            // 2. Register income in financial_records
             if (amount > 0) {
-                const { error: finError } = await supabase
-                    .from('financial_records')
-                    .insert({
-                        vehicle_id: vehicle.id,
-                        type: 'income',
-                        category: 'Renta',
-                        amount: amount,
-                        date: new Date().toISOString().split('T')[0],
-                        description: `RENTA: ${rentalForm.customer_name || 'CLIENTE'} (${rentalForm.platform})`.toUpperCase()
-                    })
+                const { error: finError } = await createFinancialRecordAction({
+                    vehicle_id: vehicle.id,
+                    type: 'income',
+                    category: 'Renta',
+                    amount: amount,
+                    date: new Date().toISOString().split('T')[0],
+                    description: `RENTA: ${rentalForm.customer_name || 'CLIENTE'} (${rentalForm.platform})`.toUpperCase()
+                })
                 if (finError) console.error("Error al registrar ingreso financiero:", finError)
             }
 
@@ -584,7 +587,8 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                 status: "confirmed",
                 notes: ""
             })
-            loadRentalHistory()
+            // Reload rentals to update calendar/list
+            if (activeTab === "alquileres") loadRentalHistory()
         } catch (error) {
             console.error(error)
             toast.error("Error al guardar reserva")
@@ -649,7 +653,8 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
         if (!confirm("¿Eliminar esta foto?")) return
 
         try {
-            await supabase.from('vehicle_photos').delete().eq('id', photoId)
+            const { error } = await deleteGeneralAction("vehicle_photos", photoId)
+            if (error) throw new Error(error)
             setPhotos(photos.filter(p => p.id !== photoId))
             toast.success("Foto eliminada")
         } catch (error) {
@@ -667,42 +672,42 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
             toast.info(`Subiendo ${files.length} documentos...`)
 
             for (const file of Array.from(files)) {
-                const fileExt = file.name.split('.').pop()
-                const fileName = `${vehicle.id}-doc-${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
+                try {
+                    const formData = new FormData()
+                    formData.append('file', file)
+                    formData.append('vehicleId', vehicle.id)
 
-                // Intentar inferir el tipo basado en el nombre
-                let docType = 'other'
-                const nameLower = file.name.toLowerCase()
-                if (nameLower.includes('title') || nameLower.includes('titulo')) docType = 'vehicle_title'
-                else if (nameLower.includes('insurance') || nameLower.includes('seguro')) docType = 'insurance'
-                else if (nameLower.includes('contract') || nameLower.includes('contrato')) docType = 'contract'
+                    const uploadResult = await uploadVehicleDocumentAction(formData)
 
-                const { error: uploadError } = await supabase.storage
-                    .from('documents')
-                    .upload(fileName, file)
+                    if (uploadResult.error || !uploadResult.publicUrl) {
+                        console.error("Upload error:", uploadResult.error)
+                        throw new Error(uploadResult.error || "Error al subir documento")
+                    }
 
-                if (uploadError) {
-                    console.error("Storage upload error:", uploadError)
-                    throw new Error(`Error de almacenamiento: ${uploadError.message}`)
-                }
+                    // Intentar inferir el tipo basado en el nombre
+                    let docType = 'other'
+                    const nameLower = file.name.toLowerCase()
+                    if (nameLower.includes('title') || nameLower.includes('titulo')) docType = 'vehicle_title'
+                    else if (nameLower.includes('insurance') || nameLower.includes('seguro')) docType = 'insurance'
+                    else if (nameLower.includes('contract') || nameLower.includes('contrato')) docType = 'contract'
 
-                const { data: { publicUrl } } = supabase.storage
-                    .from('documents')
-                    .getPublicUrl(fileName)
+                    const fileExt = file.name.split('.').pop()
 
-                const { error: dbError } = await supabase
-                    .from('documents')
-                    .insert({
+                    const { error: dbError } = await createDocumentAction({
                         vehicle_id: vehicle.id,
                         title: file.name.split('.')[0],
-                        file_url: publicUrl,
+                        file_url: uploadResult.publicUrl,
                         type: docType,
-                        category: fileExt // Guardamos la extensión para facilitar la UI
+                        category: fileExt
                     })
 
-                if (dbError) {
-                    console.error("Database insert error:", dbError)
-                    throw new Error(`Error en base de datos: ${dbError.message} (Asegúrate de ejecutar la migración SQL)`)
+                    if (dbError) {
+                        console.error("Database insert error:", dbError)
+                        throw new Error(`Error en base de datos: ${dbError} (Asegúrate de ejecutar la migración SQL)`)
+                    }
+                } catch (err: any) {
+                    console.error("Individual file upload error:", err)
+                    throw err // Re-throw to be caught by outer try/catch
                 }
             }
 
@@ -713,6 +718,7 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
             toast.error(error.message || "Error al subir documentos")
         } finally {
             setIsUploadingDocument(false)
+            e.target.value = '' // Reset input
         }
     }
 
@@ -721,7 +727,8 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
         if (!confirm("¿Eliminar este documento?")) return
 
         try {
-            await supabase.from('documents').delete().eq('id', docId)
+            const { error } = await deleteGeneralAction("documents", docId)
+            if (error) throw new Error(error)
             setDocumentsList(documentsList.filter(d => d.id !== docId))
             toast.success("Documento eliminado")
         } catch (error) {
@@ -732,36 +739,37 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
 
     // Load data functions
     const loadPhotos = async () => {
-        const { data } = await supabase
-            .from("vehicle_photos")
-            .select("*")
-            .eq("vehicle_id", vehicle.id)
-            .order("photo_order", { ascending: true })
-        setPhotos((data || []) as VehiclePhoto[])
+        setIsLoadingData(true)
+        try {
+            const { success, data, error } = await getVehiclePhotosAction(vehicle.id)
+            if (error) throw new Error(error)
+            if (success && data) setPhotos(data as VehiclePhoto[])
+        } catch (error) {
+            console.error("Error loading photos:", error)
+            toast.error("Error al cargar fotos")
+        } finally {
+            setIsLoadingData(false)
+        }
     }
 
     const loadMileageHistory = async () => {
-        const { data } = await supabase
-            .from("mileage_history")
-            .select("*")
-            .eq("vehicle_id", vehicle.id)
-            .order("date", { ascending: false })
-        setMileageHistory(data || [])
+        try {
+            const { success, data, error } = await getVehicleMileageAction(vehicle.id)
+            if (error) throw new Error(error)
+            if (success && data) setMileageHistory(data)
+        } catch (error) {
+            console.error("Error loading mileage:", error)
+        }
     }
 
     const loadMaintenanceHistory = async () => {
         setIsLoadingData(true)
         try {
-            const { data, error } = await supabase
-                .from("maintenances")
-                .select("*")
-                .eq("vehicle_id", vehicle.id)
-                .order("date", { ascending: false })
+            const { success, data, error } = await getVehicleMaintenanceAction(vehicle.id)
+            if (error) throw new Error(error)
 
-            if (error) throw error
-
-            const processedData = (data || []).map(record => {
-                let mileage = (record as any).mileage_at_service
+            const processedData = (data || []).map((record: any) => {
+                let mileage = record.mileage_at_service
                 if (!mileage && record.notes) {
                     const match = record.notes.match(/\[Millaje al servicio: (\d+)\]/)
                     if (match) mileage = parseInt(match[1])
@@ -786,8 +794,8 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
         if (!confirm("¿Eliminar este registro de mantenimiento?")) return
 
         try {
-            const { error } = await supabase.from('maintenances').delete().eq('id', maintId)
-            if (error) throw error
+            const { error } = await deleteGeneralAction("maintenances", maintId)
+            if (error) throw new Error(error)
             setMaintenanceHistory(maintenanceHistory.filter(m => m.id !== maintId))
             toast.success("Registro eliminado")
         } catch (error) {
@@ -797,21 +805,23 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
     }
 
     const loadRentalHistory = async () => {
-        const { data } = await supabase
-            .from("rentals")
-            .select("*")
-            .eq("vehicle_id", vehicle.id)
-            .order("start_date", { ascending: false })
-        setRentalHistory(data || [])
+        try {
+            const { success, data, error } = await getVehicleRentalsAction(vehicle.id)
+            if (error) throw new Error(error)
+            if (success && data) setRentalHistory(data)
+        } catch (error) {
+            console.error("Error loading rentals:", error)
+        }
     }
 
     const loadDocuments = async () => {
-        const { data } = await supabase
-            .from("documents")
-            .select("*")
-            .eq("vehicle_id", vehicle.id)
-            .order("created_at", { ascending: false })
-        setDocumentsList(data || [])
+        try {
+            const { success, data, error } = await getVehicleDocumentsAction(vehicle.id)
+            if (error) throw new Error(error)
+            if (success && data) setDocumentsList(data)
+        } catch (error) {
+            console.error("Error loading documents:", error)
+        }
     }
 
     useEffect(() => {
@@ -824,322 +834,355 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
 
     const statusBadge = getStatusBadge()
 
+
     return (
         <>
             <Dialog open={true} onOpenChange={() => onClose()}>
-                <DialogContent className="max-w-[98vw] max-h-[98vh] w-full h-full p-0 border-0 bg-transparent flex items-center justify-center animate-in zoom-in-95 duration-300">
+                <DialogContent showCloseButton={false} className="max-w-[98vw] sm:max-w-[98vw] max-h-[98vh] w-full h-full p-0 border-0 bg-transparent flex items-center justify-center animate-in zoom-in-95 duration-300">
                     <div className="bg-background w-full h-full max-w-[1800px] max-h-[95vh] rounded-[2rem] shadow-2xl flex flex-col md:flex-row overflow-hidden border border-border shadow-[0_0_100px_rgba(0,0,0,0.4)] relative">
 
-                        {/* Left Navigation Sidebar */}
-                        <div className="w-full md:w-[280px] lg:w-[320px] bg-secondary/50 border-r border-border p-4 md:p-6 flex flex-col gap-4 md:gap-6 relative flex-shrink-0 overflow-y-auto">
-                            {/* Header Profile - Mobile minimized */}
-                            <div className="flex flex-col gap-5 pt-4">
-                                <div className="flex items-center gap-4">
-                                    <div className="h-16 w-16 rounded-[1.5rem] bg-background border-2 border-primary/20 p-1 flex-shrink-0 relative group">
-                                        <div className="absolute inset-0 bg-primary/10 rounded-[1.2rem] opacity-0 group-hover:opacity-100 transition-opacity" />
-                                        <ImageWithFallback
-                                            src={formData.image_url || "/placeholder-car.svg"}
-                                            fallbackSrc="/placeholder-car.svg"
-                                            alt="Car Hero"
-                                            width={64}
-                                            height={64}
-                                            unoptimized
-                                            className="w-full h-full object-cover rounded-[1.1rem]"
-                                        />
-                                        {isEditMode && (
-                                            <label className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-[1.1rem] cursor-pointer group hover:bg-black/60 transition-all opacity-0 group-hover:opacity-100">
-                                                <Camera className="h-5 w-5 text-white" />
-                                                <input type="file" className="hidden" accept="image/*" onChange={handleChangeHeroImage} />
-                                            </label>
-                                        )}
-                                    </div>
-                                    <div className="flex flex-col min-w-0">
-                                        <h2 className="text-xl font-black italic tracking-tighter uppercase leading-none truncate text-foreground">
-                                            {formData.make}
-                                        </h2>
-                                        <p className="text-sm font-bold text-primary truncate uppercase">{formData.model}</p>
-                                        <div className="flex items-center gap-2 mt-2">
-                                            <Badge className={`rounded-full px-2 py-0 border-0 text-xs uppercase font-black italic tracking-widest ${getStatusBadge().className}`}>
-                                                {getStatusBadge().label}
-                                            </Badge>
-                                        </div>
-                                    </div>
+                        {/* Left Navigation Sidebar - Cleaned up */}
+                        <div className="hidden md:flex w-[80px] lg:w-[260px] bg-secondary/30 border-r border-border flex-col relative z-20 backdrop-blur-xl">
+                            <div className="p-6 flex items-center gap-3 mb-6">
+                                <div className="h-10 w-10 bg-primary rounded-xl flex items-center justify-center shadow-lg shadow-primary/20 flex-shrink-0">
+                                    <CarFront className="h-6 w-6 text-white" />
                                 </div>
-
-                                <div className="grid grid-cols-2 gap-3 pb-4 border-b border-border/10">
-                                    <div className="p-3 rounded-2xl bg-background border border-border shadow-inner">
-                                        <p className="text-xs font-black uppercase tracking-widest text-muted-foreground opacity-50 mb-1">Millaje Act.</p>
-                                        <p className="text-xs font-black italic text-foreground tracking-tighter">{(formData.mileage || 0).toLocaleString()} MI</p>
-                                    </div>
-                                    <div className="p-3 rounded-2xl bg-background border border-border shadow-inner">
-                                        <p className="text-xs font-black uppercase tracking-widest text-muted-foreground opacity-50 mb-1">Año Mod.</p>
-                                        <p className="text-xs font-black italic text-foreground tracking-tighter">{formData.year}</p>
-                                    </div>
+                                <div className="hidden lg:block">
+                                    <h2 className="text-sm font-black italic uppercase leading-none">Panel</h2>
+                                    <p className="text-[10px] font-bold text-muted-foreground tracking-widest uppercase">Administración</p>
                                 </div>
                             </div>
 
-                            {/* Navigation Items */}
-                            <div className="flex flex-col gap-1.5 flex-1">
+                            <div className="flex flex-col gap-2 px-3 flex-1 overflow-y-auto custom-scrollbar">
                                 {[
-                                    { id: "general", label: "Información Base", icon: Activity },
-                                    { id: "galeria", label: "Galería Vault", icon: ImageIcon },
-                                    { id: "millaje", label: "Track de Millaje", icon: Gauge },
-                                    { id: "mantenimiento", label: "Mantenimiento", icon: Wrench },
-                                    { id: "documentos", label: "Vault Documental", icon: FileBadge },
-                                    { id: "alquileres", label: "Adm. Avanzada", icon: CalendarDays }
+                                    { id: "general", label: "Resumen", icon: Activity, desc: "KPIs y Datos Base" },
+                                    { id: "galeria", label: "Galería", icon: ImageIcon, desc: "Media Vault" },
+                                    { id: "millaje", label: "Millaje", icon: Gauge, desc: "Track & Proyecciones" },
+                                    { id: "mantenimiento", label: "Servicios", icon: Wrench, desc: "Mantenimiento Log" },
+                                    { id: "documentos", label: "Legal", icon: FileBadge, desc: "Documentación" },
+                                    { id: "alquileres", label: "Rentas", icon: CalendarDays, desc: "Historial y Reservas" }
                                 ].map((item) => (
                                     <button
                                         key={item.id}
                                         onClick={() => setActiveTab(item.id)}
                                         className={cn(
-                                            "flex items-center gap-3 px-4 py-3.5 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all relative overflow-hidden group",
+                                            "flex items-center gap-3 px-3 py-3 rounded-xl transition-all relative overflow-hidden group text-left",
                                             activeTab === item.id
-                                                ? "bg-primary text-white shadow-lg shadow-primary/20 translate-x-1"
-                                                : "text-muted-foreground hover:bg-primary/5 hover:text-primary hover:translate-x-1"
+                                                ? "bg-background shadow-lg border border-border/50"
+                                                : "hover:bg-primary/5 border border-transparent"
                                         )}
                                     >
-                                        <item.icon className={cn("h-4 w-4", activeTab === item.id ? "text-white" : "text-primary group-hover:scale-110 transition-transform")} />
-                                        {item.label}
+                                        {activeTab === item.id && (
+                                            <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary" />
+                                        )}
+                                        <div className={cn(
+                                            "h-9 w-9 rounded-lg flex items-center justify-center transition-colors flex-shrink-0",
+                                            activeTab === item.id ? "bg-primary/10 text-primary" : "bg-secondary text-muted-foreground group-hover:text-primary group-hover:bg-primary/10"
+                                        )}>
+                                            <item.icon className="h-4 w-4" />
+                                        </div>
+                                        <div className="hidden lg:block min-w-0">
+                                            <p className={cn("text-xs font-black uppercase tracking-wide truncate", activeTab === item.id ? "text-foreground" : "text-muted-foreground group-hover:text-foreground")}>
+                                                {item.label}
+                                            </p>
+                                            <p className="text-[9px] font-bold text-muted-foreground/60 uppercase tracking-widest truncate">{item.desc}</p>
+                                        </div>
                                     </button>
                                 ))}
                             </div>
 
-                            <div className="mt-auto">
+                            <div className="p-4 mt-auto border-t border-border/50">
                                 <Button
                                     variant="outline"
                                     onClick={() => onClose()}
-                                    className="w-full h-12 rounded-2xl border-border hover:bg-background/80 font-black uppercase tracking-widest text-xs hidden md:flex"
+                                    className="w-full h-10 rounded-xl border-border bg-background/50 hover:bg-destructive/10 hover:border-destructive/30 hover:text-destructive transition-all font-black uppercase tracking-widest text-[10px]"
                                 >
-                                    <X className="h-4 w-4 mr-2" /> Salir del Panel
+                                    <X className="h-4 w-4 lg:mr-2" /> <span className="hidden lg:inline">Cerrar</span>
                                 </Button>
                             </div>
                         </div>
 
                         {/* Main Content Area */}
                         <div className="flex-1 flex flex-col min-w-0 bg-background overflow-hidden relative">
-                            {/* Header Dynamic */}
-                            <div className="h-[80px] md:h-24 px-6 md:px-10 border-b border-border flex items-center justify-between bg-background sticky top-0 z-20">
-                                <div>
-                                    <h3 className="text-sm md:text-lg font-black italic uppercase tracking-tighter text-foreground">
-                                        Explorador de <span className="text-primary">Activo</span>
-                                        <span className="mx-3 opacity-20 font-light">/</span>
-                                        <span className="text-muted-foreground opacity-40 uppercase text-xs tracking-widest">
-                                            {activeTab === 'general' ? 'Resumen Operativo' :
-                                                activeTab === 'galeria' ? 'Galería de Estado' :
-                                                    activeTab === 'millaje' ? 'Lectura Sensor' :
-                                                        activeTab === 'maintenance' ? 'Service Log' :
-                                                            activeTab === 'documents' ? 'Expediente Legal' : 'Configuraciones'}
-                                        </span>
-                                    </h3>
-                                </div>
 
-                                <div className="flex items-center gap-3">
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                            <Button
-                                                variant="ghost"
-                                                className="h-10 px-4 rounded-xl bg-secondary/50 border border-border/30 hover:border-primary/40 font-black uppercase text-xs tracking-widest flex items-center gap-2 group"
-                                            >
-                                                <div className={cn("h-2 w-2 rounded-full", getStatusBadge().className)} />
+                            {/* Top Hero Section */}
+                            <div className="relative h-[280px] md:h-[380px] w-full shrink-0 group">
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => onClose()}
+                                    className="absolute top-4 left-4 z-40 bg-black/20 hover:bg-black/40 text-white rounded-full backdrop-blur-md h-10 w-10 md:hidden"
+                                >
+                                    <ChevronLeft className="h-6 w-6" />
+                                </Button>
+
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => onClose()}
+                                    className="absolute top-6 right-6 z-50 bg-black/20 hover:bg-white/20 text-white/80 hover:text-white rounded-full backdrop-blur-md h-12 w-12 border border-white/10 shadow-2xl transition-all hover:scale-110 hover:rotate-90 duration-300"
+                                >
+                                    <X className="h-6 w-6" />
+                                </Button>
+
+                                <div className="absolute inset-0 bg-black/10 z-10" />
+                                <div className="absolute inset-0 bg-gradient-to-t from-background via-background/20 to-transparent z-20" />
+                                <div className="absolute inset-0 bg-gradient-to-r from-background via-background/30 to-transparent z-20" />
+
+                                <ImageWithFallback
+                                    src={formData.image_url || "/placeholder-car.svg"}
+                                    fallbackSrc="/placeholder-car.svg"
+                                    alt="Cover"
+                                    width={1200}
+                                    height={600}
+                                    className="w-full h-full object-cover opacity-100 transition-opacity duration-700"
+                                    unoptimized
+                                />
+
+                                {/* Content Overlay */}
+                                <div className="absolute bottom-0 left-0 right-0 p-6 md:p-8 z-30 flex flex-col md:flex-row md:items-end justify-between gap-6">
+                                    <div className="space-y-2">
+                                        <div className="flex items-center gap-3">
+                                            <Badge className={`rounded-md px-2 py-0.5 text-[10px] font-black uppercase tracking-widest shadow-lg ${getStatusBadge().className}`}>
                                                 {getStatusBadge().label}
-                                                <ChevronDown className="h-3 w-3 opacity-40 group-hover:rotate-180 transition-transform" />
-                                            </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent className="z-[300] bg-popover/95 backdrop-blur-xl border-border rounded-2xl p-2 w-[200px] shadow-2xl">
-                                            {["available", "rented", "maintenance", "inactive"].map((s) => (
-                                                <DropdownMenuItem
-                                                    key={s}
-                                                    onClick={() => handleQuickStatusUpdate(s as Vehicle["status"])}
-                                                    className="rounded-xl px-4 py-3 text-xs font-black uppercase tracking-widest cursor-pointer hover:bg-primary/10 hover:text-primary transition-all mb-1 last:mb-0"
-                                                >
-                                                    <div className="flex items-center gap-3">
-                                                        <div className={cn("h-2 w-2 rounded-full",
-                                                            s === 'available' ? 'bg-emerald-500' :
-                                                                s === 'rented' ? 'bg-blue-500' :
-                                                                    s === 'maintenance' ? 'bg-orange-500' : 'bg-slate-500'
-                                                        )} />
-                                                        {s.toUpperCase()}
-                                                    </div>
-                                                </DropdownMenuItem>
-                                            ))}
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
-
-                                    {activeTab === 'general' && (
-                                        <Button
-                                            onClick={isEditMode ? handleSave : () => setIsEditMode(true)}
-                                            className={cn(
-                                                "h-10 px-6 rounded-xl font-black uppercase text-xs tracking-widest shadow-xl transition-all hover:scale-105 active:scale-95",
-                                                isEditMode ? "bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/20" : "bg-primary shadow-primary/20"
+                                            </Badge>
+                                            {formData.assigned_investor_id && formData.assigned_investor_id !== 'none' && (
+                                                <Badge variant="outline" className="bg-background/50 backdrop-blur-md border-primary/30 text-primary rounded-md px-2 py-0.5 text-[10px] font-black uppercase tracking-widest">
+                                                    {investors.find(i => i.id === formData.assigned_investor_id)?.full_name || 'Inversor'}
+                                                </Badge>
                                             )}
-                                        >
-                                            {isSaving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : isEditMode ? <Save className="h-4 w-4 mr-2" /> : <Edit3 className="h-4 w-4 mr-2" />}
-                                            {isEditMode ? "Comprometer Datos" : "Modificar Activo"}
-                                        </Button>
-                                    )}
+                                        </div>
+                                        <div>
+                                            <h1 className="text-3xl md:text-5xl font-black italic uppercase tracking-tighter text-foreground leading-none drop-shadow-2xl">
+                                                {formData.make} <span className="text-primary">{formData.model}</span>
+                                            </h1>
+                                            <p className="text-sm md:text-base font-bold text-muted-foreground uppercase tracking-widest mt-1 opacity-80 flex items-center gap-4">
+                                                <span>{formData.year}</span>
+                                                <span className="h-1 w-1 rounded-full bg-primary/50" />
+                                                <span>{formData.license_plate || 'NO PLACA'}</span>
+                                                <span className="h-1 w-1 rounded-full bg-primary/50" />
+                                                <span>{(formData.mileage || 0).toLocaleString()} MI</span>
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center gap-3">
+                                        {isEditMode && (
+                                            <div className="relative">
+                                                <Button
+                                                    variant="secondary"
+                                                    className="h-10 px-4 rounded-xl font-black uppercase text-xs tracking-widest shadow-xl bg-white/10 backdrop-blur-md hover:bg-white/20 text-white border border-white/10"
+                                                >
+                                                    <Camera className="h-4 w-4 mr-2" /> Cambiar Portada
+                                                </Button>
+                                                <input
+                                                    type="file"
+                                                    accept="image/*"
+                                                    onChange={handleChangeHeroImage}
+                                                    className="absolute inset-0 opacity-0 cursor-pointer"
+                                                />
+                                            </div>
+                                        )}
+
+                                        {activeTab === 'general' && (
+                                            <Button
+                                                onClick={isEditMode ? handleSave : () => setIsEditMode(true)}
+                                                className={cn(
+                                                    "h-10 px-6 rounded-xl font-black uppercase text-xs tracking-widest shadow-xl transition-all hover:scale-105 active:scale-95",
+                                                    isEditMode ? "bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/20 text-white" : "bg-primary shadow-primary/20 text-primary-foreground"
+                                                )}
+                                            >
+                                                {isSaving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : isEditMode ? <Save className="h-4 w-4 mr-2" /> : <Edit3 className="h-4 w-4 mr-2" />}
+                                                {isEditMode ? "Guardar Cambios" : "Editar Datos"}
+                                            </Button>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
 
-                            {/* Scrollable Area Content */}
-                            <div className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 custom-scrollbar focus-visible:outline-none">
-                                <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full">
-                                    <TabsContent value="general" className="m-0 focus-visible:outline-none">
-                                        <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 lg:gap-8">
-                                            {/* Financial Glance */}
-                                            <div className="xl:col-span-8 space-y-6 lg:space-y-8">
-                                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
-                                                    <div className="glass-card p-5 lg:p-6 border-emerald-500/10 bg-gradient-to-br from-emerald-500/[0.03] to-transparent relative overflow-hidden group">
-                                                        <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-                                                            <TrendingUp className="h-16 w-16 text-emerald-500" />
+                            {/* Scrollable Content */}
+                            <div className="flex-1 overflow-y-auto p-6 md:p-8 custom-scrollbar">
+                                <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full space-y-0">
+                                    <TabsContent value="general" className="m-0 focus-visible:outline-none animate-in fade-in slide-in-from-bottom-4 duration-500">
+                                        <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
+
+                                            {/* Left Col - Stats & Main Info */}
+                                            <div className="xl:col-span-8 space-y-8">
+                                                {/* KPI Cards */}
+                                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                                    <div className="p-6 rounded-3xl bg-secondary/20 border border-border/50 relative overflow-hidden">
+                                                        <div className="absolute -right-4 -top-4 opacity-5 pointer-events-none">
+                                                            <TrendingUp className="h-32 w-32" />
                                                         </div>
-                                                        <p className="text-xs font-black uppercase tracking-widest text-emerald-500/60 mb-1">ROI Proyectado (ANUAL)</p>
-                                                        <p className="text-3xl lg:text-4xl font-black italic tracking-tighter text-emerald-500 leading-none">{roi}%</p>
-                                                        <div className="mt-4 flex items-center gap-2">
-                                                            <div className="h-1 w-full bg-emerald-500/10 rounded-full overflow-hidden">
-                                                                <div className="h-full bg-emerald-500" style={{ width: `${roi}%` }} />
-                                                            </div>
+                                                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-70 mb-2">ROI Estimado</p>
+                                                        <div className="flex items-baseline gap-1">
+                                                            <span className="text-4xl font-black italic tracking-tighter text-emerald-500">{roi}%</span>
+                                                            <span className="text-xs font-bold text-emerald-500/50 uppercase">Anual</span>
                                                         </div>
                                                     </div>
-                                                    <div className="glass-card p-5 lg:p-6 border-blue-500/10 bg-gradient-to-br from-blue-500/[0.03] to-transparent relative overflow-hidden group">
-                                                        <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-                                                            <Activity className="h-16 w-16 text-blue-500" />
+                                                    <div className="p-6 rounded-3xl bg-secondary/20 border border-border/50 relative overflow-hidden">
+                                                        <div className="absolute -right-4 -top-4 opacity-5 pointer-events-none">
+                                                            <Activity className="h-32 w-32" />
                                                         </div>
-                                                        <p className="text-xs font-black uppercase tracking-widest text-blue-500/60 mb-1">Precio Compra</p>
-                                                        <p className="text-2xl lg:text-3xl font-black italic tracking-tighter text-blue-500 leading-none">${formData.purchase_price?.toLocaleString() || '0'}</p>
-                                                        <p className="text-xs font-bold text-muted-foreground mt-2 uppercase">Inversión Inicial Asset</p>
+                                                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-70 mb-2">Inversión (Purchase)</p>
+                                                        <div className="flex items-baseline gap-1">
+                                                            <span className="text-4xl font-black italic tracking-tighter text-blue-500">${formData.purchase_price?.toLocaleString() || '0'}</span>
+                                                        </div>
+                                                    </div>
+                                                    <div className="p-6 rounded-3xl bg-secondary/20 border border-border/50 relative overflow-hidden">
+                                                        <div className="absolute -right-4 -top-4 opacity-5 pointer-events-none">
+                                                            <Gauge className="h-32 w-32" />
+                                                        </div>
+                                                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-70 mb-2">Uso Actual</p>
+                                                        <div className="flex items-baseline gap-1">
+                                                            <span className="text-4xl font-black italic tracking-tighter text-primary">{(formData.mileage || 0).toLocaleString()}</span>
+                                                            <span className="text-xs font-bold text-primary/50 uppercase">MI</span>
+                                                        </div>
                                                     </div>
                                                 </div>
 
+                                                {/* Specs Grid */}
                                                 <div className="space-y-6">
-                                                    <h4 className="text-xs font-black uppercase tracking-[0.3em] text-primary flex items-center gap-3">
-                                                        <div className="h-2 w-10 bg-primary/20 rounded-full" />
-                                                        Especificaciones del Activo
-                                                    </h4>
-                                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
-                                                        <div className="space-y-6 p-8 rounded-[2rem] bg-secondary/30 border border-border/40">
-                                                            <div className="grid grid-cols-1 gap-6">
-                                                                <div className="space-y-3">
-                                                                    <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground/60">Marca / Fabricante</Label>
-                                                                    <div className="relative group">
-                                                                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-primary opacity-40 group-focus-within:opacity-100 transition-opacity">
-                                                                            <CarFront className="h-4 w-4" />
-                                                                        </div>
-                                                                        <Input
-                                                                            disabled={!isEditMode}
-                                                                            value={formData.make}
-                                                                            onChange={(e) => setFormData({ ...formData, make: e.target.value })}
-                                                                            className="h-12 pl-12 bg-background border-border rounded-xl font-black italic text-lg uppercase tracking-tight focus:border-primary/50"
-                                                                        />
-                                                                    </div>
-                                                                </div>
-                                                                <div className="space-y-3">
-                                                                    <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground/60">Línea / Modelo</Label>
-                                                                    <Input
-                                                                        disabled={!isEditMode}
-                                                                        value={formData.model}
-                                                                        onChange={(e) => setFormData({ ...formData, model: e.target.value })}
-                                                                        className="h-12 bg-background border-border rounded-xl font-black italic text-lg uppercase tracking-tight focus:border-primary/50"
-                                                                    />
-                                                                </div>
-                                                                <div className="grid grid-cols-2 gap-6">
-                                                                    <div className="space-y-3">
-                                                                        <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground/60">Placa (Plate)</Label>
-                                                                        <Input
-                                                                            disabled={!isEditMode}
-                                                                            value={formData.license_plate}
-                                                                            onChange={(e) => setFormData({ ...formData, license_plate: e.target.value })}
-                                                                            className="h-12 bg-background border-border rounded-xl font-black italic text-lg uppercase tracking-tight focus:border-primary/50"
-                                                                        />
-                                                                    </div>
-                                                                    <div className="space-y-3">
-                                                                        <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground/60">ID Inversor</Label>
-                                                                        {isEditMode ? (
-                                                                            <Select
-                                                                                value={formData.assigned_investor_id}
-                                                                                onValueChange={(v) => setFormData({ ...formData, assigned_investor_id: v })}
-                                                                            >
-                                                                                <SelectTrigger className="h-12 bg-background border-border rounded-xl font-bold italic text-xs uppercase tracking-tight">
-                                                                                    <SelectValue />
-                                                                                </SelectTrigger>
-                                                                                <SelectContent className="z-[350] bg-popover/95 border-border shadow-2xl rounded-2xl p-2">
-                                                                                    <SelectItem value="none" className="font-bold uppercase text-xs tracking-widest">Sin asignar Socio</SelectItem>
-                                                                                    {investors.map((inv) => (
-                                                                                        <SelectItem key={inv.id} value={inv.id} className="font-bold uppercase text-xs tracking-widest">
-                                                                                            {inv.full_name || inv.email}
-                                                                                        </SelectItem>
-                                                                                    ))}
-                                                                                </SelectContent>
-                                                                            </Select>
-                                                                        ) : (
-                                                                            <div className="h-12 flex items-center px-4 bg-background border border-border rounded-xl font-black italic text-sm text-foreground">
-                                                                                {investors.find(i => i.id === formData.assigned_investor_id)?.full_name || 'PENDIENTE ASIGNACIÓN'}
-                                                                            </div>
-                                                                        )}
-                                                                    </div>
-                                                                </div>
-                                                            </div>
+                                                    <h3 className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2">
+                                                        <span className="h-1 w-6 bg-primary rounded-full" /> Especificaciones
+                                                    </h3>
+
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 rounded-[2rem] border border-border/50 bg-background/50 backdrop-blur-sm">
+
+                                                        {/* Data Point Component */}
+                                                        <div className="space-y-1">
+                                                            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/50">Marca</Label>
+                                                            {isEditMode ? (
+                                                                <Input value={formData.make} onChange={e => setFormData({ ...formData, make: e.target.value })} className="font-bold uppercase tracking-wide" />
+                                                            ) : (
+                                                                <div className="text-lg font-black italic uppercase tracking-tight">{formData.make}</div>
+                                                            )}
                                                         </div>
 
-                                                        <div className="space-y-6 pt-2">
-                                                            <div className="grid grid-cols-2 gap-6">
-                                                                <div className="space-y-3">
-                                                                    <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground/60">Año Fabricación</Label>
-                                                                    <Input
-                                                                        type="number"
-                                                                        disabled={!isEditMode}
-                                                                        value={formData.year}
-                                                                        onChange={(e) => setFormData({ ...formData, year: parseInt(e.target.value) })}
-                                                                        className="h-12 bg-secondary/20 border-border rounded-xl font-black italic text-lg tracking-tighter"
-                                                                    />
-                                                                </div>
-                                                                <div className="space-y-3">
-                                                                    <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground/60">Millaje Actual</Label>
-                                                                    <div className="relative">
-                                                                        <Input
-                                                                            type="number"
-                                                                            disabled={!isEditMode}
-                                                                            value={formData.mileage}
-                                                                            onChange={(e) => setFormData({ ...formData, mileage: parseInt(e.target.value) })}
-                                                                            className="h-12 bg-secondary/20 border-border rounded-xl font-black italic text-lg tracking-tighter pr-12"
-                                                                        />
-                                                                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-black text-muted-foreground uppercase opacity-40">MI</span>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-
-                                                            <div className="space-y-3">
-                                                                <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground/60">Número VIN (Chasis)</Label>
-                                                                <div className="relative group">
-                                                                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-primary opacity-40 group-focus-within:opacity-100 transition-opacity">
-                                                                        <FileText className="h-4 w-4" />
-                                                                    </div>
-                                                                    <Input
-                                                                        disabled={!isEditMode}
-                                                                        value={formData.vin}
-                                                                        onChange={(e) => setFormData({ ...formData, vin: e.target.value })}
-                                                                        className="h-12 pl-12 bg-secondary/20 border-border rounded-xl font-bold text-sm tracking-widest uppercase"
-                                                                    />
-                                                                </div>
-                                                            </div>
-
-                                                            <div className="space-y-3">
-                                                                <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground/60">Ubicación Estacionamiento</Label>
-                                                                <div className="relative group">
-                                                                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-primary opacity-40 group-focus-within:opacity-100 transition-opacity">
-                                                                        <MapPin className="h-4 w-4" />
-                                                                    </div>
-                                                                    <Input
-                                                                        disabled={!isEditMode}
-                                                                        value={formData.location}
-                                                                        onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                                                                        className="h-12 pl-12 bg-secondary/20 border-border rounded-xl font-bold italic text-sm text-foreground"
-                                                                    />
-                                                                </div>
-                                                            </div>
+                                                        <div className="space-y-1">
+                                                            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/50">Modelo</Label>
+                                                            {isEditMode ? (
+                                                                <Input value={formData.model} onChange={e => setFormData({ ...formData, model: e.target.value })} className="font-bold uppercase tracking-wide" />
+                                                            ) : (
+                                                                <div className="text-lg font-black italic uppercase tracking-tight">{formData.model}</div>
+                                                            )}
                                                         </div>
+
+                                                        <div className="space-y-1">
+                                                            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/50">Año</Label>
+                                                            {isEditMode ? (
+                                                                <Input type="number" value={formData.year} onChange={e => setFormData({ ...formData, year: parseInt(e.target.value) })} className="font-bold uppercase tracking-wide" />
+                                                            ) : (
+                                                                <div className="text-lg font-black italic uppercase tracking-tight">{formData.year}</div>
+                                                            )}
+                                                        </div>
+
+                                                        <div className="space-y-1">
+                                                            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/50">Placa</Label>
+                                                            {isEditMode ? (
+                                                                <Input value={formData.license_plate} onChange={e => setFormData({ ...formData, license_plate: e.target.value })} className="font-bold uppercase tracking-wide" />
+                                                            ) : (
+                                                                <div className="text-lg font-black italic uppercase tracking-tight">{formData.license_plate}</div>
+                                                            )}
+                                                        </div>
+
+                                                        <div className="space-y-1 md:col-span-2">
+                                                            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/50">VIN (Chasis)</Label>
+                                                            {isEditMode ? (
+                                                                <Input value={formData.vin} onChange={e => setFormData({ ...formData, vin: e.target.value })} className="font-bold uppercase tracking-wide font-mono" />
+                                                            ) : (
+                                                                <div className="text-base font-bold font-mono tracking-widest opacity-80">{formData.vin}</div>
+                                                            )}
+                                                        </div>
+
+                                                        <div className="space-y-1 md:col-span-2">
+                                                            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/50">Ubicación</Label>
+                                                            {isEditMode ? (
+                                                                <Input value={formData.location} onChange={e => setFormData({ ...formData, location: e.target.value })} className="font-bold uppercase tracking-wide" />
+                                                            ) : (
+                                                                <div className="text-base font-bold italic flex items-center gap-2">
+                                                                    <MapPin className="h-4 w-4 text-primary" />
+                                                                    {formData.location}
+                                                                </div>
+                                                            )}
+                                                        </div>
+
+                                                        <div className="space-y-1 md:col-span-2">
+                                                            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/50">Socio Inversor</Label>
+                                                            {isEditMode ? (
+                                                                <Select value={formData.assigned_investor_id} onValueChange={(v) => setFormData({ ...formData, assigned_investor_id: v })}>
+                                                                    <SelectTrigger className="font-bold uppercase tracking-wide">
+                                                                        <SelectValue />
+                                                                    </SelectTrigger>
+                                                                    <SelectContent>
+                                                                        <SelectItem value="none">Sin Asignar</SelectItem>
+                                                                        {investors.map(i => (
+                                                                            <SelectItem key={i.id} value={i.id}>{i.full_name || i.email}</SelectItem>
+                                                                        ))}
+                                                                    </SelectContent>
+                                                                </Select>
+                                                            ) : (
+                                                                <div className="text-base font-bold italic flex items-center gap-2 text-foreground/80">
+                                                                    <User className="h-4 w-4 text-primary" />
+                                                                    {investors.find(i => i.id === formData.assigned_investor_id)?.full_name || 'Sin Asignar'}
+                                                                </div>
+                                                            )}
+                                                        </div>
+
                                                     </div>
                                                 </div>
                                             </div>
+
+                                            {/* Right Col - Additional & Status */}
+                                            <div className="xl:col-span-4 space-y-8">
+                                                <div className="p-6 rounded-[2rem] bg-secondary/10 border border-border/50">
+                                                    <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-4">Estado & Disponibilidad</h4>
+
+                                                    <div className="flex flex-col gap-2">
+                                                        {["available", "rented", "maintenance", "inactive"].map((s) => (
+                                                            <div
+                                                                key={s}
+                                                                onClick={() => handleQuickStatusUpdate(s as Vehicle['status'])}
+                                                                className={cn(
+                                                                    "p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between group",
+                                                                    formData.status === s ? "bg-background border-primary/50 shadow-lg" : "border-transparent hover:bg-background/50 hover:border-border"
+                                                                )}
+                                                            >
+                                                                <div className="flex items-center gap-3">
+                                                                    <div className={cn("h-2 w-2 rounded-full",
+                                                                        s === 'available' ? 'bg-emerald-500' :
+                                                                            s === 'rented' ? 'bg-blue-500' :
+                                                                                s === 'maintenance' ? 'bg-orange-500' : 'bg-slate-500'
+                                                                    )} />
+                                                                    <span className={cn("text-xs font-black uppercase tracking-wide", formData.status === s ? "text-foreground" : "text-muted-foreground")}>{s}</span>
+                                                                </div>
+                                                                {formData.status === s && <div className="h-2 w-2 bg-primary rounded-full animate-pulse" />}
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+
+                                                {/* Mini Gallery Preview */}
+                                                <div className="space-y-4">
+                                                    <div className="flex items-center justify-between">
+                                                        <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Preview Galería</h4>
+                                                        <Button variant="link" onClick={() => setActiveTab('galeria')} className="text-[10px] font-black uppercase h-auto p-0 text-primary">Ver Todo</Button>
+                                                    </div>
+                                                    <div className="grid grid-cols-2 gap-2">
+                                                        {photos.slice(0, 4).map(p => (
+                                                            <div key={p.id} className="aspect-square rounded-xl overflow-hidden bg-secondary relative">
+                                                                <img src={p.image_url} className="w-full h-full object-cover" />
+                                                            </div>
+                                                        ))}
+                                                        {photos.length === 0 && (
+                                                            <div className="col-span-2 aspect-[2/1] rounded-xl border border-dashed border-border flex items-center justify-center">
+                                                                <p className="text-[10px] font-black uppercase text-muted-foreground opacity-50">Sin Fotos</p>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+
                                         </div>
                                     </TabsContent>
 
@@ -1770,7 +1813,7 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
             </Dialog>
 
             {/* CHECK-IN DIALOG */}
-            < Dialog open={isCheckInDialogOpen} onOpenChange={setIsCheckInDialogOpen} >
+            <Dialog open={isCheckInDialogOpen} onOpenChange={setIsCheckInDialogOpen} >
                 <DialogContent className="sm:max-w-[450px]">
                     <div className="space-y-6">
                         <div>
@@ -1799,10 +1842,10 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                         </div>
                     </div>
                 </DialogContent>
-            </Dialog >
+            </Dialog>
 
             {/* RENTAL DIALOG */}
-            < Dialog open={isRentalDialogOpen} onOpenChange={setIsRentalDialogOpen} >
+            <Dialog open={isRentalDialogOpen} onOpenChange={setIsRentalDialogOpen} >
                 <DialogContent className="sm:max-w-[500px]">
                     <div className="space-y-6">
                         <div>
@@ -1817,10 +1860,10 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                         </div>
                     </div>
                 </DialogContent>
-            </Dialog >
+            </Dialog>
 
             {/* MILEAGE DIALOG */}
-            < Dialog open={isMileageDialogOpen} onOpenChange={setIsMileageDialogOpen} >
+            <Dialog open={isMileageDialogOpen} onOpenChange={setIsMileageDialogOpen} >
                 <DialogContent className="sm:max-w-[400px]">
                     <div className="space-y-6">
                         <div>
@@ -1873,10 +1916,10 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                         </div>
                     </div>
                 </DialogContent>
-            </Dialog >
+            </Dialog>
 
             {/* MAINTENANCE DIALOG */}
-            < Dialog open={isMaintenanceDialogOpen} onOpenChange={setIsMaintenanceDialogOpen} >
+            <Dialog open={isMaintenanceDialogOpen} onOpenChange={setIsMaintenanceDialogOpen} >
                 <DialogContent className="sm:max-w-[600px] p-0 overflow-hidden border-0 bg-transparent shadow-none">
                     <div className="bg-slate-50 dark:bg-slate-950/95 border border-primary/20 flex flex-col max-h-[90vh] rounded-[2.5rem] shadow-[0_0_50px_rgba(0,0,0,0.5)]">
                         {/* Header Premium */}
@@ -2028,6 +2071,7 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                                         onChange={(e) => {
                                             const files = Array.from(e.target.files || [])
                                             setMaintenanceReceipts(prev => [...prev, ...files])
+                                            e.target.value = '' // Reset input
                                         }}
                                         className="hidden"
                                     />
@@ -2095,7 +2139,7 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                         </div>
                     </div>
                 </DialogContent>
-            </Dialog >
+            </Dialog>
 
             {/* LIGHTBOX LAYOUT */}
             {

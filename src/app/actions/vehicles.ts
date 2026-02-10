@@ -230,6 +230,7 @@ export async function deleteGeneralAction(table: string, id: string) {
 
 export async function createMileageLogAction(payload: any) {
     try {
+        // 1. Insert into mileage_history
         const { data, error } = await supabaseAdmin
             .from("mileage_history")
             .insert([payload])
@@ -241,9 +242,210 @@ export async function createMileageLogAction(payload: any) {
             return { error: error.message }
         }
 
+        // 2. Update vehicle mileage
+        if (payload.vehicle_id && payload.mileage) {
+            const { error: updateError } = await supabaseAdmin
+                .from("vehicles")
+                .update({ mileage: payload.mileage })
+                .eq("id", payload.vehicle_id)
+
+            if (updateError) {
+                console.error('[createMileageLogAction] Error updating vehicle mileage:', updateError)
+                // Note: We don't fail the whole action if just the vehicle update fails, 
+                // but ideally it should be consistent.
+            }
+        }
+
         return { success: true, data }
     } catch (error: any) {
         console.error('[createMileageLogAction] Unexpected error:', error)
         return { error: error.message || 'An unexpected error occurred' }
+    }
+}
+
+export async function uploadGalleryPhotoAction(formData: FormData) {
+    try {
+        const file = formData.get('file') as File;
+        const vehicleId = formData.get('vehicleId') as string;
+        if (!file) return { error: 'No file provided' };
+
+        const fileExt = file.name.split('.').pop();
+        const baseName = file.name.split('.')[0] || 'photo';
+        const fileName = `${vehicleId}-${baseName}-${Date.now()}.${fileExt}`;
+        const filePath = `gallery/${fileName}`;
+
+        const buffer = await file.arrayBuffer();
+
+        const { error } = await supabaseAdmin.storage
+            .from('vehicle-images')
+            .upload(filePath, buffer, {
+                contentType: file.type,
+                cacheControl: '3600',
+                upsert: false
+            });
+
+        if (error) {
+            console.error('[uploadGalleryPhotoAction] Storage error:', error);
+            return { error: error.message };
+        }
+
+        const { data: { publicUrl } } = supabaseAdmin.storage
+            .from('vehicle-images')
+            .getPublicUrl(filePath);
+
+        return { success: true, publicUrl };
+    } catch (error: any) {
+        console.error('[uploadGalleryPhotoAction] Unexpected error:', error);
+        return { error: error.message || 'An unexpected error occurred' };
+    }
+}
+
+export async function uploadVehicleDocumentAction(formData: FormData) {
+    try {
+        const file = formData.get('file') as File;
+        const vehicleId = formData.get('vehicleId') as string;
+        if (!file) return { error: 'No file provided' };
+
+        const fileExt = file.name.split('.').pop();
+        const baseName = file.name.split('.')[0] || 'doc';
+        // Sanitize baseName to avoid weird chars in path
+        const safeBaseName = baseName.replace(/[^a-zA-Z0-9-_]/g, '_');
+
+        const fileName = `${vehicleId}-doc-${Date.now()}-${safeBaseName}.${fileExt}`;
+        const filePath = `vehicle-docs/${fileName}`; // Assuming a folder structure or root
+
+        const buffer = await file.arrayBuffer();
+
+        const { error } = await supabaseAdmin.storage
+            .from('documents')
+            .upload(filePath, buffer, {
+                contentType: file.type,
+                cacheControl: '3600',
+                upsert: false
+            });
+
+        if (error) {
+            console.error('[uploadVehicleDocumentAction] Storage error:', error);
+            return { error: error.message };
+        }
+
+        const { data: { publicUrl } } = supabaseAdmin.storage
+            .from('documents')
+            .getPublicUrl(filePath);
+
+        return { success: true, publicUrl };
+    } catch (error: any) {
+        console.error('[uploadVehicleDocumentAction] Unexpected error:', error);
+        return { error: error.message || 'An unexpected error occurred' };
+    }
+}
+
+export async function createFinancialRecordAction(payload: any) {
+    try {
+        const { data, error } = await supabaseAdmin
+            .from("financial_records")
+            .insert([payload])
+            .select()
+            .single()
+
+        if (error) {
+            console.error('[createFinancialRecordAction] Supabase error:', error)
+            return { error: error.message }
+        }
+
+        return { success: true, data }
+    } catch (error: any) {
+        console.error('[createFinancialRecordAction] Unexpected error:', error)
+        return { error: error.message || 'An unexpected error occurred' }
+    }
+}
+
+export async function getVehiclePhotosAction(vehicleId: string) {
+    try {
+        const { data, error } = await supabaseAdmin
+            .from("vehicle_photos")
+            .select("*")
+            .eq("vehicle_id", vehicleId)
+            .order("photo_order", { ascending: true })
+
+        if (error) {
+            console.error('[getVehiclePhotosAction] Supabase error:', error)
+            return { error: error.message }
+        }
+        return { success: true, data }
+    } catch (error: any) {
+        return { error: error.message }
+    }
+}
+
+export async function getVehicleDocumentsAction(vehicleId: string) {
+    try {
+        const { data, error } = await supabaseAdmin
+            .from("documents")
+            .select("*")
+            .eq("vehicle_id", vehicleId)
+            .order("created_at", { ascending: false })
+
+        if (error) {
+            console.error('[getVehicleDocumentsAction] Supabase error:', error)
+            return { error: error.message }
+        }
+        return { success: true, data }
+    } catch (error: any) {
+        return { error: error.message }
+    }
+}
+
+export async function getVehicleMaintenanceAction(vehicleId: string) {
+    try {
+        const { data, error } = await supabaseAdmin
+            .from("maintenances")
+            .select("*")
+            .eq("vehicle_id", vehicleId)
+            .order("date", { ascending: false })
+
+        if (error) {
+            console.error('[getVehicleMaintenanceAction] Supabase error:', error)
+            return { error: error.message }
+        }
+        return { success: true, data }
+    } catch (error: any) {
+        return { error: error.message }
+    }
+}
+
+export async function getVehicleMileageAction(vehicleId: string) {
+    try {
+        const { data, error } = await supabaseAdmin
+            .from("mileage_history")
+            .select("*")
+            .eq("vehicle_id", vehicleId)
+            .order("date", { ascending: false })
+
+        if (error) {
+            console.error('[getVehicleMileageAction] Supabase error:', error)
+            return { error: error.message }
+        }
+        return { success: true, data }
+    } catch (error: any) {
+        return { error: error.message }
+    }
+}
+
+export async function getVehicleRentalsAction(vehicleId: string) {
+    try {
+        const { data, error } = await supabaseAdmin
+            .from("rentals")
+            .select("*")
+            .eq("vehicle_id", vehicleId)
+            .order("start_date", { ascending: false })
+
+        if (error) {
+            console.error('[getVehicleRentalsAction] Supabase error:', error)
+            return { error: error.message }
+        }
+        return { success: true, data }
+    } catch (error: any) {
+        return { error: error.message }
     }
 }
