@@ -37,7 +37,7 @@ export function BenefitsSection() {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
                     <div className="space-y-8">
                         <div>
-                            <span className="text-[10px] font-black uppercase tracking-[0.4em] text-primary italic">Ventaja Tecnológica</span>
+                            <span className="text-xs font-black uppercase tracking-[0.4em] text-primary italic">Ventaja Tecnológica</span>
                             <h2 className="text-4xl md:text-6xl font-black tracking-tighter uppercase italic leading-none mt-4 text-foreground">
                                 Tu Dashboard <br />
                                 <span className="text-primary italic">tu tranquilidad.</span>
@@ -74,7 +74,7 @@ export function BenefitsSection() {
                                     <feature.icon className="h-7 w-7" />
                                 </div>
                                 <h3 className="text-xs font-black uppercase tracking-widest mb-3 italic leading-tight text-foreground">{feature.title}</h3>
-                                <p className="text-[10px] font-bold text-muted-foreground leading-relaxed uppercase opacity-70 italic tracking-tight">
+                                <p className="text-xs font-bold text-muted-foreground leading-relaxed uppercase opacity-70 italic tracking-tight">
                                     {feature.description}
                                 </p>
                             </motion.div>

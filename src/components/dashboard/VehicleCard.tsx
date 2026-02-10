@@ -76,6 +76,7 @@ export function VehicleCard({ vehicle, onDelete, onManage, onUpdate }: VehicleCa
                     fallbackSrc={generatePlaceholderImage(vehicle.make, vehicle.model)}
                     alt={`${vehicle.make} ${vehicle.model}`}
                     fill
+                    unoptimized
                     className="object-cover transition-transform duration-1000 group-hover:scale-110"
                     sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                 />
@@ -106,7 +107,7 @@ export function VehicleCard({ vehicle, onDelete, onManage, onUpdate }: VehicleCa
                             align="end"
                             className="bg-popover/90 backdrop-blur-2xl border-border rounded-[1.5rem] p-3 min-w-[180px] shadow-2xl animate-in zoom-in-95 duration-200"
                         >
-                            <p className="text-[10px] font-black text-primary uppercase tracking-[0.2em] px-3 pb-2 mb-2 border-b border-border">Cambiar Disponibilidad</p>
+                            <p className="text-xs font-black text-primary uppercase tracking-[0.2em] px-3 pb-2 mb-2 border-b border-border">Cambiar Disponibilidad</p>
                             {statuses.map((s) => (
                                 <DropdownMenuItem
                                     key={s.value}
@@ -131,7 +132,7 @@ export function VehicleCard({ vehicle, onDelete, onManage, onUpdate }: VehicleCa
 
                 {/* Hero Info */}
                 <div className="absolute bottom-6 left-6 sm:left-8 flex flex-col gap-1">
-                    <span className="text-primary text-[10px] sm:text-xs font-black uppercase tracking-[0.3em]">
+                    <span className="text-primary text-xs sm:text-xs font-black uppercase tracking-[0.3em]">
                         {vehicle.year} MODEL • {vehicle.license_plate || "SN"}
                     </span>
                     <h3 className="text-white text-2xl sm:text-3xl font-black italic tracking-tighter uppercase leading-none">
@@ -204,7 +205,7 @@ export function VehicleCard({ vehicle, onDelete, onManage, onUpdate }: VehicleCa
             <div className="px-5 sm:px-6 pb-8 flex gap-2 sm:gap-3">
                 <Button
                     onClick={() => onManage?.(vehicle)}
-                    className="flex-1 h-14 rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground font-black uppercase tracking-widest text-[10px] shadow-xl shadow-primary/20 transition-all hover:scale-[1.02] active:scale-95"
+                    className="flex-1 h-14 rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground font-black uppercase tracking-widest text-xs shadow-xl shadow-primary/20 transition-all hover:scale-[1.02] active:scale-95"
                 >
                     <Settings className="h-4 w-4 mr-2" />
                     Administrar Vehículo

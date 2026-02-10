@@ -30,6 +30,17 @@ import { useRouter } from "next/navigation"
 import { ImageWithFallback } from "@/components/ui/image-with-fallback"
 import { toast } from "sonner"
 import { Calendar } from "@/components/ui/calendar"
+import {
+    updateVehicleAction,
+    deleteVehicleAction,
+    uploadVehicleImageAction,
+    createVehiclePhotoAction,
+    createMileageLogAction,
+    createMaintenanceAction,
+    createRentalAction,
+    createDocumentAction,
+    deleteGeneralAction
+} from "@/app/actions/vehicles"
 import { eachDayOfInterval, isSameDay, parseISO } from "date-fns"
 import { es } from "date-fns/locale"
 import {
@@ -218,19 +229,17 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
 
         setIsSaving(true)
         try {
-            const { error } = await supabase
-                .from("vehicles")
-                .update({ status: newStatus })
-                .eq("id", vehicle.id)
+            const { success, data, error } = await updateVehicleAction(vehicle.id, { status: newStatus })
 
-            if (error) throw error
+            if (error) throw new Error(error)
+            if (!success || !data) throw new Error("No se pudo confirmar la actualización")
 
             setFormData(prev => ({ ...prev, status: newStatus }))
             toast.success(`Estado actualizado a ${newStatus.toUpperCase()}`)
             router.refresh()
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error updating status:", error)
-            toast.error("Error al actualizar el estado")
+            toast.error(`Error al actualizar el estado: ${error.message || 'Error desconocido'}`)
         } finally {
             setIsSaving(false)
         }
@@ -244,6 +253,7 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
             const {
                 id: _id,
                 created_at: _ca,
+                assigned_investor_id: _ai_id,
                 ...dataToUpdate
             } = formData;
 
@@ -254,28 +264,18 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                 updateData.assigned_investor_id = null;
             }
 
-            const { data, error } = await supabase
-                .from("vehicles")
-                .update(updateData)
-                .eq("id", vehicle.id)
-                .select(`
-                    *,
-                    assigned_investor:profiles!assigned_investor_id(id, full_name, email)
-                `)
-                .single()
+            const { success, data, error } = await updateVehicleAction(vehicle.id, updateData)
 
-            if (error) {
-                console.error("Supabase Error:", error);
-                throw error;
-            }
+            if (error) throw new Error(error)
+            if (!success || !data) throw new Error("No se pudo obtener la respuesta del servidor")
 
-            if (onUpdate && data) onUpdate(data as Vehicle)
+            if (onUpdate && data) onUpdate(data as any)
             setIsEditMode(false)
             toast.success("Vehículo actualizado correctamente")
             router.refresh()
         } catch (error: any) {
-            console.error("Error completo:", error)
-            toast.error(error.message || "Error al actualizar los datos")
+            console.error("Error saving vehicle:", error)
+            toast.error(`Error al guardar cambios: ${error.message || 'Error desconocido'}`)
         } finally {
             setIsSaving(false)
         }
@@ -284,12 +284,16 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
     const handleDelete = async () => {
         if (!confirm("¿Eliminar vehículo permanentemente?")) return
         try {
-            await supabase.from("vehicles").delete().eq("id", vehicle.id)
+            const { success, error } = await deleteVehicleAction(vehicle.id)
+            if (error) throw new Error(error)
+            if (!success) throw new Error("No se pudo confirmar la eliminación")
+
             if (onDelete) onDelete(vehicle.id)
             onClose()
             router.refresh()
-        } catch (error) {
-            console.error(error)
+        } catch (error: any) {
+            console.error("Error deleting vehicle:", error)
+            toast.error(`Error al eliminar: ${error.message || 'Error desconocido'}`)
         }
     }
 
@@ -823,11 +827,11 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
     return (
         <>
             <Dialog open={true} onOpenChange={() => onClose()}>
-                <DialogContent className="max-w-[100vw] h-[100vh] w-full p-0 border-0 bg-transparent flex items-center justify-center p-0 md:p-8 animate-in zoom-in-95 duration-300">
-                    <div className="bg-background w-full h-full md:h-[95vh] rounded-none md:rounded-[3rem] shadow-2xl flex flex-col md:flex-row overflow-hidden border border-border shadow-[0_0_100px_rgba(0,0,0,0.4)] relative">
+                <DialogContent className="max-w-[98vw] max-h-[98vh] w-full h-full p-0 border-0 bg-transparent flex items-center justify-center animate-in zoom-in-95 duration-300">
+                    <div className="bg-background w-full h-full max-w-[1800px] max-h-[95vh] rounded-[2rem] shadow-2xl flex flex-col md:flex-row overflow-hidden border border-border shadow-[0_0_100px_rgba(0,0,0,0.4)] relative">
 
                         {/* Left Navigation Sidebar */}
-                        <div className="w-full md:w-[280px] bg-secondary/50 border-r border-border p-6 flex flex-col gap-6 relative flex-shrink-0">
+                        <div className="w-full md:w-[280px] lg:w-[320px] bg-secondary/50 border-r border-border p-4 md:p-6 flex flex-col gap-4 md:gap-6 relative flex-shrink-0 overflow-y-auto">
                             {/* Header Profile - Mobile minimized */}
                             <div className="flex flex-col gap-5 pt-4">
                                 <div className="flex items-center gap-4">
@@ -837,6 +841,9 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                                             src={formData.image_url || "/placeholder-car.svg"}
                                             fallbackSrc="/placeholder-car.svg"
                                             alt="Car Hero"
+                                            width={64}
+                                            height={64}
+                                            unoptimized
                                             className="w-full h-full object-cover rounded-[1.1rem]"
                                         />
                                         {isEditMode && (
@@ -852,7 +859,7 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                                         </h2>
                                         <p className="text-sm font-bold text-primary truncate uppercase">{formData.model}</p>
                                         <div className="flex items-center gap-2 mt-2">
-                                            <Badge className={`rounded-full px-2 py-0 border-0 text-[9px] uppercase font-black italic tracking-widest ${getStatusBadge().className}`}>
+                                            <Badge className={`rounded-full px-2 py-0 border-0 text-xs uppercase font-black italic tracking-widest ${getStatusBadge().className}`}>
                                                 {getStatusBadge().label}
                                             </Badge>
                                         </div>
@@ -861,11 +868,11 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
 
                                 <div className="grid grid-cols-2 gap-3 pb-4 border-b border-border/10">
                                     <div className="p-3 rounded-2xl bg-background border border-border shadow-inner">
-                                        <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground opacity-50 mb-1">Millaje Act.</p>
+                                        <p className="text-xs font-black uppercase tracking-widest text-muted-foreground opacity-50 mb-1">Millaje Act.</p>
                                         <p className="text-xs font-black italic text-foreground tracking-tighter">{(formData.mileage || 0).toLocaleString()} MI</p>
                                     </div>
                                     <div className="p-3 rounded-2xl bg-background border border-border shadow-inner">
-                                        <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground opacity-50 mb-1">Año Mod.</p>
+                                        <p className="text-xs font-black uppercase tracking-widest text-muted-foreground opacity-50 mb-1">Año Mod.</p>
                                         <p className="text-xs font-black italic text-foreground tracking-tighter">{formData.year}</p>
                                     </div>
                                 </div>
@@ -901,7 +908,7 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                                 <Button
                                     variant="outline"
                                     onClick={() => onClose()}
-                                    className="w-full h-12 rounded-2xl border-border hover:bg-background/80 font-black uppercase tracking-widest text-[10px] hidden md:flex"
+                                    className="w-full h-12 rounded-2xl border-border hover:bg-background/80 font-black uppercase tracking-widest text-xs hidden md:flex"
                                 >
                                     <X className="h-4 w-4 mr-2" /> Salir del Panel
                                 </Button>
@@ -931,7 +938,7 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                                         <DropdownMenuTrigger asChild>
                                             <Button
                                                 variant="ghost"
-                                                className="h-10 px-4 rounded-xl bg-secondary/50 border border-border/30 hover:border-primary/40 font-black uppercase text-[10px] tracking-widest flex items-center gap-2 group"
+                                                className="h-10 px-4 rounded-xl bg-secondary/50 border border-border/30 hover:border-primary/40 font-black uppercase text-xs tracking-widest flex items-center gap-2 group"
                                             >
                                                 <div className={cn("h-2 w-2 rounded-full", getStatusBadge().className)} />
                                                 {getStatusBadge().label}
@@ -943,7 +950,7 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                                                 <DropdownMenuItem
                                                     key={s}
                                                     onClick={() => handleQuickStatusUpdate(s as Vehicle["status"])}
-                                                    className="rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest cursor-pointer hover:bg-primary/10 hover:text-primary transition-all mb-1 last:mb-0"
+                                                    className="rounded-xl px-4 py-3 text-xs font-black uppercase tracking-widest cursor-pointer hover:bg-primary/10 hover:text-primary transition-all mb-1 last:mb-0"
                                                 >
                                                     <div className="flex items-center gap-3">
                                                         <div className={cn("h-2 w-2 rounded-full",
@@ -962,7 +969,7 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                                         <Button
                                             onClick={isEditMode ? handleSave : () => setIsEditMode(true)}
                                             className={cn(
-                                                "h-10 px-6 rounded-xl font-black uppercase text-[10px] tracking-widest shadow-xl transition-all hover:scale-105 active:scale-95",
+                                                "h-10 px-6 rounded-xl font-black uppercase text-xs tracking-widest shadow-xl transition-all hover:scale-105 active:scale-95",
                                                 isEditMode ? "bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/20" : "bg-primary shadow-primary/20"
                                             )}
                                         >
@@ -974,45 +981,45 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                             </div>
 
                             {/* Scrollable Area Content */}
-                            <div className="flex-1 overflow-y-auto p-6 md:p-10 custom-scrollbar focus-visible:outline-none">
+                            <div className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 custom-scrollbar focus-visible:outline-none">
                                 <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full">
                                     <TabsContent value="general" className="m-0 focus-visible:outline-none">
-                                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+                                        <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 lg:gap-8">
                                             {/* Financial Glance */}
-                                            <div className="lg:col-span-8 space-y-10">
-                                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                                                    <div className="glass-card p-6 border-emerald-500/10 bg-gradient-to-br from-emerald-500/[0.03] to-transparent relative overflow-hidden group">
+                                            <div className="xl:col-span-8 space-y-6 lg:space-y-8">
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
+                                                    <div className="glass-card p-5 lg:p-6 border-emerald-500/10 bg-gradient-to-br from-emerald-500/[0.03] to-transparent relative overflow-hidden group">
                                                         <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
                                                             <TrendingUp className="h-16 w-16 text-emerald-500" />
                                                         </div>
-                                                        <p className="text-[10px] font-black uppercase tracking-widest text-emerald-500/60 mb-1">ROI Proyectado (ANUAL)</p>
-                                                        <p className="text-4xl font-black italic tracking-tighter text-emerald-500 leading-none">{roi}%</p>
+                                                        <p className="text-xs font-black uppercase tracking-widest text-emerald-500/60 mb-1">ROI Proyectado (ANUAL)</p>
+                                                        <p className="text-3xl lg:text-4xl font-black italic tracking-tighter text-emerald-500 leading-none">{roi}%</p>
                                                         <div className="mt-4 flex items-center gap-2">
                                                             <div className="h-1 w-full bg-emerald-500/10 rounded-full overflow-hidden">
                                                                 <div className="h-full bg-emerald-500" style={{ width: `${roi}%` }} />
                                                             </div>
                                                         </div>
                                                     </div>
-                                                    <div className="glass-card p-6 border-blue-500/10 bg-gradient-to-br from-blue-500/[0.03] to-transparent relative overflow-hidden group">
+                                                    <div className="glass-card p-5 lg:p-6 border-blue-500/10 bg-gradient-to-br from-blue-500/[0.03] to-transparent relative overflow-hidden group">
                                                         <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
                                                             <Activity className="h-16 w-16 text-blue-500" />
                                                         </div>
-                                                        <p className="text-[10px] font-black uppercase tracking-widest text-blue-500/60 mb-1">Precio Compra</p>
-                                                        <p className="text-3xl font-black italic tracking-tighter text-blue-500 leading-none">${formData.purchase_price?.toLocaleString() || '0'}</p>
-                                                        <p className="text-[9px] font-bold text-muted-foreground mt-2 uppercase">Inversión Inicial Asset</p>
+                                                        <p className="text-xs font-black uppercase tracking-widest text-blue-500/60 mb-1">Precio Compra</p>
+                                                        <p className="text-2xl lg:text-3xl font-black italic tracking-tighter text-blue-500 leading-none">${formData.purchase_price?.toLocaleString() || '0'}</p>
+                                                        <p className="text-xs font-bold text-muted-foreground mt-2 uppercase">Inversión Inicial Asset</p>
                                                     </div>
                                                 </div>
 
                                                 <div className="space-y-6">
-                                                    <h4 className="text-[11px] font-black uppercase tracking-[0.3em] text-primary flex items-center gap-3">
+                                                    <h4 className="text-xs font-black uppercase tracking-[0.3em] text-primary flex items-center gap-3">
                                                         <div className="h-2 w-10 bg-primary/20 rounded-full" />
                                                         Especificaciones del Activo
                                                     </h4>
-                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
                                                         <div className="space-y-6 p-8 rounded-[2rem] bg-secondary/30 border border-border/40">
                                                             <div className="grid grid-cols-1 gap-6">
                                                                 <div className="space-y-3">
-                                                                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Marca / Fabricante</Label>
+                                                                    <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground/60">Marca / Fabricante</Label>
                                                                     <div className="relative group">
                                                                         <div className="absolute left-4 top-1/2 -translate-y-1/2 text-primary opacity-40 group-focus-within:opacity-100 transition-opacity">
                                                                             <CarFront className="h-4 w-4" />
@@ -1026,7 +1033,7 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                                                                     </div>
                                                                 </div>
                                                                 <div className="space-y-3">
-                                                                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Línea / Modelo</Label>
+                                                                    <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground/60">Línea / Modelo</Label>
                                                                     <Input
                                                                         disabled={!isEditMode}
                                                                         value={formData.model}
@@ -1036,7 +1043,7 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                                                                 </div>
                                                                 <div className="grid grid-cols-2 gap-6">
                                                                     <div className="space-y-3">
-                                                                        <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Placa (Plate)</Label>
+                                                                        <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground/60">Placa (Plate)</Label>
                                                                         <Input
                                                                             disabled={!isEditMode}
                                                                             value={formData.license_plate}
@@ -1045,7 +1052,7 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                                                                         />
                                                                     </div>
                                                                     <div className="space-y-3">
-                                                                        <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">ID Inversor</Label>
+                                                                        <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground/60">ID Inversor</Label>
                                                                         {isEditMode ? (
                                                                             <Select
                                                                                 value={formData.assigned_investor_id}
@@ -1055,9 +1062,9 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                                                                                     <SelectValue />
                                                                                 </SelectTrigger>
                                                                                 <SelectContent className="z-[350] bg-popover/95 border-border shadow-2xl rounded-2xl p-2">
-                                                                                    <SelectItem value="none" className="font-bold uppercase text-[10px] tracking-widest">Sin asignar Socio</SelectItem>
+                                                                                    <SelectItem value="none" className="font-bold uppercase text-xs tracking-widest">Sin asignar Socio</SelectItem>
                                                                                     {investors.map((inv) => (
-                                                                                        <SelectItem key={inv.id} value={inv.id} className="font-bold uppercase text-[10px] tracking-widest">
+                                                                                        <SelectItem key={inv.id} value={inv.id} className="font-bold uppercase text-xs tracking-widest">
                                                                                             {inv.full_name || inv.email}
                                                                                         </SelectItem>
                                                                                     ))}
@@ -1076,7 +1083,7 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                                                         <div className="space-y-6 pt-2">
                                                             <div className="grid grid-cols-2 gap-6">
                                                                 <div className="space-y-3">
-                                                                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Año Fabricación</Label>
+                                                                    <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground/60">Año Fabricación</Label>
                                                                     <Input
                                                                         type="number"
                                                                         disabled={!isEditMode}
@@ -1086,7 +1093,7 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                                                                     />
                                                                 </div>
                                                                 <div className="space-y-3">
-                                                                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Millaje Actual</Label>
+                                                                    <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground/60">Millaje Actual</Label>
                                                                     <div className="relative">
                                                                         <Input
                                                                             type="number"
@@ -1095,13 +1102,13 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                                                                             onChange={(e) => setFormData({ ...formData, mileage: parseInt(e.target.value) })}
                                                                             className="h-12 bg-secondary/20 border-border rounded-xl font-black italic text-lg tracking-tighter pr-12"
                                                                         />
-                                                                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[9px] font-black text-muted-foreground uppercase opacity-40">MI</span>
+                                                                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-black text-muted-foreground uppercase opacity-40">MI</span>
                                                                     </div>
                                                                 </div>
                                                             </div>
 
                                                             <div className="space-y-3">
-                                                                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Número VIN (Chasis)</Label>
+                                                                <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground/60">Número VIN (Chasis)</Label>
                                                                 <div className="relative group">
                                                                     <div className="absolute left-4 top-1/2 -translate-y-1/2 text-primary opacity-40 group-focus-within:opacity-100 transition-opacity">
                                                                         <FileText className="h-4 w-4" />
@@ -1116,7 +1123,7 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                                                             </div>
 
                                                             <div className="space-y-3">
-                                                                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Ubicación Estacionamiento</Label>
+                                                                <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground/60">Ubicación Estacionamiento</Label>
                                                                 <div className="relative group">
                                                                     <div className="absolute left-4 top-1/2 -translate-y-1/2 text-primary opacity-40 group-focus-within:opacity-100 transition-opacity">
                                                                         <MapPin className="h-4 w-4" />
@@ -1168,7 +1175,7 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                                             {isLoadingData ? (
                                                 <div className="flex flex-col items-center justify-center py-20 gap-4">
                                                     <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                                                    <p className="text-[10px] font-black uppercase tracking-widest animate-pulse">Revelando boveda...</p>
+                                                    <p className="text-xs font-black uppercase tracking-widest animate-pulse">Revelando boveda...</p>
                                                 </div>
                                             ) : photos.length === 0 ? (
                                                 <div className="text-center py-24 glass-card border-dashed border-primary/20 bg-primary/2 group hover:bg-primary/5 transition-colors border-border/40">
@@ -1180,7 +1187,7 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                                                     <Button
                                                         variant="outline"
                                                         onClick={() => document.getElementById('photo-upload-tab')?.click()}
-                                                        className="rounded-xl font-black uppercase text-[10px] tracking-widest border-primary/20 hover:bg-primary hover:text-white h-11 px-8"
+                                                        className="rounded-xl font-black uppercase text-xs tracking-widest border-primary/20 hover:bg-primary hover:text-white h-11 px-8"
                                                     >
                                                         Capturar Primera Imagen
                                                     </Button>
@@ -1261,11 +1268,11 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                                                                 </div>
                                                                 <div>
                                                                     <h4 className="font-black italic uppercase tracking-tighter text-sm">Curva de Uso</h4>
-                                                                    <p className="text-[9px] font-bold text-muted-foreground uppercase opacity-60">Últimas 10 lecturas certificadas</p>
+                                                                    <p className="text-xs font-bold text-muted-foreground uppercase opacity-60">Últimas 10 lecturas certificadas</p>
                                                                 </div>
                                                             </div>
                                                             <div className="bg-background border border-border px-4 py-2 rounded-xl">
-                                                                <span className="text-[10px] font-black uppercase text-primary">Consumo Promedio: <span className="text-foreground">{(mileageHistory.length > 1 ? (Math.max(...mileageHistory.map(m => m.mileage)) - Math.min(...mileageHistory.map(m => m.mileage))) / (mileageHistory.length - 1) : 0).toFixed(0)} MI/Mes</span></span>
+                                                                <span className="text-xs font-black uppercase text-primary">Consumo Promedio: <span className="text-foreground">{(mileageHistory.length > 1 ? (Math.max(...mileageHistory.map(m => m.mileage)) - Math.min(...mileageHistory.map(m => m.mileage))) / (mileageHistory.length - 1) : 0).toFixed(0)} MI/Mes</span></span>
                                                             </div>
                                                         </div>
 
@@ -1297,7 +1304,7 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                                                                                 if (active && payload && payload.length) {
                                                                                     return (
                                                                                         <div className="bg-slate-900 border border-primary/20 p-3 rounded-xl shadow-2xl">
-                                                                                            <p className="text-[10px] font-black uppercase text-primary mb-1">Lectura Certificada</p>
+                                                                                            <p className="text-xs font-black uppercase text-primary mb-1">Lectura Certificada</p>
                                                                                             <p className="text-xl font-black italic text-white tracking-tighter">{payload[0].value?.toLocaleString()} MI</p>
                                                                                             <p className="text-[8px] font-bold text-slate-500 mt-1">{new Date(payload[0].payload.date).toLocaleDateString()}</p>
                                                                                         </div>
@@ -1320,7 +1327,7 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                                                         ) : (
                                                             <div className="flex flex-col items-center justify-center h-64 gap-3 bg-secondary/10 rounded-2xl border border-dashed border-border">
                                                                 <TrendingUp className="h-8 w-8 opacity-10" />
-                                                                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Datos insuficientes para graficar</p>
+                                                                <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">Datos insuficientes para graficar</p>
                                                             </div>
                                                         )}
                                                     </div>
@@ -1328,14 +1335,14 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
 
                                                 <div className="md:col-span-12 lg:col-span-4 space-y-6">
                                                     <div className="flex items-center justify-between px-2">
-                                                        <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Historial Reciente</h4>
+                                                        <h4 className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground">Historial Reciente</h4>
                                                         <div className="h-1 w-8 bg-primary/20 rounded-full"></div>
                                                     </div>
 
                                                     <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
                                                         {mileageHistory.length === 0 ? (
                                                             <div className="p-8 text-center bg-secondary/5 rounded-2xl border border-dashed border-border">
-                                                                <p className="text-[10px] font-black uppercase text-muted-foreground opacity-40">Sin lecturas previas</p>
+                                                                <p className="text-xs font-black uppercase text-muted-foreground opacity-40">Sin lecturas previas</p>
                                                             </div>
                                                         ) : (
                                                             mileageHistory.map((log) => (
@@ -1346,7 +1353,7 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                                                                         </div>
                                                                         <div>
                                                                             <p className="text-sm font-black italic tracking-tight">{log.mileage.toLocaleString()} MI</p>
-                                                                            <p className="text-[9px] font-black text-muted-foreground uppercase opacity-60">Verified: {new Date(log.date).toLocaleDateString()}</p>
+                                                                            <p className="text-xs font-black text-muted-foreground uppercase opacity-60">Verified: {new Date(log.date).toLocaleDateString()}</p>
                                                                         </div>
                                                                     </div>
                                                                     <div className="flex flex-col items-end gap-1">
@@ -1382,7 +1389,7 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                                             {isLoadingData ? (
                                                 <div className="flex flex-col items-center justify-center py-20 gap-4">
                                                     <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                                                    <p className="text-[10px] font-black uppercase tracking-widest animate-pulse">Consultando historial...</p>
+                                                    <p className="text-xs font-black uppercase tracking-widest animate-pulse">Consultando historial...</p>
                                                 </div>
                                             ) : maintenanceHistory.length === 0 ? (
                                                 <div className="text-center py-24 glass-card border-dashed border-primary/20 bg-primary/2 group hover:bg-primary/5 transition-colors border-border/40">
@@ -1394,7 +1401,7 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                                                     <Button
                                                         variant="outline"
                                                         onClick={() => setIsMaintenanceDialogOpen(true)}
-                                                        className="rounded-xl font-black uppercase text-[10px] tracking-widest border-primary/20 hover:bg-primary hover:text-white h-11 px-8"
+                                                        className="rounded-xl font-black uppercase text-xs tracking-widest border-primary/20 hover:bg-primary hover:text-white h-11 px-8"
                                                     >
                                                         Registrar Servicio
                                                     </Button>
@@ -1404,11 +1411,11 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                                                     <Table>
                                                         <TableHeader className="bg-sidebar-accent/30">
                                                             <TableRow className="hover:bg-transparent border-border/40">
-                                                                <TableHead className="font-bold uppercase text-[10px] tracking-widest py-4">Fecha</TableHead>
-                                                                <TableHead className="font-bold uppercase text-[10px] tracking-widest py-4">Servicio</TableHead>
-                                                                <TableHead className="font-bold uppercase text-[10px] tracking-widest py-4">Kilometraje</TableHead>
-                                                                <TableHead className="font-bold uppercase text-[10px] tracking-widest py-4">Inversión</TableHead>
-                                                                <TableHead className="text-right font-bold uppercase text-[10px] tracking-widest py-4 px-6">Acciones</TableHead>
+                                                                <TableHead className="font-bold uppercase text-xs tracking-widest py-4">Fecha</TableHead>
+                                                                <TableHead className="font-bold uppercase text-xs tracking-widest py-4">Servicio</TableHead>
+                                                                <TableHead className="font-bold uppercase text-xs tracking-widest py-4">Kilometraje</TableHead>
+                                                                <TableHead className="font-bold uppercase text-xs tracking-widest py-4">Inversión</TableHead>
+                                                                <TableHead className="text-right font-bold uppercase text-xs tracking-widest py-4 px-6">Acciones</TableHead>
                                                             </TableRow>
                                                         </TableHeader>
                                                         <TableBody>
@@ -1422,7 +1429,7 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                                                                             <span className="font-black italic text-sm tracking-tight group-hover:text-primary transition-colors uppercase">
                                                                                 {record.service_type}
                                                                             </span>
-                                                                            <span className="text-[10px] font-bold text-muted-foreground tracking-widest opacity-60 truncate max-w-[200px]">
+                                                                            <span className="text-xs font-bold text-muted-foreground tracking-widest opacity-60 truncate max-w-[200px]">
                                                                                 {record.display_notes || record.notes || "Servicio estándar sin incidencias"}
                                                                             </span>
                                                                         </div>
@@ -1433,7 +1440,7 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                                                                                 {record.mileage_at_service?.toLocaleString() || "-"} MI
                                                                             </span>
                                                                             {record.next_service_mileage && (
-                                                                                <span className="text-[9px] font-black text-muted-foreground uppercase tracking-tighter">Next @ {record.next_service_mileage.toLocaleString()}</span>
+                                                                                <span className="text-xs font-black text-muted-foreground uppercase tracking-tighter">Next @ {record.next_service_mileage.toLocaleString()}</span>
                                                                             )}
                                                                         </div>
                                                                     </TableCell>
@@ -1470,12 +1477,12 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                                                                                         </DropdownMenuTrigger>
                                                                                         <DropdownMenuContent align="end" className="w-48 bg-popover dark:bg-slate-900 border-primary/20">
                                                                                             <div className="px-3 py-2 border-b border-border/50 mb-1">
-                                                                                                <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Documentos Adjuntos</span>
+                                                                                                <span className="text-xs font-black uppercase tracking-widest text-muted-foreground">Documentos Adjuntos</span>
                                                                                             </div>
                                                                                             {record.receipt_images.map((img, i) => (
                                                                                                 <DropdownMenuItem
                                                                                                     key={i}
-                                                                                                    className="text-[10px] font-bold uppercase tracking-tight py-2 cursor-pointer"
+                                                                                                    className="text-xs font-bold uppercase tracking-tight py-2 cursor-pointer"
                                                                                                     onClick={() => window.open(img, '_blank')}
                                                                                                 >
                                                                                                     <FileText className="h-3 w-3 mr-2 opacity-50" />
@@ -1539,7 +1546,7 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                                                                 modifiersClassNames={{ booked: "bg-primary text-primary-foreground rounded-full" }}
                                                             />
                                                         </div>
-                                                        <div className="mt-8 flex gap-8 text-[10px] font-black uppercase tracking-widest justify-center">
+                                                        <div className="mt-8 flex gap-8 text-xs font-black uppercase tracking-widest justify-center">
                                                             <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-primary shadow-[0_0_8px_oklch(0.8_0.18_185)]"></div> Ocupado</div>
                                                             <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-border/40"></div> Disponible</div>
                                                         </div>
@@ -1550,13 +1557,13 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                                                 <div className="md:col-span-12 lg:col-span-7 space-y-6">
                                                     <div className="flex items-center gap-2 px-2">
                                                         <div className="h-1 w-6 bg-primary rounded-full"></div>
-                                                        <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground italic">Historial Operativo</h4>
+                                                        <h4 className="text-xs font-black uppercase tracking-[0.3em] text-muted-foreground italic">Historial Operativo</h4>
                                                     </div>
 
                                                     {isLoadingData ? (
                                                         <div className="flex flex-col items-center justify-center py-20 gap-4">
                                                             <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                                                            <p className="text-[10px] font-black uppercase tracking-widest animate-pulse">Consultando Calendario...</p>
+                                                            <p className="text-xs font-black uppercase tracking-widest animate-pulse">Consultando Calendario...</p>
                                                         </div>
                                                     ) : rentalHistory.length === 0 ? (
                                                         <div className="text-center py-24 glass-card border-dashed border-primary/20 bg-primary/2 group hover:bg-primary/5 transition-colors border-border/40">
@@ -1568,7 +1575,7 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                                                             <Button
                                                                 variant="outline"
                                                                 onClick={() => setIsRentalDialogOpen(true)}
-                                                                className="rounded-xl font-black uppercase text-[10px] tracking-widest border-primary/20 hover:bg-primary hover:text-white h-11 px-8"
+                                                                className="rounded-xl font-black uppercase text-xs tracking-widest border-primary/20 hover:bg-primary hover:text-white h-11 px-8"
                                                             >
                                                                 Registrar Evento
                                                             </Button>
@@ -1578,10 +1585,10 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                                                             <Table>
                                                                 <TableHeader className="bg-sidebar-accent/30">
                                                                     <TableRow className="hover:bg-transparent border-border/40">
-                                                                        <TableHead className="font-bold uppercase text-[10px] tracking-widest py-4">Cliente</TableHead>
-                                                                        <TableHead className="font-bold uppercase text-[10px] tracking-widest py-4">Período</TableHead>
-                                                                        <TableHead className="font-bold uppercase text-[10px] tracking-widest py-4">Estado</TableHead>
-                                                                        <TableHead className="text-right font-bold uppercase text-[10px] tracking-widest py-4 px-6">Ingreso</TableHead>
+                                                                        <TableHead className="font-bold uppercase text-xs tracking-widest py-4">Cliente</TableHead>
+                                                                        <TableHead className="font-bold uppercase text-xs tracking-widest py-4">Período</TableHead>
+                                                                        <TableHead className="font-bold uppercase text-xs tracking-widest py-4">Estado</TableHead>
+                                                                        <TableHead className="text-right font-bold uppercase text-xs tracking-widest py-4 px-6">Ingreso</TableHead>
                                                                     </TableRow>
                                                                 </TableHeader>
                                                                 <TableBody>
@@ -1592,7 +1599,7 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                                                                                     <span className="font-black italic text-sm tracking-tight group-hover:text-primary transition-colors uppercase">
                                                                                         {rental.customer_name || 'Generic Client'}
                                                                                     </span>
-                                                                                    <span className="text-[9px] font-bold text-muted-foreground tracking-widest opacity-60 uppercase">
+                                                                                    <span className="text-xs font-bold text-muted-foreground tracking-widest opacity-60 uppercase">
                                                                                         Platform: {rental.platform || 'Direct'}
                                                                                     </span>
                                                                                 </div>
@@ -1602,14 +1609,14 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                                                                                     <span className="text-xs font-bold uppercase opacity-80">
                                                                                         {new Date(rental.start_date).toLocaleDateString()}
                                                                                     </span>
-                                                                                    <span className="text-[9px] font-bold text-primary/60 italic tracking-tighter uppercase whitespace-nowrap">
+                                                                                    <span className="text-xs font-bold text-primary/60 italic tracking-tighter uppercase whitespace-nowrap">
                                                                                         → {new Date(rental.end_date).toLocaleDateString()}
                                                                                     </span>
                                                                                 </div>
                                                                             </TableCell>
                                                                             <TableCell className="py-5">
                                                                                 <Badge className={`
-                                                                                uppercase text-[9px] font-black tracking-widest px-2 py-0.5 rounded-md shadow-sm border-0
+                                                                                uppercase text-xs font-black tracking-widest px-2 py-0.5 rounded-md shadow-sm border-0
                                                                                 ${rental.status === 'confirmed' ? 'bg-emerald-500/10 text-emerald-500' : ''}
                                                                                 ${rental.status === 'completed' ? 'bg-primary/10 text-primary' : ''}
                                                                                 ${rental.status === 'cancelled' ? 'bg-slate-500/10 text-slate-500' : ''}
@@ -1675,7 +1682,7 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                                                     <p className="text-muted-foreground max-w-sm mx-auto font-medium mb-12 text-sm">No se han sincronizado registros legales. Almacena seguros, títulos o contratos en este espacio seguro.</p>
                                                     <Button
                                                         onClick={() => document.getElementById('document-upload')?.click()}
-                                                        className="h-12 px-10 rounded-xl font-black tracking-widest text-[10px] uppercase shadow-2xl shadow-primary/20"
+                                                        className="h-12 px-10 rounded-xl font-black tracking-widest text-xs uppercase shadow-2xl shadow-primary/20"
                                                     >
                                                         Iniciar Sincronización
                                                     </Button>
@@ -1702,7 +1709,7 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                                                                     {doc.file_url.toLowerCase().endsWith('.pdf') || doc.category?.toLowerCase() === 'pdf' ? (
                                                                         <div className="flex flex-col items-center gap-2">
                                                                             <FileText className="h-12 w-12 opacity-40" />
-                                                                            <span className="text-[10px] font-black uppercase tracking-[0.2em] opacity-40">Vista PDF</span>
+                                                                            <span className="text-xs font-black uppercase tracking-[0.2em] opacity-40">Vista PDF</span>
                                                                         </div>
                                                                     ) : (
                                                                         <img
@@ -1721,7 +1728,7 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                                                                         {doc.title}
                                                                     </h4>
                                                                     <div className="flex items-center gap-2">
-                                                                        <span className="text-[10px] font-bold text-muted-foreground tracking-widest uppercase opacity-60">
+                                                                        <span className="text-xs font-bold text-muted-foreground tracking-widest uppercase opacity-60">
                                                                             {doc.type.replace('_', ' ')}
                                                                         </span>
                                                                         <div className="w-1 h-1 rounded-full bg-border" />
@@ -1980,7 +1987,7 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                                                     toast.warning("Ingrese millaje actual")
                                                 }
                                             }}
-                                            className="h-8 px-4 bg-primary text-white hover:bg-primary/80 rounded-lg font-black uppercase text-[10px] tracking-widest transition-all shadow-lg shadow-primary/20"
+                                            className="h-8 px-4 bg-primary text-white hover:bg-primary/80 rounded-lg font-black uppercase text-xs tracking-widest transition-all shadow-lg shadow-primary/20"
                                         >
                                             +5K MI Sugerido
                                         </Button>
@@ -1999,7 +2006,7 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                                 <Label className="text-[11px] font-black uppercase tracking-widest text-primary">Notas del Servicio</Label>
                                 <Textarea
                                     placeholder="DETALLES TÉCNICOS, MARCAS DE REPUESTOS, DIAGNÓSTICO..."
-                                    className="min-h-[100px] bg-slate-200/50 dark:bg-primary/5 border-primary/20 rounded-xl font-bold text-sm p-4 resize-none focus:bg-primary/10 transition-all uppercase placeholder:text-[10px] placeholder:tracking-widest"
+                                    className="min-h-[100px] bg-slate-200/50 dark:bg-primary/5 border-primary/20 rounded-xl font-bold text-sm p-4 resize-none focus:bg-primary/10 transition-all uppercase placeholder:text-xs placeholder:tracking-widest"
                                     value={maintenanceForm.notes}
                                     onChange={(e) => setMaintenanceForm(prev => ({ ...prev, notes: e.target.value }))}
                                 />
@@ -2026,7 +2033,7 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                                     />
                                     <div className="flex flex-col items-center">
                                         <Upload className="h-6 w-6 text-primary/40 group-hover:text-primary transition-colors mb-2" />
-                                        <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground group-hover:text-primary transition-colors">Click para añadir archivos</span>
+                                        <span className="text-xs font-black uppercase tracking-widest text-muted-foreground group-hover:text-primary transition-colors">Click para añadir archivos</span>
                                     </div>
                                 </div>
 
@@ -2040,7 +2047,7 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                                                         <FileText className="h-4 w-4" />
                                                     </div>
                                                     <div className="flex flex-col overflow-hidden">
-                                                        <span className="text-[10px] font-black uppercase tracking-tighter truncate">{file.name}</span>
+                                                        <span className="text-xs font-black uppercase tracking-tighter truncate">{file.name}</span>
                                                         <span className="text-[8px] text-emerald-500 font-bold uppercase tracking-widest">Listo para subir</span>
                                                     </div>
                                                 </div>
@@ -2067,14 +2074,14 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                             <Button
                                 variant="ghost"
                                 onClick={() => setIsMaintenanceDialogOpen(false)}
-                                className="flex-1 h-14 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-primary/5"
+                                className="flex-1 h-14 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-primary/5"
                             >
                                 Cancelar
                             </Button>
                             <Button
                                 onClick={handleSaveMaintenance}
                                 disabled={isSaving}
-                                className="flex-[2] h-14 rounded-2xl bg-primary text-primary-foreground font-black uppercase text-[10px] tracking-widest shadow-2xl shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                                className="flex-[2] h-14 rounded-2xl bg-primary text-primary-foreground font-black uppercase text-xs tracking-widest shadow-2xl shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
                             >
                                 {isSaving ? (
                                     <Loader2 className="h-5 w-5 animate-spin" />

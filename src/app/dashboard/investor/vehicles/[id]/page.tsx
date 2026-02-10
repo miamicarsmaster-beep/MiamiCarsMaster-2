@@ -222,7 +222,7 @@ export default function InvestorVehicleDetailPage() {
                 <Button
                     variant="ghost"
                     onClick={() => router.push("/dashboard/investor")}
-                    className="mb-6 rounded-xl font-bold uppercase text-[10px] tracking-[0.2em] group hover:bg-primary/10 hover:text-primary transition-all p-0 px-4"
+                    className="mb-6 rounded-xl font-bold uppercase text-xs tracking-[0.2em] group hover:bg-primary/10 hover:text-primary transition-all p-0 px-4"
                 >
                     <ArrowLeft className="h-4 w-4 mr-2 group-hover:-translate-x-1 transition-transform" />
                     Volver al Dashboard
@@ -234,12 +234,12 @@ export default function InvestorVehicleDetailPage() {
                             <h1 className="text-4xl font-black italic tracking-tighter uppercase leading-none">
                                 {vehicle.make} <span className="text-primary">{vehicle.model}</span>
                             </h1>
-                            <Badge className={cn("px-4 py-1.5 text-[10px] font-black uppercase tracking-widest border-0 flex items-center gap-2", getStatusColor(vehicle.status).bg, getStatusColor(vehicle.status).text)}>
+                            <Badge className={cn("px-4 py-1.5 text-xs font-black uppercase tracking-widest border-0 flex items-center gap-2", getStatusColor(vehicle.status).bg, getStatusColor(vehicle.status).text)}>
                                 <div className={cn("h-2 w-2 rounded-full animate-pulse", getStatusColor(vehicle.status).dot)} />
                                 {getStatusColor(vehicle.status).label}
                             </Badge>
                         </div>
-                        <div className="flex flex-wrap items-center gap-6 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                        <div className="flex flex-wrap items-center gap-6 text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">
                             <span className="flex items-center gap-2">
                                 <Clock className="h-3 w-3 text-primary/50" />
                                 Modelo {vehicle.year}
@@ -256,7 +256,7 @@ export default function InvestorVehicleDetailPage() {
 
                     <div className="flex items-center gap-4">
                         <div className="text-right hidden sm:block">
-                            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">Valor Estimado</p>
+                            <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1">Valor Estimado</p>
                             <p className="text-2xl font-black italic tracking-tighter">${vehicle.purchase_price?.toLocaleString() || "0"}</p>
                         </div>
                         <div className="h-12 w-[1px] bg-border/50 mx-2" />
@@ -274,7 +274,7 @@ export default function InvestorVehicleDetailPage() {
                         <TabsTrigger
                             key={tab}
                             value={tab}
-                            className="bg-transparent data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none h-14 px-0 font-bold uppercase text-[10px] tracking-[0.2em] transition-all"
+                            className="bg-transparent data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none h-14 px-0 font-bold uppercase text-xs tracking-[0.2em] transition-all"
                         >
                             {tab === "overview" && "Resumen Ejecutivo"}
                             {tab === "photos" && "Galería HD"}
@@ -299,11 +299,11 @@ export default function InvestorVehicleDetailPage() {
                             />
                             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
                             <div className="absolute bottom-10 left-10 text-white">
-                                <Badge className="mb-4 bg-primary text-white border-0 font-black uppercase text-[10px] tracking-widest px-4 py-1.5">Destacado de Flota</Badge>
+                                <Badge className="mb-4 bg-primary text-white border-0 font-black uppercase text-xs tracking-widest px-4 py-1.5">Destacado de Flota</Badge>
                                 <h3 className="text-4xl font-black uppercase italic tracking-tighter leading-none mb-2">
                                     {vehicle.make} <span className="text-primary">{vehicle.model.split(' ')[0]}</span>
                                 </h3>
-                                <p className="text-[10px] font-bold uppercase tracking-[0.3em] opacity-60">Ficha Técnica Verificada {vehicle.year}</p>
+                                <p className="text-xs font-bold uppercase tracking-[0.3em] opacity-60">Ficha Técnica Verificada {vehicle.year}</p>
                             </div>
                         </div>
 
@@ -317,7 +317,7 @@ export default function InvestorVehicleDetailPage() {
                                             <TrendingUp className="h-7 w-7" />
                                         </div>
                                         <div>
-                                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-1">Tarifa Sugerida</p>
+                                            <p className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground mb-1">Tarifa Sugerida</p>
                                             <p className="text-3xl font-black italic tracking-tighter">${vehicle.daily_rental_price || 0}<span className="text-sm font-bold text-muted-foreground not-italic ml-1">/ día</span></p>
                                         </div>
                                     </div>
@@ -329,7 +329,7 @@ export default function InvestorVehicleDetailPage() {
                                             <Gauge className="h-7 w-7" />
                                         </div>
                                         <div>
-                                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-1">Uso Acumulado</p>
+                                            <p className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground mb-1">Uso Acumulado</p>
                                             <p className="text-3xl font-black italic tracking-tighter">{vehicle.mileage?.toLocaleString() || 0}<span className="text-sm font-bold text-muted-foreground not-italic ml-1">mi</span></p>
                                         </div>
                                     </div>
@@ -342,7 +342,7 @@ export default function InvestorVehicleDetailPage() {
                                             <TrendingUp className="h-8 w-8" />
                                         </div>
                                         <div>
-                                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-1">Rentabilidad Proyectada (ROI)</p>
+                                            <p className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground mb-1">Rentabilidad Proyectada (ROI)</p>
                                             <p className="text-4xl font-black italic tracking-tighter text-emerald-500">
                                                 {(() => {
                                                     const gross = (vehicle.daily_rental_price || 0) * (vehicle.expected_occupancy_days || 240);
@@ -404,7 +404,7 @@ export default function InvestorVehicleDetailPage() {
                                         { label: "Año Fab.", value: vehicle.year },
                                     ].map((spec, i) => (
                                         <div key={i} className="flex justify-between items-center py-3 border-b border-border/30 last:border-0 group">
-                                            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{spec.label}</span>
+                                            <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{spec.label}</span>
                                             <span className={cn("text-xs font-black uppercase tracking-tight group-hover:text-primary transition-colors", spec.mono && "font-mono tracking-normal")}>
                                                 {spec.value}
                                             </span>
@@ -458,11 +458,11 @@ export default function InvestorVehicleDetailPage() {
                                     <Wrench className="h-7 w-7 text-orange-500" />
                                     Expediente de <span className="text-primary">Mantenimiento</span>
                                 </h3>
-                                <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-muted-foreground">Historial técnico completo y registros de servicio</p>
+                                <p className="text-xs font-bold uppercase tracking-[0.3em] text-muted-foreground">Historial técnico completo y registros de servicio</p>
                             </div>
                             <div className="flex items-center gap-4 p-4 bg-sidebar-accent/30 rounded-2xl border border-border/50">
                                 <div className="text-right">
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">Inversión Total</p>
+                                    <p className="text-xs font-black uppercase tracking-widest text-muted-foreground mb-1">Inversión Total</p>
                                     <p className="text-2xl font-black italic tracking-tighter text-orange-500">
                                         ${maintenanceHistory.reduce((sum, h) => sum + (h.cost || 0), 0).toLocaleString()}
                                     </p>
@@ -488,7 +488,7 @@ export default function InvestorVehicleDetailPage() {
                                                         <Badge className={cn("rounded-lg px-3 py-1 text-[8px] font-black uppercase tracking-widest border-0", service.status === 'completed' ? "bg-emerald-500/10 text-emerald-500" : "bg-orange-500/10 text-orange-500")}>
                                                             {service.status === 'completed' ? 'Completado' : 'Pendiente'}
                                                         </Badge>
-                                                        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                                                        <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
                                                             {new Date(service.date).toLocaleDateString('es-ES', { month: 'short', day: 'numeric', year: 'numeric' })}
                                                         </span>
                                                     </div>
@@ -496,7 +496,7 @@ export default function InvestorVehicleDetailPage() {
                                                 </div>
                                                 <div className="text-right">
                                                     <p className="text-xl font-black italic tracking-tighter text-foreground">${service.cost?.toLocaleString() || "0"}</p>
-                                                    <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Costo Total</p>
+                                                    <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Costo Total</p>
                                                 </div>
                                             </div>
 
@@ -566,11 +566,11 @@ export default function InvestorVehicleDetailPage() {
                                 <div className="flex items-center gap-6 p-6 bg-muted/40 rounded-2xl border border-border/50">
                                     <div className="flex items-center gap-2">
                                         <div className="h-3 w-3 rounded-full bg-emerald-500" />
-                                        <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-500">Alquilado</span>
+                                        <span className="text-xs font-bold uppercase tracking-widest text-emerald-500">Alquilado</span>
                                     </div>
                                     <div className="flex items-center gap-2">
                                         <div className="h-3 w-3 rounded-full bg-slate-700" />
-                                        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Disponible</span>
+                                        <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Disponible</span>
                                     </div>
                                 </div>
                             </div>
@@ -589,7 +589,7 @@ export default function InvestorVehicleDetailPage() {
                                         <div key={rental.id} className="p-6 bg-slate-50/50 dark:bg-slate-800/40 border border-border/50 rounded-2xl hover:border-primary/30 transition-all group">
                                             <div className="flex justify-between items-center mb-4">
                                                 <div>
-                                                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground mb-1">Cliente</p>
+                                                    <p className="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground mb-1">Cliente</p>
                                                     <h4 className="text-lg font-black uppercase italic tracking-tighter group-hover:text-primary transition-colors">{rental.customer_name}</h4>
                                                 </div>
                                                 <Badge className="rounded-lg px-3 py-1 text-[8px] font-black uppercase tracking-widest bg-emerald-500/10 text-emerald-500 border-0">
@@ -598,19 +598,19 @@ export default function InvestorVehicleDetailPage() {
                                             </div>
                                             <div className="grid grid-cols-2 gap-4">
                                                 <div>
-                                                    <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground mb-1">Período</p>
+                                                    <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1">Período</p>
                                                     <p className="text-xs font-black uppercase tracking-tight text-foreground">
                                                         {new Date(rental.start_date).toLocaleDateString()} - {new Date(rental.end_date).toLocaleDateString()}
                                                     </p>
                                                 </div>
                                                 <div className="text-right">
-                                                    <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground mb-1">Ingreso Total</p>
+                                                    <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1">Ingreso Total</p>
                                                     <p className="text-xl font-black italic tracking-tighter text-emerald-500">${rental.total_amount.toLocaleString()}</p>
                                                 </div>
                                             </div>
                                             <div className="mt-4 pt-4 border-t border-border/30 flex items-center justify-between">
-                                                <span className="text-[9px] font-bold uppercase tracking-[0.3em] text-muted-foreground">Plataforma: {rental.platform}</span>
-                                                <span className="text-[9px] font-black uppercase tracking-widest text-primary italic">Ver Contrato</span>
+                                                <span className="text-xs font-bold uppercase tracking-[0.3em] text-muted-foreground">Plataforma: {rental.platform}</span>
+                                                <span className="text-xs font-black uppercase tracking-widest text-primary italic">Ver Contrato</span>
                                             </div>
                                         </div>
                                     ))}
@@ -683,7 +683,7 @@ export default function InvestorVehicleDetailPage() {
                                                 <Button
                                                     variant="outline"
                                                     size="sm"
-                                                    className="flex-1 rounded-xl font-black uppercase text-[9px] tracking-widest h-9 border-border/50 hover:bg-primary hover:text-white transition-all shadow-lg"
+                                                    className="flex-1 rounded-xl font-black uppercase text-xs tracking-widest h-9 border-border/50 hover:bg-primary hover:text-white transition-all shadow-lg"
                                                     onClick={() => window.open(doc.file_url, '_blank')}
                                                 >
                                                     <Eye className="h-3.5 w-3.5 mr-2" />

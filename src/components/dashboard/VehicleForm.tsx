@@ -23,6 +23,7 @@ import { ImageWithFallback } from "@/components/ui/image-with-fallback"
 import { createClient } from "@/lib/supabase/client"
 import { toast } from "sonner"
 import { Profile } from "@/types/database"
+import { uploadVehicleImageAction } from "@/app/actions/vehicles"
 
 interface VehicleFormProps {
     investors: Profile[]
@@ -50,26 +51,20 @@ export function VehicleForm({ investors }: VehicleFormProps) {
 
         setIsLoading(true)
         try {
-            const fileExt = file.name.split('.').pop()
-            const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
-            const filePath = `vehicles/${fileName}`
+            const formData = new FormData()
+            formData.append('file', file)
 
-            const { error } = await supabase.storage
-                .from('vehicle-images')
-                .upload(filePath, file, { cacheControl: '3600', upsert: false })
+            const { success, publicUrl, error } = await uploadVehicleImageAction(formData)
 
-            if (error) throw error
-
-            const { data: { publicUrl } } = supabase.storage
-                .from('vehicle-images')
-                .getPublicUrl(filePath)
+            if (error) throw new Error(error)
+            if (!success || !publicUrl) throw new Error("No se pudo obtener la URL pública")
 
             form.setValue("image_url", publicUrl, { shouldDirty: true })
             setPreviewUrl(publicUrl)
             toast.success("Imagen subida correctamente")
-        } catch (error) {
+        } catch (error: any) {
             console.error('Upload error:', error)
-            toast.error('Error al subir imagen')
+            toast.error(`Error al subir imagen: ${error.message || 'Error desconocido'}`)
         } finally {
             setIsLoading(false)
         }
@@ -119,6 +114,7 @@ export function VehicleForm({ investors }: VehicleFormProps) {
                                     fallbackSrc={generatePlaceholderImage("Car", "Vehicle")}
                                     alt="Preview"
                                     fill
+                                    unoptimized
                                     className="object-cover"
                                 />
                             </div>
@@ -133,7 +129,7 @@ export function VehicleForm({ investors }: VehicleFormProps) {
                     name="make"
                     render={({ field }) => (
                         <FormItem>
-                            <FormLabel className="text-[10px] font-black uppercase tracking-widest text-foreground/70">Marca *</FormLabel>
+                            <FormLabel className="text-xs font-black uppercase tracking-widest text-foreground/70">Marca *</FormLabel>
                             <FormControl>
                                 <Input {...field} placeholder="Toyota" className="bg-white/5 border-border/60 focus:bg-white/10 transition-all" />
                             </FormControl>
@@ -146,7 +142,7 @@ export function VehicleForm({ investors }: VehicleFormProps) {
                     name="model"
                     render={({ field }) => (
                         <FormItem>
-                            <FormLabel className="text-[10px] font-black uppercase tracking-widest text-foreground/70">Modelo *</FormLabel>
+                            <FormLabel className="text-xs font-black uppercase tracking-widest text-foreground/70">Modelo *</FormLabel>
                             <FormControl>
                                 <Input {...field} placeholder="Corolla" className="bg-white/5 border-border/60 focus:bg-white/10 transition-all" />
                             </FormControl>
@@ -162,7 +158,7 @@ export function VehicleForm({ investors }: VehicleFormProps) {
                     name="year"
                     render={({ field }) => (
                         <FormItem>
-                            <FormLabel className="text-[10px] font-black uppercase tracking-widest text-foreground/70">Año *</FormLabel>
+                            <FormLabel className="text-xs font-black uppercase tracking-widest text-foreground/70">Año *</FormLabel>
                             <FormControl>
                                 <Input {...field} type="number" className="bg-white/5 border-border/60 focus:bg-white/10 transition-all" onChange={e => field.onChange(e.target.valueAsNumber)} />
                             </FormControl>
@@ -175,7 +171,7 @@ export function VehicleForm({ investors }: VehicleFormProps) {
                     name="license_plate"
                     render={({ field }) => (
                         <FormItem>
-                            <FormLabel className="text-[10px] font-black uppercase tracking-widest text-foreground/70">Placa</FormLabel>
+                            <FormLabel className="text-xs font-black uppercase tracking-widest text-foreground/70">Placa</FormLabel>
                             <FormControl>
                                 <Input {...field} placeholder="ABC-123" className="bg-white/5 border-border/60 focus:bg-white/10 transition-all" />
                             </FormControl>
@@ -190,7 +186,7 @@ export function VehicleForm({ investors }: VehicleFormProps) {
                 name="vin"
                 render={({ field }) => (
                     <FormItem>
-                        <FormLabel className="text-[10px] font-black uppercase tracking-widest text-foreground/70">VIN</FormLabel>
+                        <FormLabel className="text-xs font-black uppercase tracking-widest text-foreground/70">VIN</FormLabel>
                         <FormControl>
                             <Input {...field} placeholder="VIN..." className="bg-white/5 border-border/60 focus:bg-white/10 transition-all" />
                         </FormControl>
@@ -205,7 +201,7 @@ export function VehicleForm({ investors }: VehicleFormProps) {
                     name="status"
                     render={({ field }) => (
                         <FormItem>
-                            <FormLabel className="text-[10px] font-black uppercase tracking-widest text-foreground/70">Estado</FormLabel>
+                            <FormLabel className="text-xs font-black uppercase tracking-widest text-foreground/70">Estado</FormLabel>
                             <Select onValueChange={field.onChange} defaultValue={field.value}>
                                 <FormControl>
                                     <SelectTrigger>
@@ -228,7 +224,7 @@ export function VehicleForm({ investors }: VehicleFormProps) {
                     name="assigned_investor_id"
                     render={({ field }) => (
                         <FormItem>
-                            <FormLabel className="text-[10px] font-black uppercase tracking-widest text-foreground/70">Inversor</FormLabel>
+                            <FormLabel className="text-xs font-black uppercase tracking-widest text-foreground/70">Inversor</FormLabel>
                             <Select onValueChange={field.onChange} defaultValue={field.value || "none"}>
                                 <FormControl>
                                     <SelectTrigger>
@@ -256,7 +252,7 @@ export function VehicleForm({ investors }: VehicleFormProps) {
                     name="purchase_price"
                     render={({ field }) => (
                         <FormItem>
-                            <FormLabel className="text-[10px] font-black uppercase tracking-widest text-foreground/70">Precio Compra ($)</FormLabel>
+                            <FormLabel className="text-xs font-black uppercase tracking-widest text-foreground/70">Precio Compra ($)</FormLabel>
                             <FormControl>
                                 <Input {...field} value={field.value ?? ""} type="number" className="bg-white/5 border-border/60 focus:bg-white/10 transition-all font-medium" onChange={e => field.onChange(e.target.valueAsNumber || null)} />
                             </FormControl>
@@ -269,7 +265,7 @@ export function VehicleForm({ investors }: VehicleFormProps) {
                     name="daily_rental_price"
                     render={({ field }) => (
                         <FormItem>
-                            <FormLabel className="text-[10px] font-black uppercase tracking-widest text-foreground/70">Tarifa Diaria ($)</FormLabel>
+                            <FormLabel className="text-xs font-black uppercase tracking-widest text-foreground/70">Tarifa Diaria ($)</FormLabel>
                             <FormControl>
                                 <Input {...field} value={field.value ?? ""} type="number" className="bg-white/5 border-border/60 focus:bg-white/10 transition-all font-medium" onChange={e => field.onChange(e.target.valueAsNumber || null)} />
                             </FormControl>
@@ -283,8 +279,8 @@ export function VehicleForm({ investors }: VehicleFormProps) {
             <div className="mt-4 p-6 rounded-3xl bg-primary/5 border border-primary/10 space-y-6">
                 <div className="flex items-center justify-between">
                     <div className="space-y-1">
-                        <h4 className="text-xs font-black uppercase tracking-tight italic">Configuración <span className="text-primary italic text-[10px]">ROI & FEES</span></h4>
-                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest leading-none">Ajustes de rentabilidad proyectada</p>
+                        <h4 className="text-xs font-black uppercase tracking-tight italic">Configuración <span className="text-primary italic text-xs">ROI & FEES</span></h4>
+                        <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest leading-none">Ajustes de rentabilidad proyectada</p>
                     </div>
                 </div>
 
@@ -294,7 +290,7 @@ export function VehicleForm({ investors }: VehicleFormProps) {
                         name="expected_occupancy_days"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel className="text-[10px] font-black uppercase tracking-widest text-foreground/70">Ocupación Anual (días)</FormLabel>
+                                <FormLabel className="text-xs font-black uppercase tracking-widest text-foreground/70">Ocupación Anual (días)</FormLabel>
                                 <FormControl>
                                     <Input {...field} value={field.value ?? 240} type="number" className="bg-white/10 border-border/30 focus:bg-white/20 transition-all font-medium h-12 rounded-xl" onChange={e => field.onChange(e.target.valueAsNumber || 240)} />
                                 </FormControl>
@@ -307,7 +303,7 @@ export function VehicleForm({ investors }: VehicleFormProps) {
                         name="apply_management_fee"
                         render={({ field }) => (
                             <FormItem className="flex flex-col justify-end">
-                                <FormLabel className="text-[10px] font-black uppercase tracking-widest text-foreground/70 mb-2">Fee de Gestión</FormLabel>
+                                <FormLabel className="text-xs font-black uppercase tracking-widest text-foreground/70 mb-2">Fee de Gestión</FormLabel>
                                 <FormControl>
                                     <div className="flex items-center gap-3 h-12">
                                         <button
@@ -317,7 +313,7 @@ export function VehicleForm({ investors }: VehicleFormProps) {
                                         >
                                             <div className={`h-4 w-4 rounded-full bg-white transition-all duration-300 ${field.value ? 'translate-x-6' : 'translate-x-0'}`} />
                                         </button>
-                                        <span className="text-[10px] font-black uppercase tracking-widest opacity-60">
+                                        <span className="text-xs font-black uppercase tracking-widest opacity-60">
                                             {field.value ? 'HABILITADO' : 'DESACTIVADO'}
                                         </span>
                                     </div>
@@ -335,19 +331,19 @@ export function VehicleForm({ investors }: VehicleFormProps) {
                             name="management_fee_type"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel className="text-[10px] font-black uppercase tracking-widest text-foreground/70">Tipo de Fee</FormLabel>
+                                    <FormLabel className="text-xs font-black uppercase tracking-widest text-foreground/70">Tipo de Fee</FormLabel>
                                     <div className="flex p-1 bg-slate-900/40 rounded-xl border border-white/5 h-12">
                                         <button
                                             type="button"
                                             onClick={() => field.onChange('percentage')}
-                                            className={`flex-1 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${field.value === 'percentage' ? 'bg-emerald-500 text-black shadow-lg shadow-emerald-500/10' : 'text-muted-foreground'}`}
+                                            className={`flex-1 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${field.value === 'percentage' ? 'bg-emerald-500 text-black shadow-lg shadow-emerald-500/10' : 'text-muted-foreground'}`}
                                         >
                                             %
                                         </button>
                                         <button
                                             type="button"
                                             onClick={() => field.onChange('fixed')}
-                                            className={`flex-1 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${field.value === 'fixed' ? 'bg-emerald-500 text-black shadow-lg shadow-emerald-500/10' : 'text-muted-foreground'}`}
+                                            className={`flex-1 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${field.value === 'fixed' ? 'bg-emerald-500 text-black shadow-lg shadow-emerald-500/10' : 'text-muted-foreground'}`}
                                         >
                                             $ Fijo
                                         </button>
@@ -361,7 +357,7 @@ export function VehicleForm({ investors }: VehicleFormProps) {
                             name={form.watch("management_fee_type") === 'percentage' ? "management_fee_percent" : "management_fee_fixed_amount"}
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel className="text-[10px] font-black uppercase tracking-widest text-foreground/70">
+                                    <FormLabel className="text-xs font-black uppercase tracking-widest text-foreground/70">
                                         {form.watch("management_fee_type") === 'percentage' ? 'Comisión (%)' : 'Monto Fijo ($)'}
                                     </FormLabel>
                                     <FormControl>
@@ -373,7 +369,7 @@ export function VehicleForm({ investors }: VehicleFormProps) {
                                                 className="bg-white/10 border-border/30 focus:bg-white/20 transition-all font-black italic tracking-tight text-lg h-12 rounded-xl pr-10"
                                                 onChange={e => field.onChange(parseFloat(e.target.value) || 0)}
                                             />
-                                            <div className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-muted-foreground italic">
+                                            <div className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-black text-muted-foreground italic">
                                                 {form.watch("management_fee_type") === 'percentage' ? '%' : 'USD'}
                                             </div>
                                         </div>
@@ -392,7 +388,7 @@ export function VehicleForm({ investors }: VehicleFormProps) {
                     name="mileage"
                     render={({ field }) => (
                         <FormItem>
-                            <FormLabel className="text-[10px] font-black uppercase tracking-widest text-foreground/70">Millaje</FormLabel>
+                            <FormLabel className="text-xs font-black uppercase tracking-widest text-foreground/70">Millaje</FormLabel>
                             <FormControl>
                                 <Input {...field} value={field.value ?? ""} type="number" className="bg-white/5 border-border/60 focus:bg-white/10 transition-all font-medium" onChange={e => field.onChange(e.target.valueAsNumber)} />
                             </FormControl>
@@ -405,7 +401,7 @@ export function VehicleForm({ investors }: VehicleFormProps) {
                     name="location"
                     render={({ field }) => (
                         <FormItem>
-                            <FormLabel className="text-[10px] font-black uppercase tracking-widest text-foreground/70">Ubicación</FormLabel>
+                            <FormLabel className="text-xs font-black uppercase tracking-widest text-foreground/70">Ubicación</FormLabel>
                             <FormControl>
                                 <Input {...field} placeholder="Miami..." className="bg-white/5 border-border/60 focus:bg-white/10 transition-all font-medium" />
                             </FormControl>
@@ -421,7 +417,7 @@ export function VehicleForm({ investors }: VehicleFormProps) {
                     name="seats"
                     render={({ field }) => (
                         <FormItem>
-                            <FormLabel className="text-[10px] font-black uppercase tracking-widest text-foreground/70">Asientos</FormLabel>
+                            <FormLabel className="text-xs font-black uppercase tracking-widest text-foreground/70">Asientos</FormLabel>
                             <FormControl>
                                 <Input {...field} type="number" placeholder="5" className="bg-white/5 border-border/60 focus:bg-white/10 transition-all font-medium" onChange={e => field.onChange(e.target.valueAsNumber || null)} />
                             </FormControl>
@@ -434,7 +430,7 @@ export function VehicleForm({ investors }: VehicleFormProps) {
                     name="transmission"
                     render={({ field }) => (
                         <FormItem>
-                            <FormLabel className="text-[10px] font-black uppercase tracking-widest text-foreground/70">Transmisión</FormLabel>
+                            <FormLabel className="text-xs font-black uppercase tracking-widest text-foreground/70">Transmisión</FormLabel>
                             <Select onValueChange={field.onChange} defaultValue={field.value || "automatic"}>
                                 <FormControl>
                                     <SelectTrigger className="bg-white/5 border-border/60 transition-all font-medium">
@@ -458,7 +454,7 @@ export function VehicleForm({ investors }: VehicleFormProps) {
                     name="fuel_type"
                     render={({ field }) => (
                         <FormItem>
-                            <FormLabel className="text-[10px] font-black uppercase tracking-widest text-foreground/70">Combustible</FormLabel>
+                            <FormLabel className="text-xs font-black uppercase tracking-widest text-foreground/70">Combustible</FormLabel>
                             <Select onValueChange={field.onChange} defaultValue={field.value || "nafta"}>
                                 <FormControl>
                                     <SelectTrigger className="bg-white/5 border-border/60 transition-all font-medium">
@@ -481,7 +477,7 @@ export function VehicleForm({ investors }: VehicleFormProps) {
                     name="range"
                     render={({ field }) => (
                         <FormItem>
-                            <FormLabel className="text-[10px] font-black uppercase tracking-widest text-foreground/70">Autonomía (mi/km)</FormLabel>
+                            <FormLabel className="text-xs font-black uppercase tracking-widest text-foreground/70">Autonomía (mi/km)</FormLabel>
                             <FormControl>
                                 <Input {...field} type="number" placeholder="400" className="bg-white/5 border-border/60 focus:bg-white/10 transition-all font-medium" onChange={e => field.onChange(e.target.valueAsNumber || null)} />
                             </FormControl>

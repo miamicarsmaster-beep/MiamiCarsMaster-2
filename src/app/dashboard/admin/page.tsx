@@ -63,14 +63,14 @@ export default async function AdminDashboardPage() {
         <div className="space-y-10 p-2">
             <div className="flex flex-col md:flex-row md:items-end justify-between border-b border-border/20 pb-8 gap-4">
                 <div className="flex flex-col space-y-2">
-                    <h2 className="text-4xl md:text-5xl font-black tracking-tight bg-gradient-to-r from-foreground to-foreground/50 bg-clip-text text-transparent uppercase italic">
+                    <h2 className="text-3xl md:text-4xl font-black tracking-tight bg-gradient-to-r from-foreground to-foreground/50 bg-clip-text text-transparent uppercase italic">
                         Panel <span className="text-primary">General</span>
                     </h2>
                     <p className="text-sm md:text-base text-muted-foreground font-bold uppercase tracking-widest opacity-80">Centro de Inteligencia Operativa • MiamiCars</p>
                 </div>
                 <div className="flex items-center gap-3">
                     <div className="hidden sm:flex flex-col items-end mr-4">
-                        <span className="text-[10px] font-black uppercase tracking-widest text-primary">Estado del Sistema</span>
+                        <span className="text-xs font-black uppercase tracking-widest text-primary">Estado del Sistema</span>
                         <span className="text-xs font-bold flex items-center gap-2">
                             <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
                             Operativo 100%
@@ -109,7 +109,7 @@ export default async function AdminDashboardPage() {
                             <h3 className="text-base font-black uppercase tracking-widest text-foreground group-hover:text-primary transition-colors">
                                 {action.label}
                             </h3>
-                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1 opacity-60">
+                            <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mt-1 opacity-60">
                                 {action.desc}
                             </p>
 
@@ -136,7 +136,7 @@ export default async function AdminDashboardPage() {
                             <div className="h-1.5 w-full bg-secondary rounded-full overflow-hidden">
                                 <div className="h-full bg-primary w-[75%]" />
                             </div>
-                            <p className="text-[10px] text-muted-foreground font-bold uppercase">
+                            <p className="text-xs text-muted-foreground font-bold uppercase">
                                 Gastos: <span className="text-red-500">${monthlyExpenses.toLocaleString()}</span>
                             </p>
                         </div>
@@ -154,7 +154,7 @@ export default async function AdminDashboardPage() {
                     </CardHeader>
                     <CardContent>
                         <div className="text-3xl font-black tracking-tighter">{investors.length}</div>
-                        <p className="text-[10px] text-muted-foreground font-bold uppercase mt-2">
+                        <p className="text-xs text-muted-foreground font-bold uppercase mt-2">
                             Socios Activos
                         </p>
                     </CardContent>
@@ -173,7 +173,7 @@ export default async function AdminDashboardPage() {
                         <div className="text-3xl font-black tracking-tighter">{totalVehicles}</div>
                         <div className="flex items-center gap-2 mt-2">
                             <span className="h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
-                            <span className="text-[10px] text-muted-foreground font-bold uppercase">{availableVehicles} Listos</span>
+                            <span className="text-xs text-muted-foreground font-bold uppercase">{availableVehicles} Listos</span>
                         </div>
                     </CardContent>
                 </Card>
@@ -189,7 +189,7 @@ export default async function AdminDashboardPage() {
                     </CardHeader>
                     <CardContent>
                         <div className="text-3xl font-black tracking-tighter">{maintenanceVehicles}</div>
-                        <p className="text-[10px] text-muted-foreground font-bold uppercase mt-2 italic">
+                        <p className="text-xs text-muted-foreground font-bold uppercase mt-2 italic">
                             En proceso técnico
                         </p>
                     </CardContent>
@@ -203,7 +203,7 @@ export default async function AdminDashboardPage() {
                             <Zap className="h-5 w-5 text-emerald-500" />
                             Rendimiento Financiero
                         </CardTitle>
-                        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-60 italic">Últimos 30 días</span>
+                        <span className="text-xs font-black uppercase tracking-widest text-muted-foreground opacity-60 italic">Últimos 30 días</span>
                     </CardHeader>
                     <CardContent>
                         <div className="space-y-4">
@@ -244,7 +244,7 @@ export default async function AdminDashboardPage() {
                 <Card className="col-span-3 glass-card border-l-4 border-l-primary/40">
                     <CardHeader className="flex flex-row items-center justify-between">
                         <CardTitle className="text-base md:text-lg font-black uppercase tracking-widest">Actividad Crítica</CardTitle>
-                        <Link href="/dashboard/admin/finance" className="text-[10px] font-black uppercase tracking-widest text-primary hover:underline italic">Ver Todo</Link>
+                        <Link href="/dashboard/admin/finance" className="text-xs font-black uppercase tracking-widest text-primary hover:underline italic">Ver Todo</Link>
                     </CardHeader>
                     <CardContent>
                         <div className="space-y-6">

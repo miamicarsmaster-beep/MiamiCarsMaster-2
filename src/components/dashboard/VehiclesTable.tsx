@@ -26,6 +26,7 @@ import { toast } from "sonner"
 import { VehicleAdminPanel } from "./VehicleAdminPanel"
 import { VehicleCard } from "./VehicleCard"
 import { VehicleForm } from "./VehicleForm"
+import { createVehicleAction, deleteVehicleAction } from "@/app/actions/vehicles"
 
 const vehicleSchema = z.object({
     make: z.string().min(1, "La marca es requerida"),
@@ -96,7 +97,6 @@ export function VehiclesGrid({ vehicles: initialVehicles, investors }: VehiclesG
     }
 
     const onSubmit = async (values: VehicleFormValues) => {
-        // setIsLoading(true) - Removed
         try {
             const carName = `${values.make} ${values.model}`.replace(/\s+/g, '+')
             const placeholderUrl = `https://source.unsplash.com/800x600/?${carName},car`
@@ -117,54 +117,41 @@ export function VehiclesGrid({ vehicles: initialVehicles, investors }: VehiclesG
                 apply_management_fee: values.apply_management_fee ?? true,
             }
 
-            const { data, error } = await supabase
-                .from("vehicles")
-                .insert([payload])
-                .select(`
-                    *,
-                    assigned_investor:profiles!assigned_investor_id(id, full_name, email)
-                `)
-                .single()
+            const { success, data, error } = await createVehicleAction(payload)
 
-            if (error) throw error
+            if (error) throw new Error(error)
+            if (!success || !data) throw new Error("No se pudo obtener la respuesta del servidor")
 
-            setVehicles([data, ...vehicles])
+            setVehicles([data as Vehicle, ...vehicles])
             setIsAddOpen(false)
             resetForm()
             toast.success("Vehículo agregado correctamente")
             startTransition(() => {
                 router.refresh()
             })
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error adding vehicle:", error)
-            toast.error("Error al agregar vehículo")
-        } finally {
-            // setIsLoading(false)
+            toast.error(`Error al agregar vehículo: ${error.message || 'Error desconocido'}`)
         }
     }
 
     const handleDelete = async (id: string) => {
         if (!confirm("¿Estás seguro de eliminar este vehículo?")) return
 
-        // setIsLoading(true)
         try {
-            const { error } = await supabase
-                .from("vehicles")
-                .delete()
-                .eq("id", id)
+            const { success, error } = await deleteVehicleAction(id)
 
-            if (error) throw error
+            if (error) throw new Error(error)
+            if (!success) throw new Error("No se pudo confirmar la eliminación")
 
             setVehicles(vehicles.filter(v => v.id !== id))
             toast.success("Vehículo eliminado")
             startTransition(() => {
                 router.refresh()
             })
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error deleting vehicle:", error)
-            toast.error("Error al eliminar vehículo")
-        } finally {
-            // setIsLoading(false)
+            toast.error(`Error al eliminar vehículo: ${error.message || 'Error desconocido'}`)
         }
     }
 
@@ -178,7 +165,7 @@ export function VehiclesGrid({ vehicles: initialVehicles, investors }: VehiclesG
                             <div className="h-3 w-3 bg-primary rounded-full animate-bounce [animation-delay:-0.15s]"></div>
                             <div className="h-3 w-3 bg-primary rounded-full animate-bounce"></div>
                         </div>
-                        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary animate-pulse">Sincronizando</p>
+                        <p className="text-xs font-black uppercase tracking-[0.4em] text-primary animate-pulse">Sincronizando</p>
                     </div>
                 </div>
             )}
@@ -186,7 +173,7 @@ export function VehiclesGrid({ vehicles: initialVehicles, investors }: VehiclesG
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 px-2">
                 <div className="flex flex-col gap-1">
                     <h3 className="text-xl font-black italic tracking-tight uppercase text-foreground">Activos <span className="text-primary">Operativos</span></h3>
-                    <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">{vehicles.length} Unidades en inventario</p>
+                    <p className="text-xs text-muted-foreground font-bold uppercase tracking-widest">{vehicles.length} Unidades en inventario</p>
                 </div>
                 <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
                     <DialogTrigger asChild>
@@ -195,24 +182,26 @@ export function VehiclesGrid({ vehicles: initialVehicles, investors }: VehiclesG
                             size="lg"
                             className="h-12 w-full sm:w-auto px-6 rounded-xl font-black uppercase tracking-widest text-xs shadow-2xl shadow-primary/20"
                         >
-                            <Plus className="mr-2 h-5 w-5" /> Adquirir Unidad
+                            <Plus className="mr-2 h-5 w-5" /> Agregar vehículo
                         </Button>
                     </DialogTrigger>
-                    <DialogContent className="bg-card border-border shadow-2xl max-w-2xl max-h-[90vh] rounded-[3rem] p-8 overflow-hidden">
-                        <DialogHeader>
-                            <DialogTitle className="text-2xl font-black italic uppercase tracking-tight text-foreground">Registro de <span className="text-primary">Nueva Unidad</span></DialogTitle>
-                            <DialogDescription className="text-xs font-bold uppercase tracking-widest opacity-60 text-muted-foreground">
-                                Introducir especificaciones técnicas y financieras
-                            </DialogDescription>
-                        </DialogHeader>
-                        <div className="overflow-y-auto max-h-[60vh] pr-4 custom-scrollbar lg:pr-2">
+                    <DialogContent className="bg-card border-border shadow-2xl max-w-2xl max-h-[90vh] rounded-[3rem] p-0 overflow-y-auto">
+                        <div className="p-8 pb-0">
+                            <DialogHeader>
+                                <DialogTitle className="text-2xl font-black italic uppercase tracking-tight text-foreground">Registro de <span className="text-primary">Nueva Unidad</span></DialogTitle>
+                                <DialogDescription className="text-sm font-bold uppercase tracking-widest opacity-60 text-muted-foreground">
+                                    Introducir especificaciones técnicas y financieras
+                                </DialogDescription>
+                            </DialogHeader>
+                        </div>
+                        <div className="px-8 pb-4">
                             <Form {...form}>
                                 <div className="space-y-6 pt-6">
                                     <VehicleForm investors={investors} />
                                 </div>
                             </Form>
                         </div>
-                        <DialogFooter className="mt-8 gap-3 sm:gap-0 border-t border-border pt-6">
+                        <DialogFooter className="mt-4 gap-3 sm:gap-0 border-t border-border pt-6 px-8 pb-8 sticky bottom-0 bg-card">
                             <Button variant="ghost" type="button" onClick={() => setIsAddOpen(false)} className="rounded-xl font-bold uppercase text-xs tracking-widest">
                                 Abortar
                             </Button>

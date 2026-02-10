@@ -62,13 +62,13 @@ export function VehicleCarousel({ vehicles }: VehicleCarouselProps) {
                         exit={{ x: 20, opacity: 0 }}
                         transition={{ duration: 0.8, ease: "easeOut" }}
                     >
-                        <Badge className="bg-primary/20 backdrop-blur-md text-primary border-primary/20 mb-4 uppercase font-black tracking-[0.2em] text-[10px] px-4 py-1.5">
+                        <Badge className="bg-primary/20 backdrop-blur-md text-primary border-primary/20 mb-4 uppercase font-black tracking-[0.2em] text-xs px-4 py-1.5">
                             Destacado de la Flota
                         </Badge>
-                        <h3 className="text-4xl md:text-6xl font-black text-white italic tracking-tighter uppercase leading-tight drop-shadow-2xl">
+                        <h3 className="text-3xl md:text-5xl font-black text-white italic tracking-tighter uppercase leading-tight drop-shadow-2xl">
                             {currentVehicle.make} <span className="text-primary">{currentVehicle.model}</span>
                         </h3>
-                        <p className="text-white/70 font-bold uppercase tracking-[0.3em] text-[10px] md:text-xs mt-3 flex items-center gap-4">
+                        <p className="text-white/70 font-bold uppercase tracking-[0.3em] text-xs md:text-xs mt-3 flex items-center gap-4">
                             <span>{currentVehicle.year}</span>
                             <span className="h-1 w-1 rounded-full bg-primary/50" />
                             <span>{currentVehicle.license_plate}</span>

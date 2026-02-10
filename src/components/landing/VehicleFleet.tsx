@@ -127,7 +127,7 @@ export function VehicleFleet() {
 
             <div className="container mx-auto px-6 relative z-10">
                 <div className="flex flex-col items-center mb-20 text-center">
-                    <Badge variant="outline" className="mb-4 py-1.5 px-4 rounded-full border-primary/30 text-primary font-black tracking-[0.3em] uppercase text-[10px] bg-primary/5">
+                    <Badge variant="outline" className="mb-4 py-1.5 px-4 rounded-full border-primary/30 text-primary font-black tracking-[0.3em] uppercase text-xs bg-primary/5">
                         Nuestra Flota
                     </Badge>
                     <h2 className="text-4xl md:text-6xl font-black italic tracking-tighter uppercase mb-6 leading-none">
@@ -156,18 +156,19 @@ export function VehicleFleet() {
                                         fallbackSrc={`https://placehold.co/800x600/000000/FFFFFF?text=${vehicle.make}+${vehicle.model}`}
                                         alt={`${vehicle.make} ${vehicle.model}`}
                                         fill
+                                        unoptimized
                                         className="object-cover transition-transform duration-1000 group-hover:scale-110"
                                     />
                                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60" />
                                     <div className="absolute bottom-6 left-8 flex flex-col gap-0.5">
-                                        <span className="text-primary text-[10px] font-black uppercase tracking-[0.3em]">{vehicle.year} MODEL</span>
+                                        <span className="text-primary text-xs font-black uppercase tracking-[0.3em]">{vehicle.year} MODEL</span>
                                         <h3 className="text-white text-3xl font-black italic tracking-tighter uppercase leading-none">
                                             {vehicle.make} <span className="text-white/70">{vehicle.model}</span>
                                         </h3>
                                     </div>
                                     <div className="absolute top-6 right-6">
                                         <div className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-2xl p-3 flex flex-col items-center min-w-[80px]">
-                                            <span className="text-[10px] font-black uppercase tracking-widest text-white/50 mb-1">Día desde</span>
+                                            <span className="text-xs font-black uppercase tracking-widest text-white/50 mb-1">Día desde</span>
                                             <span className="text-xl font-black italic tracking-tighter text-white">
                                                 ${vehicle.daily_rental_price?.toLocaleString()}
                                             </span>
@@ -183,7 +184,7 @@ export function VehicleFleet() {
                                                 <User className="h-4 w-4 text-primary" />
                                             </div>
                                             <div className="flex flex-col">
-                                                <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Asientos</span>
+                                                <span className="text-xs font-black uppercase tracking-widest text-muted-foreground">Asientos</span>
                                                 <span className="text-xs font-black italic tracking-tight uppercase">
                                                     {vehicle.seats || 'No disponible'}
                                                 </span>
@@ -196,7 +197,7 @@ export function VehicleFleet() {
                                                 <Settings className="h-4 w-4 text-primary" />
                                             </div>
                                             <div className="flex flex-col">
-                                                <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Transmisión</span>
+                                                <span className="text-xs font-black uppercase tracking-widest text-muted-foreground">Transmisión</span>
                                                 <span className="text-xs font-black italic tracking-tight uppercase">
                                                     {vehicle.transmission || 'No disponible'}
                                                 </span>
@@ -209,7 +210,7 @@ export function VehicleFleet() {
                                                 <Fuel className="h-4 w-4 text-primary" />
                                             </div>
                                             <div className="flex flex-col">
-                                                <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Combustible</span>
+                                                <span className="text-xs font-black uppercase tracking-widest text-muted-foreground">Combustible</span>
                                                 <span className="text-xs font-black italic tracking-tight uppercase">
                                                     {vehicle.fuel_type || 'No disponible'}
                                                 </span>
@@ -222,7 +223,7 @@ export function VehicleFleet() {
                                                 <Gauge className="h-4 w-4 text-primary" />
                                             </div>
                                             <div className="flex flex-col">
-                                                <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Autonomía</span>
+                                                <span className="text-xs font-black uppercase tracking-widest text-muted-foreground">Autonomía</span>
                                                 <span className="text-xs font-black italic tracking-tight uppercase">
                                                     {vehicle.range ? `${vehicle.range} km` : 'No disponible'}
                                                 </span>
@@ -233,7 +234,7 @@ export function VehicleFleet() {
                                     <div className="flex items-center justify-between pt-4 border-t border-slate-100 dark:border-white/5">
                                         <div className="flex items-center gap-2">
                                             <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                                            <span className="text-[10px] font-black uppercase tracking-widest text-emerald-500">Disponible</span>
+                                            <span className="text-xs font-black uppercase tracking-widest text-emerald-500">Disponible</span>
                                         </div>
                                     </div>
 
@@ -272,7 +273,7 @@ export function VehicleFleet() {
                                     Checkout <span className="text-primary italic">Premium</span>
                                 </h2>
                             </div>
-                            <p className="text-[9px] sm:text-[11px] font-black text-muted-foreground uppercase tracking-[0.3em] sm:tracking-[0.5em] pl-14 sm:pl-20 opacity-60">
+                            <p className="text-xs sm:text-[11px] font-black text-muted-foreground uppercase tracking-[0.3em] sm:tracking-[0.5em] pl-14 sm:pl-20 opacity-60">
                                 Miami Luxury Experience • Reserva Final
                             </p>
                         </div>
@@ -286,7 +287,7 @@ export function VehicleFleet() {
                             {/* LEFT COLUMN: VEHICLE SUMMARY (4/12) */}
                             <div className="lg:col-span-4 space-y-4 sm:space-y-5">
                                 <div className="bg-white dark:bg-slate-900/80 rounded-xl sm:rounded-2xl p-5 sm:p-6 shadow-sm border border-slate-200/50 dark:border-white/5 backdrop-blur-sm">
-                                    <h3 className="text-[10px] sm:text-[11px] font-black uppercase tracking-[0.25em] text-primary mb-4 sm:mb-5 flex items-center gap-2">
+                                    <h3 className="text-xs sm:text-[11px] font-black uppercase tracking-[0.25em] text-primary mb-4 sm:mb-5 flex items-center gap-2">
                                         <Car className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                                         Vehículo Seleccionado
                                     </h3>
@@ -301,7 +302,7 @@ export function VehicleFleet() {
                                             <p className="text-white font-black text-lg sm:text-xl uppercase tracking-tight italic leading-tight">
                                                 {selectedVehicle?.make} {selectedVehicle?.model}
                                             </p>
-                                            <p className="text-primary/90 font-bold text-[9px] sm:text-[10px] uppercase tracking-widest mt-0.5 sm:mt-1">{selectedVehicle?.year}</p>
+                                            <p className="text-primary/90 font-bold text-xs sm:text-xs uppercase tracking-widest mt-0.5 sm:mt-1">{selectedVehicle?.year}</p>
                                         </div>
                                     </div>
 
@@ -309,33 +310,33 @@ export function VehicleFleet() {
                                     <div className="grid grid-cols-2 gap-2 mb-6">
                                         <div className="bg-slate-50 dark:bg-slate-950/50 p-2.5 rounded-xl border border-slate-100 dark:border-white/5 flex items-center gap-2">
                                             <User className="h-3 w-3 text-primary" />
-                                            <span className="text-[10px] font-black uppercase tracking-tighter truncate">{selectedVehicle?.seats} Asientos</span>
+                                            <span className="text-xs font-black uppercase tracking-tighter truncate">{selectedVehicle?.seats} Asientos</span>
                                         </div>
                                         <div className="bg-slate-50 dark:bg-slate-950/50 p-2.5 rounded-xl border border-slate-100 dark:border-white/5 flex items-center gap-2">
                                             <Settings className="h-3 w-3 text-primary" />
-                                            <span className="text-[10px] font-black uppercase tracking-tighter truncate capitalize">{selectedVehicle?.transmission === 'automatic' ? 'Auto' : 'Manual'}</span>
+                                            <span className="text-xs font-black uppercase tracking-tighter truncate capitalize">{selectedVehicle?.transmission === 'automatic' ? 'Auto' : 'Manual'}</span>
                                         </div>
                                         <div className="bg-slate-50 dark:bg-slate-950/50 p-2.5 rounded-xl border border-slate-100 dark:border-white/5 flex items-center gap-2">
                                             <Fuel className="h-3 w-3 text-primary" />
-                                            <span className="text-[10px] font-black uppercase tracking-tighter truncate capitalize">{selectedVehicle?.fuel_type}</span>
+                                            <span className="text-xs font-black uppercase tracking-tighter truncate capitalize">{selectedVehicle?.fuel_type}</span>
                                         </div>
                                         <div className="bg-slate-50 dark:bg-slate-950/50 p-2.5 rounded-xl border border-slate-100 dark:border-white/5 flex items-center gap-2">
                                             <Gauge className="h-3 w-3 text-primary" />
-                                            <span className="text-[10px] font-black uppercase tracking-tighter truncate">{selectedVehicle?.range || 0} mi/km</span>
+                                            <span className="text-xs font-black uppercase tracking-tighter truncate">{selectedVehicle?.range || 0} mi/km</span>
                                         </div>
                                     </div>
 
                                     <div className="space-y-3 sm:space-y-3.5 py-4 border-t border-slate-100 dark:border-white/5">
-                                        <div className="flex justify-between items-center text-[10px] sm:text-[11px] uppercase tracking-wider font-bold text-muted-foreground">
+                                        <div className="flex justify-between items-center text-xs sm:text-[11px] uppercase tracking-wider font-bold text-muted-foreground">
                                             <span>Tarifa diaria</span>
                                             <span className="text-foreground font-black text-sm sm:text-base">${selectedVehicle?.daily_rental_price}</span>
                                         </div>
-                                        <div className="flex justify-between items-center text-[10px] sm:text-[11px] uppercase tracking-wider font-bold text-muted-foreground">
+                                        <div className="flex justify-between items-center text-xs sm:text-[11px] uppercase tracking-wider font-bold text-muted-foreground">
                                             <span>Período</span>
                                             <span className="text-foreground font-black text-sm sm:text-base">{dateRange?.from && dateRange?.to ? differenceInDays(dateRange.to, dateRange.from) + 1 : 0} días</span>
                                         </div>
                                         {needsAirport && (
-                                            <div className="flex justify-between items-center text-[10px] sm:text-[11px] uppercase tracking-wider font-bold text-primary">
+                                            <div className="flex justify-between items-center text-xs sm:text-[11px] uppercase tracking-wider font-bold text-primary">
                                                 <span className="flex items-center gap-1.5 sm:gap-2">
                                                     <Plane className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                                                     Servicio Aeropuerto
@@ -347,7 +348,7 @@ export function VehicleFleet() {
 
                                     <div className="pt-4 sm:pt-5 border-t border-slate-200 dark:border-white/10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
                                         <div>
-                                            <p className="text-[9px] sm:text-[10px] font-black uppercase text-muted-foreground tracking-[0.25em] mb-1.5 sm:mb-2">Total Final</p>
+                                            <p className="text-xs sm:text-xs font-black uppercase text-muted-foreground tracking-[0.25em] mb-1.5 sm:mb-2">Total Final</p>
                                             <div className="flex items-baseline gap-2">
                                                 <span className="text-4xl sm:text-5xl font-black italic tracking-tighter text-primary">
                                                     ${calculateTotal().toLocaleString()}
@@ -355,7 +356,7 @@ export function VehicleFleet() {
                                                 <span className="text-[11px] sm:text-[12px] font-black text-muted-foreground uppercase tracking-widest">USD</span>
                                             </div>
                                         </div>
-                                        <div className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-4 py-2 rounded-full border border-emerald-500/20 text-[9px] sm:text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
+                                        <div className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-4 py-2 rounded-full border border-emerald-500/20 text-xs sm:text-xs font-black uppercase tracking-widest flex items-center gap-2">
                                             <CheckCircle2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                                             Disponible
                                         </div>
@@ -363,7 +364,7 @@ export function VehicleFleet() {
                                 </div>
 
                                 <div className="bg-white dark:bg-slate-900/80 rounded-xl sm:rounded-2xl p-5 sm:p-6 shadow-sm border border-slate-200/50 dark:border-white/5 backdrop-blur-sm">
-                                    <h3 className="text-[10px] sm:text-[11px] font-black uppercase tracking-[0.25em] text-primary mb-4 sm:mb-5 flex items-center gap-2">
+                                    <h3 className="text-xs sm:text-[11px] font-black uppercase tracking-[0.25em] text-primary mb-4 sm:mb-5 flex items-center gap-2">
                                         <Plane className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                                         Servicios VIP
                                     </h3>
@@ -377,7 +378,7 @@ export function VehicleFleet() {
                                             </div>
                                             <div className="text-left">
                                                 <p className="text-[11px] sm:text-[12px] font-black uppercase tracking-tight leading-tight">Servicio Aeropuerto</p>
-                                                <p className="text-[9px] sm:text-[10px] text-muted-foreground font-bold uppercase tracking-widest">Entrega en Terminal</p>
+                                                <p className="text-xs sm:text-xs text-muted-foreground font-bold uppercase tracking-widest">Entrega en Terminal</p>
                                             </div>
                                         </div>
                                         <div className={`w-12 h-6 sm:w-14 sm:h-7 rounded-full relative flex items-center px-0.5 transition-colors ${needsAirport ? 'bg-primary' : 'bg-slate-200 dark:bg-slate-800'}`}>
@@ -390,13 +391,13 @@ export function VehicleFleet() {
                             {/* CENTER COLUMN: INFORMATION (4/12) */}
                             <div className="lg:col-span-4 space-y-4 sm:space-y-5">
                                 <div className="bg-white dark:bg-slate-900/80 rounded-xl sm:rounded-2xl p-5 sm:p-6 shadow-sm border border-slate-200/50 dark:border-white/5 backdrop-blur-sm space-y-4 sm:space-y-5">
-                                    <h3 className="text-[10px] sm:text-[11px] font-black uppercase tracking-[0.25em] text-primary flex items-center gap-2">
+                                    <h3 className="text-xs sm:text-[11px] font-black uppercase tracking-[0.25em] text-primary flex items-center gap-2">
                                         <User className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                                         Información Personal
                                     </h3>
                                     <div className="space-y-4 sm:space-y-5">
                                         <div className="space-y-2">
-                                            <Label className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Nombre Completo</Label>
+                                            <Label className="text-xs sm:text-xs font-black uppercase tracking-widest text-muted-foreground ml-1">Nombre Completo</Label>
                                             <div className="relative group">
                                                 <User className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
                                                 <Input
@@ -408,7 +409,7 @@ export function VehicleFleet() {
                                             </div>
                                         </div>
                                         <div className="space-y-2">
-                                            <Label className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">WhatsApp</Label>
+                                            <Label className="text-xs sm:text-xs font-black uppercase tracking-widest text-muted-foreground ml-1">WhatsApp</Label>
                                             <div className="relative group">
                                                 <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
                                                 <Input
@@ -421,7 +422,7 @@ export function VehicleFleet() {
                                             </div>
                                         </div>
                                         <div className="space-y-2">
-                                            <Label className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Email (Opcional)</Label>
+                                            <Label className="text-xs sm:text-xs font-black uppercase tracking-widest text-muted-foreground ml-1">Email (Opcional)</Label>
                                             <div className="relative group">
                                                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
                                                 <Input
@@ -437,7 +438,7 @@ export function VehicleFleet() {
                                 </div>
 
                                 <div className="bg-white dark:bg-slate-900/80 rounded-xl sm:rounded-2xl p-5 sm:p-6 shadow-sm border border-slate-200/50 dark:border-white/5 backdrop-blur-sm space-y-4 sm:space-y-5">
-                                    <h3 className="text-[10px] sm:text-[11px] font-black uppercase tracking-[0.25em] text-primary flex items-center gap-2">
+                                    <h3 className="text-xs sm:text-[11px] font-black uppercase tracking-[0.25em] text-primary flex items-center gap-2">
                                         <DollarSign className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                                         Método de Pago
                                     </h3>
@@ -456,8 +457,8 @@ export function VehicleFleet() {
                                                     <method.icon className="h-4 w-4 sm:h-5 sm:w-5" />
                                                 </div>
                                                 <div className="flex-1">
-                                                    <p className="font-black uppercase tracking-tight text-[10px] sm:text-[11px] leading-tight mb-1">{method.label}</p>
-                                                    <p className="text-[8px] sm:text-[9px] text-muted-foreground font-bold uppercase tracking-widest">{method.sub}</p>
+                                                    <p className="font-black uppercase tracking-tight text-xs sm:text-[11px] leading-tight mb-1">{method.label}</p>
+                                                    <p className="text-[8px] sm:text-xs text-muted-foreground font-bold uppercase tracking-widest">{method.sub}</p>
                                                 </div>
                                                 {paymentMethod === method.label && (
                                                     <CheckCircle2 className="h-5 w-5 sm:h-5 sm:w-5 text-primary" />
@@ -471,7 +472,7 @@ export function VehicleFleet() {
                             {/* RIGHT COLUMN: CALENDAR (4/12) */}
                             <div className="lg:col-span-4 space-y-4 sm:space-y-5">
                                 <div className="bg-white dark:bg-slate-900/80 rounded-xl sm:rounded-2xl p-5 sm:p-6 shadow-sm border border-slate-200/50 dark:border-white/5 backdrop-blur-sm flex flex-col items-center">
-                                    <h3 className="text-[10px] sm:text-[11px] font-black uppercase tracking-[0.25em] text-primary mb-5 sm:mb-6 w-full text-center flex items-center justify-center gap-2">
+                                    <h3 className="text-xs sm:text-[11px] font-black uppercase tracking-[0.25em] text-primary mb-5 sm:mb-6 w-full text-center flex items-center justify-center gap-2">
                                         <CalendarDays className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                                         Calendario de Reserva
                                     </h3>
@@ -487,20 +488,20 @@ export function VehicleFleet() {
                                     <div className="mt-6 sm:mt-8 pt-5 sm:pt-6 w-full border-t border-slate-100 dark:border-white/5 space-y-3 sm:space-y-4">
                                         <div className="flex items-center justify-between p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-slate-50/50 dark:bg-slate-950/50 border border-slate-200/50 dark:border-white/5">
                                             <div className="flex flex-col">
-                                                <span className="text-[8px] sm:text-[9px] font-black uppercase text-muted-foreground tracking-widest mb-1">Inicio</span>
-                                                <span className="text-[10px] sm:text-[11px] font-black uppercase italic tracking-tighter">
+                                                <span className="text-[8px] sm:text-xs font-black uppercase text-muted-foreground tracking-widest mb-1">Inicio</span>
+                                                <span className="text-xs sm:text-[11px] font-black uppercase italic tracking-tighter">
                                                     {dateRange?.from ? format(dateRange.from, "dd MMM yyyy", { locale: es }) : "SELECCIONE"}
                                                 </span>
                                             </div>
                                             <ChevronRight className="h-4 w-4 text-muted-foreground/30" />
                                             <div className="flex flex-col text-right">
-                                                <span className="text-[8px] sm:text-[9px] font-black uppercase text-muted-foreground tracking-widest mb-1">Entrega</span>
-                                                <span className="text-[10px] sm:text-[11px] font-black uppercase italic tracking-tighter">
+                                                <span className="text-[8px] sm:text-xs font-black uppercase text-muted-foreground tracking-widest mb-1">Entrega</span>
+                                                <span className="text-xs sm:text-[11px] font-black uppercase italic tracking-tighter">
                                                     {dateRange?.to ? format(dateRange.to, "dd MMM yyyy", { locale: es }) : "SELECCIONE"}
                                                 </span>
                                             </div>
                                         </div>
-                                        <p className="text-[8px] sm:text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground text-center opacity-60">
+                                        <p className="text-[8px] sm:text-xs font-black uppercase tracking-[0.2em] text-muted-foreground text-center opacity-60">
                                             Selecciona el rango de fechas en el calendario
                                         </p>
                                     </div>
@@ -514,7 +515,7 @@ export function VehicleFleet() {
                         <Button
                             variant="ghost"
                             onClick={() => setIsDialogOpen(false)}
-                            className="w-full sm:w-fit px-6 sm:px-8 h-12 sm:h-12 rounded-xl font-black uppercase tracking-widest text-[10px] sm:text-[11px] hover:bg-slate-100 dark:hover:bg-white/5 transition-all text-muted-foreground border border-slate-200/50 dark:border-white/5"
+                            className="w-full sm:w-fit px-6 sm:px-8 h-12 sm:h-12 rounded-xl font-black uppercase tracking-widest text-xs sm:text-[11px] hover:bg-slate-100 dark:hover:bg-white/5 transition-all text-muted-foreground border border-slate-200/50 dark:border-white/5"
                         >
                             ← Cancelar
                         </Button>

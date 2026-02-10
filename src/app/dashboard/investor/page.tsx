@@ -77,7 +77,7 @@ export default async function InvestorDashboardPage() {
                     <h1 className="text-4xl md:text-5xl font-black italic tracking-tighter uppercase leading-none">
                         Operativa <span className="text-primary">{displayName.split(' ')[0]}</span>
                     </h1>
-                    <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-muted-foreground">Estado global de tu inversión y activos en tiempo real</p>
+                    <p className="text-xs font-bold uppercase tracking-[0.3em] text-muted-foreground">Estado global de tu inversión y activos en tiempo real</p>
                 </div>
 
                 <div className="flex items-center gap-4 bg-sidebar-accent/30 p-2 rounded-2xl border border-border/50">
@@ -85,8 +85,8 @@ export default async function InvestorDashboardPage() {
                         <Zap className="h-5 w-5 animate-pulse" />
                     </div>
                     <div className="pr-4">
-                        <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground mb-0.5">Versión Sistema</p>
-                        <p className="text-[10px] font-bold uppercase tracking-tight">v2.0 Premium Ops</p>
+                        <p className="text-xs font-black uppercase tracking-widest text-muted-foreground mb-0.5">Versión Sistema</p>
+                        <p className="text-xs font-bold uppercase tracking-tight">v2.0 Premium Ops</p>
                     </div>
                 </div>
             </div>
@@ -107,10 +107,10 @@ export default async function InvestorDashboardPage() {
                             <TrendingUp className="h-7 w-7" />
                         </div>
                         <div>
-                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-1">Ingresos de este Mes</p>
+                            <p className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground mb-1">Ingresos de este Mes</p>
                             <div className="flex items-baseline gap-2">
                                 <h3 className="text-3xl font-black italic tracking-tighter">${monthlyIncome.toLocaleString()}</h3>
-                                <span className="text-[10px] font-bold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full">+12%</span>
+                                <span className="text-xs font-bold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full">+12%</span>
                             </div>
                         </div>
                     </div>
@@ -123,10 +123,10 @@ export default async function InvestorDashboardPage() {
                             <Calendar className="h-7 w-7" />
                         </div>
                         <div>
-                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-1">Ocupación Operativa</p>
+                            <p className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground mb-1">Ocupación Operativa</p>
                             <div className="flex items-baseline gap-2">
                                 <h3 className="text-3xl font-black italic tracking-tighter">{occupancyRate.toFixed(0)}%</h3>
-                                <p className="text-[10px] font-bold text-muted-foreground">{rentedVehicles} de {totalVehicles} unidades</p>
+                                <p className="text-xs font-bold text-muted-foreground">{rentedVehicles} de {totalVehicles} unidades</p>
                             </div>
                         </div>
                     </div>
@@ -139,12 +139,12 @@ export default async function InvestorDashboardPage() {
                             <ShieldCheck className="h-7 w-7" />
                         </div>
                         <div>
-                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-1">Status de Disponibilidad</p>
+                            <p className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground mb-1">Status de Disponibilidad</p>
                             <div className="flex items-baseline gap-2">
                                 <h3 className="text-3xl font-black italic tracking-tighter uppercase text-orange-500">
                                     {totalVehicles - rentedVehicles > 0 ? 'Activo' : 'En Renta'}
                                 </h3>
-                                <p className="text-[10px] font-bold text-muted-foreground">{totalVehicles - rentedVehicles} libres</p>
+                                <p className="text-xs font-bold text-muted-foreground">{totalVehicles - rentedVehicles} libres</p>
                             </div>
                         </div>
                     </div>
@@ -167,7 +167,7 @@ export default async function InvestorDashboardPage() {
                                     <action.icon className="h-6 w-6" />
                                 </div>
                                 <div className="space-y-0.5">
-                                    <p className="text-[10px] font-black uppercase tracking-tighter leading-none">{action.label}</p>
+                                    <p className="text-xs font-black uppercase tracking-tighter leading-none">{action.label}</p>
                                     <p className="text-[8px] font-bold uppercase tracking-widest text-muted-foreground opacity-60">{action.sub}</p>
                                 </div>
                             </div>
@@ -186,7 +186,7 @@ export default async function InvestorDashboardPage() {
                             </div>
                             <h3 className="text-xl font-black uppercase italic tracking-tighter">Mi Flota <span className="text-primary">Asignada</span></h3>
                         </div>
-                        <Badge variant="outline" className="rounded-lg px-3 py-1 text-[10px] font-black uppercase tracking-widest border-border/50">
+                        <Badge variant="outline" className="rounded-lg px-3 py-1 text-xs font-black uppercase tracking-widest border-border/50">
                             {vehicles.length} Autos
                         </Badge>
                     </div>
@@ -213,7 +213,7 @@ export default async function InvestorDashboardPage() {
 
                                         <div className="absolute top-6 right-6">
                                             <Badge className={cn(
-                                                "border-none px-4 py-1.5 rounded-full font-black uppercase text-[9px] tracking-widest shadow-lg",
+                                                "border-none px-4 py-1.5 rounded-full font-black uppercase text-xs tracking-widest shadow-lg",
                                                 vehicle.status === 'rented' ? "bg-emerald-500 text-white" :
                                                     vehicle.status === 'maintenance' ? "bg-orange-500 text-white" :
                                                         "bg-blue-500 text-white"
@@ -226,20 +226,20 @@ export default async function InvestorDashboardPage() {
                                             <h4 className="text-2xl font-black italic uppercase tracking-tighter leading-none">
                                                 {vehicle.make} <span className="text-primary">{vehicle.model.split(' ')[0]}</span>
                                             </h4>
-                                            <p className="text-[10px] uppercase font-bold tracking-[0.3em] opacity-60">MODELO {vehicle.year}</p>
+                                            <p className="text-xs uppercase font-bold tracking-[0.3em] opacity-60">MODELO {vehicle.year}</p>
                                         </div>
                                     </div>
 
                                     <div className="p-8 space-y-6">
                                         <div className="grid grid-cols-2 gap-6">
                                             <div className="space-y-1">
-                                                <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Ubicación</p>
+                                                <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">Ubicación</p>
                                                 <p className="text-xs font-bold uppercase truncate flex items-center gap-1.5 italic tracking-tighter">
                                                     <MapPin className="h-3 w-3 text-primary" /> {vehicle.location || "Miami Base"}
                                                 </p>
                                             </div>
                                             <div className="space-y-1">
-                                                <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Millaje Actual</p>
+                                                <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">Millaje Actual</p>
                                                 <p className="text-xs font-bold uppercase flex items-center gap-1.5 italic tracking-tighter">
                                                     <Gauge className="h-3 w-3 text-primary" /> {vehicle.mileage?.toLocaleString() || 0} mi
                                                 </p>
@@ -248,11 +248,11 @@ export default async function InvestorDashboardPage() {
 
                                         <div className="pt-6 border-t border-border/30 flex items-center justify-between">
                                             <div className="space-y-1">
-                                                <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Matrícula</p>
+                                                <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">Matrícula</p>
                                                 <p className="text-sm font-black font-mono tracking-tight text-foreground/80">{vehicle.license_plate || "N/A"}</p>
                                             </div>
                                             <Link href={`/dashboard/investor/vehicles/${vehicle.id}`}>
-                                                <Button size="sm" className="rounded-xl h-10 px-6 font-black uppercase text-[10px] tracking-widest shadow-lg shadow-primary/20 bg-primary hover:scale-105 active:scale-95 transition-all">
+                                                <Button size="sm" className="rounded-xl h-10 px-6 font-black uppercase text-xs tracking-widest shadow-lg shadow-primary/20 bg-primary hover:scale-105 active:scale-95 transition-all">
                                                     Ver Activo <ArrowUpRight className="h-3.5 w-3.5 ml-2" />
                                                 </Button>
                                             </Link>
@@ -284,7 +284,7 @@ export default async function InvestorDashboardPage() {
                         <p className="text-xs font-medium text-muted-foreground leading-relaxed mb-6 opacity-70">
                             Tu portafolio está rindiendo un <span className="text-emerald-500 font-bold">14.2% APY</span> estimado este trimestre.
                         </p>
-                        <Button variant="outline" className="w-full rounded-2xl h-12 font-black uppercase text-[10px] tracking-widest border-primary/20 text-primary hover:bg-primary/5 transition-all">
+                        <Button variant="outline" className="w-full rounded-2xl h-12 font-black uppercase text-xs tracking-widest border-primary/20 text-primary hover:bg-primary/5 transition-all">
                             Descargar Reporte Pro
                         </Button>
                     </Card>

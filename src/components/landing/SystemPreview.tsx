@@ -36,7 +36,7 @@ export function SystemPreview() {
 
             <div className="container mx-auto px-6">
                 <div className="text-center mb-24">
-                    <span className="text-[10px] font-black uppercase tracking-[0.5em] text-white/40 italic">System Architecture v2.0 Premium Ops</span>
+                    <span className="text-xs font-black uppercase tracking-[0.5em] text-white/40 italic">System Architecture v2.0 Premium Ops</span>
                     <h2 className="text-4xl md:text-7xl font-black tracking-tighter uppercase italic text-white mt-6">
                         Funcionalidades <span className="text-primary italic">Sin Fronteras.</span>
                     </h2>
@@ -64,7 +64,7 @@ export function SystemPreview() {
 
                             <div className="mt-10 pt-8 border-t border-white/5 flex items-center gap-2">
                                 <ShieldCheck className="h-4 w-4 text-emerald-500" />
-                                <span className="text-[10px] font-black uppercase tracking-widest text-emerald-500">Security Verified</span>
+                                <span className="text-xs font-black uppercase tracking-widest text-emerald-500">Security Verified</span>
                             </div>
                         </motion.div>
                     ))}

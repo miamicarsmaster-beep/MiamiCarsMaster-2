@@ -32,7 +32,7 @@ export function ExperienceSection() {
                                     <Star className="h-5 w-5 fill-current" />
                                 </div>
                                 <div>
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-white leading-none">Premium Fleet</p>
+                                    <p className="text-xs font-black uppercase tracking-widest text-white leading-none">Premium Fleet</p>
                                     <p className="text-[8px] font-bold uppercase tracking-widest text-white/60 mt-1">Verified Miami Assets</p>
                                 </div>
                             </div>
@@ -47,7 +47,7 @@ export function ExperienceSection() {
                         className="space-y-10"
                     >
                         <div className="space-y-4">
-                            <span className="text-[10px] font-black uppercase tracking-[0.5em] text-primary italic">Activos Tangibles</span>
+                            <span className="text-xs font-black uppercase tracking-[0.5em] text-primary italic">Activos Tangibles</span>
                             <h2 className="text-4xl md:text-6xl font-black tracking-tighter uppercase italic leading-none">
                                 Calidad que <br />
                                 <span className="text-primary italic">genera renta.</span>
@@ -71,7 +71,7 @@ export function ExperienceSection() {
                                     <div className="h-6 w-6 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-500 group-hover:bg-emerald-500 group-hover:text-white transition-all">
                                         <CheckCircle2 className="h-4 w-4" />
                                     </div>
-                                    <span className="text-[10px] font-black uppercase tracking-widest opacity-80">{item}</span>
+                                    <span className="text-xs font-black uppercase tracking-widest opacity-80">{item}</span>
                                 </div>
                             ))}
                         </div>

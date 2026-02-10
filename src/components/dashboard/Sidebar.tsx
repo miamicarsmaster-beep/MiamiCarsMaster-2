@@ -131,10 +131,10 @@ export function Sidebar() {
                     <div className="absolute top-0 right-0 w-20 h-20 bg-primary/5 -mr-10 -mt-10 rounded-full blur-2xl group-hover:bg-primary/10 transition-colors" />
                     <div className="flex items-center gap-2 mb-3">
                         <div className="h-2 w-2 rounded-full bg-primary animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.4)]"></div>
-                        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground italic">Sistema Master</span>
+                        <span className="text-xs font-black uppercase tracking-widest text-muted-foreground italic">Sistema Master</span>
                     </div>
                     <p className="text-sm font-black text-foreground">v2.0 Premium Ops</p>
-                    <p className="text-[10px] text-muted-foreground mt-1 font-bold">Conexión Segura v4.0</p>
+                    <p className="text-xs text-muted-foreground mt-1 font-bold">Conexión Segura v4.0</p>
                 </div>
 
                 <Link
@@ -144,7 +144,7 @@ export function Sidebar() {
                 >
                     <div className="flex items-center flex-1">
                         <LogOut className="h-5 w-5 mr-3 text-red-500/50 group-hover:text-red-500 transition-all duration-500 group-hover:rotate-12" />
-                        <span className="tracking-tight uppercase text-[10px] font-black tracking-widest">Cerrar Sesión</span>
+                        <span className="tracking-tight uppercase text-xs font-black tracking-widest">Cerrar Sesión</span>
                     </div>
                 </Link>
             </div>

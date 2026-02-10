@@ -72,7 +72,7 @@ export default async function InvestorsFinancePage() {
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
                 <Card className="glass-card group">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                        <CardTitle className="text-xs font-black uppercase tracking-widest text-muted-foreground">
                             Total Inversores
                         </CardTitle>
                         <div className="p-2 bg-primary/10 rounded-lg">
@@ -81,7 +81,7 @@ export default async function InvestorsFinancePage() {
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-black tracking-tighter">{totalInvestors}</div>
-                        <p className="text-[9px] text-muted-foreground font-bold uppercase mt-1">
+                        <p className="text-xs text-muted-foreground font-bold uppercase mt-1">
                             Socios activos
                         </p>
                     </CardContent>
@@ -89,7 +89,7 @@ export default async function InvestorsFinancePage() {
 
                 <Card className="glass-card group">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                        <CardTitle className="text-xs font-black uppercase tracking-widest text-muted-foreground">
                             Vehículos Asignados
                         </CardTitle>
                         <div className="p-2 bg-blue-500/10 rounded-lg">
@@ -98,7 +98,7 @@ export default async function InvestorsFinancePage() {
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-black tracking-tighter">{totalVehicles}</div>
-                        <p className="text-[9px] text-muted-foreground font-bold uppercase mt-1">
+                        <p className="text-xs text-muted-foreground font-bold uppercase mt-1">
                             Unidades totales
                         </p>
                     </CardContent>
@@ -106,7 +106,7 @@ export default async function InvestorsFinancePage() {
 
                 <Card className="glass-card group">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                        <CardTitle className="text-xs font-black uppercase tracking-widest text-muted-foreground">
                             Ingresos Totales
                         </CardTitle>
                         <div className="p-2 bg-emerald-500/10 rounded-lg">
@@ -117,7 +117,7 @@ export default async function InvestorsFinancePage() {
                         <div className="text-2xl font-black tracking-tighter text-emerald-500">
                             ${totalIncome.toLocaleString()}
                         </div>
-                        <p className="text-[9px] text-muted-foreground font-bold uppercase mt-1">
+                        <p className="text-xs text-muted-foreground font-bold uppercase mt-1">
                             Todos los inversores
                         </p>
                     </CardContent>
@@ -125,7 +125,7 @@ export default async function InvestorsFinancePage() {
 
                 <Card className="glass-card group">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                        <CardTitle className="text-xs font-black uppercase tracking-widest text-muted-foreground">
                             Gastos Totales
                         </CardTitle>
                         <div className="p-2 bg-red-500/10 rounded-lg">
@@ -136,7 +136,7 @@ export default async function InvestorsFinancePage() {
                         <div className="text-2xl font-black tracking-tighter text-red-500">
                             ${totalExpenses.toLocaleString()}
                         </div>
-                        <p className="text-[9px] text-muted-foreground font-bold uppercase mt-1">
+                        <p className="text-xs text-muted-foreground font-bold uppercase mt-1">
                             Todos los inversores
                         </p>
                     </CardContent>
@@ -144,7 +144,7 @@ export default async function InvestorsFinancePage() {
 
                 <Card className="glass-card group border-l-4 border-l-primary/40">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-[10px] font-black uppercase tracking-widest text-primary">
+                        <CardTitle className="text-xs font-black uppercase tracking-widest text-primary">
                             Balance Neto Total
                         </CardTitle>
                         <div className="p-2 bg-primary/10 rounded-lg">
@@ -158,7 +158,7 @@ export default async function InvestorsFinancePage() {
                         )}>
                             ${totalNetBalance.toLocaleString()}
                         </div>
-                        <p className="text-[9px] text-muted-foreground font-bold uppercase mt-1">
+                        <p className="text-xs text-muted-foreground font-bold uppercase mt-1">
                             Caja consolidada
                         </p>
                     </CardContent>
@@ -177,7 +177,7 @@ export default async function InvestorsFinancePage() {
                                 Estado de Caja por Inversor
                             </CardTitle>
                         </div>
-                        <Badge variant="outline" className="font-black uppercase text-[9px] tracking-widest">
+                        <Badge variant="outline" className="font-black uppercase text-xs tracking-widest">
                             {investorsWithPositiveBalance} Positivos • {investorsWithNegativeBalance} Negativos
                         </Badge>
                     </div>
@@ -196,22 +196,22 @@ export default async function InvestorsFinancePage() {
                             <table className="w-full border-collapse">
                                 <thead>
                                     <tr className="bg-muted/40 border-b border-border/50">
-                                        <th className="px-4 py-3 text-left text-[9px] font-black uppercase tracking-widest text-muted-foreground">
+                                        <th className="px-4 py-3 text-left text-xs font-black uppercase tracking-widest text-muted-foreground">
                                             Inversor
                                         </th>
-                                        <th className="px-4 py-3 text-center text-[9px] font-black uppercase tracking-widest text-muted-foreground hidden md:table-cell">
+                                        <th className="px-4 py-3 text-center text-xs font-black uppercase tracking-widest text-muted-foreground hidden md:table-cell">
                                             Vehículos
                                         </th>
-                                        <th className="px-4 py-3 text-right text-[9px] font-black uppercase tracking-widest text-muted-foreground hidden lg:table-cell">
+                                        <th className="px-4 py-3 text-right text-xs font-black uppercase tracking-widest text-muted-foreground hidden lg:table-cell">
                                             Ingresos
                                         </th>
-                                        <th className="px-4 py-3 text-right text-[9px] font-black uppercase tracking-widest text-muted-foreground hidden lg:table-cell">
+                                        <th className="px-4 py-3 text-right text-xs font-black uppercase tracking-widest text-muted-foreground hidden lg:table-cell">
                                             Gastos
                                         </th>
-                                        <th className="px-4 py-3 text-right text-[9px] font-black uppercase tracking-widest text-muted-foreground">
+                                        <th className="px-4 py-3 text-right text-xs font-black uppercase tracking-widest text-muted-foreground">
                                             Balance
                                         </th>
-                                        <th className="px-4 py-3 text-right text-[9px] font-black uppercase tracking-widest text-muted-foreground">
+                                        <th className="px-4 py-3 text-right text-xs font-black uppercase tracking-widest text-muted-foreground">
                                             Acción
                                         </th>
                                     </tr>
@@ -231,7 +231,7 @@ export default async function InvestorsFinancePage() {
                                                         <p className="text-sm font-black uppercase tracking-tight leading-none group-hover:text-primary transition-colors">
                                                             {investor.investorName || 'Sin nombre'}
                                                         </p>
-                                                        <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground opacity-60">
+                                                        <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground opacity-60">
                                                             {investor.investorEmail}
                                                         </p>
                                                         {investor.vehicleCount > 0 && (
@@ -247,7 +247,7 @@ export default async function InvestorsFinancePage() {
                                                 </Link>
                                             </td>
                                             <td className="py-4 px-4 text-center hidden md:table-cell">
-                                                <Badge variant="outline" className="font-black text-[10px]">
+                                                <Badge variant="outline" className="font-black text-xs">
                                                     {investor.vehicleCount}
                                                 </Badge>
                                             </td>
@@ -280,7 +280,7 @@ export default async function InvestorsFinancePage() {
                                             <td className="py-4 px-4 text-right">
                                                 <div className="flex items-center justify-end gap-1 sm:gap-2">
                                                     <Link href={`/dashboard/admin/investors/${investor.investorId}`}>
-                                                        <Button variant="outline" size="sm" className="h-8 px-2 sm:px-3 rounded-lg font-black uppercase text-[8px] sm:text-[9px] tracking-widest border-primary/20 hover:bg-primary hover:text-white transition-all group-hover:border-primary">
+                                                        <Button variant="outline" size="sm" className="h-8 px-2 sm:px-3 rounded-lg font-black uppercase text-[8px] sm:text-xs tracking-widest border-primary/20 hover:bg-primary hover:text-white transition-all group-hover:border-primary">
                                                             <span className="hidden sm:inline">Ver informe</span>
                                                             <ChevronRight className="sm:ml-1.5 h-3 w-3" />
                                                         </Button>

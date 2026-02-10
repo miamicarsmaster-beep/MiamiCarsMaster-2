@@ -75,7 +75,7 @@ export function DeleteInvestorButton({ investorId, investorName }: DeleteInvesto
                     <Button
                         variant="outline"
                         onClick={() => setOpen(false)}
-                        className="flex-1 h-12 rounded-2xl font-black uppercase italic tracking-widest border-slate-200 text-slate-400 hover:bg-slate-50 transition-all text-[10px]"
+                        className="flex-1 h-12 rounded-2xl font-black uppercase italic tracking-widest border-slate-200 text-slate-400 hover:bg-slate-50 transition-all text-xs"
                     >
                         Cancelar
                     </Button>
@@ -83,7 +83,7 @@ export function DeleteInvestorButton({ investorId, investorName }: DeleteInvesto
                         variant="destructive"
                         onClick={handleDelete}
                         disabled={isDeleting}
-                        className="flex-1 h-12 rounded-2xl font-black uppercase italic tracking-widest bg-red-600 hover:bg-red-700 transition-all shadow-xl shadow-red-200 text-[10px]"
+                        className="flex-1 h-12 rounded-2xl font-black uppercase italic tracking-widest bg-red-600 hover:bg-red-700 transition-all shadow-xl shadow-red-200 text-xs"
                     >
                         {isDeleting ? (
                             <Loader2 className="h-4 w-4 animate-spin" />

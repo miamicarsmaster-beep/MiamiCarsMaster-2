@@ -18,7 +18,7 @@ export function ContactSection() {
                     viewport={{ once: true }}
                     className="max-w-4xl mx-auto space-y-8 md:space-y-10"
                 >
-                    <span className="text-[10px] font-black uppercase tracking-[0.5em] text-primary italic">Asesoría VIP 24/7</span>
+                    <span className="text-xs font-black uppercase tracking-[0.5em] text-primary italic">Asesoría VIP 24/7</span>
                     <h2 className="text-4xl md:text-8xl font-black tracking-tighter uppercase italic leading-[0.85]">
                         Escala tu capital <br />
                         <span className="text-primary italic">en miami.</span>
@@ -44,7 +44,7 @@ export function ContactSection() {
 
                     <div className="pt-20 grid grid-cols-2 lg:grid-cols-4 gap-8 opacity-40">
                         {['SEGURIDAD JURÍDICA', 'ALTA RENTABILIDAD', 'GESTIÓN TOTAL', 'TRANSPARENCIA 100%'].map((item, i) => (
-                            <span key={i} className="text-[9px] font-black tracking-[0.3em] font-mono">{item}</span>
+                            <span key={i} className="text-xs font-black tracking-[0.3em] font-mono">{item}</span>
                         ))}
                     </div>
                 </motion.div>

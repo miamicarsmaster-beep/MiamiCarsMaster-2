@@ -114,7 +114,7 @@ export default function InvestorRentalsPage() {
                 <h1 className="text-4xl font-black italic tracking-tighter uppercase leading-none mb-2">
                     Mi <span className="text-primary">Flota Operativa</span>
                 </h1>
-                <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-muted-foreground">Calendario de alquileres y gestión de reservas en tiempo real</p>
+                <p className="text-xs font-bold uppercase tracking-[0.3em] text-muted-foreground">Calendario de alquileres y gestión de reservas en tiempo real</p>
             </div>
 
             {/* Quick Stats */}
@@ -125,7 +125,7 @@ export default function InvestorRentalsPage() {
                             <TrendingUp className="h-7 w-7" />
                         </div>
                         <div>
-                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-1">En Curso</p>
+                            <p className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground mb-1">En Curso</p>
                             <p className="text-3xl font-black italic tracking-tighter">{activeRentals.length}<span className="text-sm font-bold text-muted-foreground not-italic ml-1">autos</span></p>
                         </div>
                     </div>
@@ -137,7 +137,7 @@ export default function InvestorRentalsPage() {
                             <CalendarIcon className="h-7 w-7" />
                         </div>
                         <div>
-                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-1">Reservas</p>
+                            <p className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground mb-1">Reservas</p>
                             <p className="text-3xl font-black italic tracking-tighter">{upcomingRentals.length}<span className="text-sm font-bold text-muted-foreground not-italic ml-1">próximas</span></p>
                         </div>
                     </div>
@@ -149,7 +149,7 @@ export default function InvestorRentalsPage() {
                             <BadgeDollarSign className="h-7 w-7" />
                         </div>
                         <div>
-                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-1">Ingresos Proyectados</p>
+                            <p className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground mb-1">Ingresos Proyectados</p>
                             <p className="text-3xl font-black italic tracking-tighter">${rentals.filter(r => parseISO(r.start_date) >= new Date()).reduce((sum, r) => sum + r.total_amount, 0).toLocaleString()}</p>
                         </div>
                     </div>
@@ -171,11 +171,11 @@ export default function InvestorRentalsPage() {
                             <div className="flex items-center gap-6 p-4 bg-muted/40 rounded-2xl border border-border/50">
                                 <div className="flex items-center gap-2">
                                     <div className="h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
-                                    <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-500 opacity-80">Renta Activa</span>
+                                    <span className="text-xs font-bold uppercase tracking-widest text-emerald-500 opacity-80">Renta Activa</span>
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <div className="h-2 w-2 rounded-full bg-blue-500 opacity-50" />
-                                    <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Reserva Próxima</span>
+                                    <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Reserva Próxima</span>
                                 </div>
                             </div>
                         </div>
@@ -198,7 +198,7 @@ export default function InvestorRentalsPage() {
                                         button_next: "h-8 w-8 bg-transparent p-0 opacity-50 hover:opacity-100 transition-opacity",
                                         table: "w-full border-collapse",
                                         weekdays: "flex justify-between mb-4",
-                                        weekday: "text-muted-foreground w-10 font-black uppercase text-[10px] tracking-widest text-center",
+                                        weekday: "text-muted-foreground w-10 font-black uppercase text-xs tracking-widest text-center",
                                         week: "flex w-full justify-between mt-2",
                                         day: "h-10 w-10 text-center text-sm p-0 relative focus-within:relative focus-within:z-20 flex items-center justify-center",
                                         day_button: cn(
@@ -234,8 +234,8 @@ export default function InvestorRentalsPage() {
 
                             <div className="space-y-6">
                                 <div className="flex items-center justify-between border-b border-border/30 pb-4">
-                                    <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground">Eventos del {selectedDate ? format(selectedDate, 'dd MMMM', { locale: es }) : 'Día Selectionada'}</h4>
-                                    <Badge className="bg-primary/10 text-primary border-0 rounded-lg font-black text-[10px] tracking-widest">{selectedDateRentals.length}</Badge>
+                                    <h4 className="text-xs font-black uppercase tracking-[0.3em] text-muted-foreground">Eventos del {selectedDate ? format(selectedDate, 'dd MMMM', { locale: es }) : 'Día Selectionada'}</h4>
+                                    <Badge className="bg-primary/10 text-primary border-0 rounded-lg font-black text-xs tracking-widest">{selectedDateRentals.length}</Badge>
                                 </div>
 
                                 {selectedDateRentals.length > 0 ? (
@@ -251,10 +251,10 @@ export default function InvestorRentalsPage() {
                                                         <h5 className="font-black italic tracking-tighter uppercase text-sm group-hover:text-primary transition-colors">
                                                             {rental.vehicle?.make} {rental.vehicle?.model}
                                                         </h5>
-                                                        <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">{rental.vehicle?.license_plate}</p>
+                                                        <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{rental.vehicle?.license_plate}</p>
                                                     </div>
                                                 </div>
-                                                <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest">
+                                                <div className="flex items-center justify-between text-xs font-bold uppercase tracking-widest">
                                                     <span className="flex items-center gap-1.5 opacity-60"><User className="h-3 w-3" /> {rental.customer_name}</span>
                                                     <span className="text-emerald-500 italic">${rental.total_amount.toLocaleString()}</span>
                                                 </div>
@@ -264,7 +264,7 @@ export default function InvestorRentalsPage() {
                                 ) : (
                                     <div className="flex flex-col items-center justify-center py-20 opacity-20 text-center">
                                         <AlertCircle className="h-12 w-12 mb-4" />
-                                        <p className="text-[10px] font-bold uppercase tracking-[0.2em]">Disponibilidad Total</p>
+                                        <p className="text-xs font-bold uppercase tracking-[0.2em]">Disponibilidad Total</p>
                                         <p className="text-[8px] font-bold uppercase tracking-[0.1em] mt-1">No hay rentas operativas para este día</p>
                                     </div>
                                 )}
@@ -296,17 +296,17 @@ export default function InvestorRentalsPage() {
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center justify-between mb-1">
                                             <h5 className="font-bold text-xs uppercase truncate group-hover:text-primary transition-colors">{rental.customer_name}</h5>
-                                            <span className="text-[9px] font-black italic tracking-tighter text-emerald-500">${rental.total_amount.toLocaleString()}</span>
+                                            <span className="text-xs font-black italic tracking-tighter text-emerald-500">${rental.total_amount.toLocaleString()}</span>
                                         </div>
                                         <div className="flex items-center justify-between">
-                                            <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">{rental.vehicle?.make} {rental.vehicle?.model?.split(' ')[0]}</p>
+                                            <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{rental.vehicle?.make} {rental.vehicle?.model?.split(' ')[0]}</p>
                                             <span className="text-[8px] font-bold tracking-tight opacity-40">{format(parseISO(rental.start_date), 'dd/MM/yy')}</span>
                                         </div>
                                     </div>
                                 </div>
                             ))}
 
-                            <Button variant="ghost" className="w-full rounded-xl font-black uppercase text-[10px] tracking-[0.2em] text-muted-foreground hover:text-primary hover:bg-primary/5">
+                            <Button variant="ghost" className="w-full rounded-xl font-black uppercase text-xs tracking-[0.2em] text-muted-foreground hover:text-primary hover:bg-primary/5">
                                 Ver Todo el Historial <ChevronRight className="h-3 w-3 ml-2" />
                             </Button>
                         </div>
@@ -318,7 +318,7 @@ export default function InvestorRentalsPage() {
                         <p className="text-xs font-medium text-slate-400 leading-relaxed mb-6">
                             Tu flota tiene una ocupación del <span className="text-primary font-black">{(activeRentals.length / (rentals.length || 1) * 100).toFixed(0)}%</span> en los últimos 30 días.
                         </p>
-                        <Button className="w-full rounded-2xl h-12 font-black uppercase text-[10px] tracking-widest shadow-xl shadow-primary/20 bg-primary text-white hover:scale-105 active:scale-95 transition-all">
+                        <Button className="w-full rounded-2xl h-12 font-black uppercase text-xs tracking-widest shadow-xl shadow-primary/20 bg-primary text-white hover:scale-105 active:scale-95 transition-all">
                             Optimizar Tarifas
                         </Button>
                     </Card>

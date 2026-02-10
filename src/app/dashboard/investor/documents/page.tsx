@@ -110,14 +110,14 @@ export default function InvestorDocumentsPage() {
                     <h1 className="text-4xl md:text-5xl font-black italic tracking-tighter uppercase leading-none">
                         Vault de <span className="text-primary">Documentos</span>
                     </h1>
-                    <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-muted-foreground">Archivo digital centralizado de tu flota e inversión</p>
+                    <p className="text-xs font-bold uppercase tracking-[0.3em] text-muted-foreground">Archivo digital centralizado de tu flota e inversión</p>
                 </div>
 
                 <div className="flex items-center gap-3">
                     <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary group">
                         <FileText className="h-5 w-5 group-hover:scale-110 transition-transform" />
                     </div>
-                    <Badge variant="outline" className="rounded-lg px-3 py-1 text-[10px] font-black uppercase tracking-widest border-border/50">
+                    <Badge variant="outline" className="rounded-lg px-3 py-1 text-xs font-black uppercase tracking-widest border-border/50">
                         {documents.length} Archivos
                     </Badge>
                 </div>
@@ -128,7 +128,7 @@ export default function InvestorDocumentsPage() {
                 <button
                     onClick={() => setSelectedCategory("all")}
                     className={cn(
-                        "px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300",
+                        "px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all duration-300",
                         selectedCategory === "all"
                             ? "bg-primary text-white shadow-lg shadow-primary/20 scale-105"
                             : "text-muted-foreground hover:text-primary hover:bg-primary/5"
@@ -141,7 +141,7 @@ export default function InvestorDocumentsPage() {
                         key={cat.value}
                         onClick={() => setSelectedCategory(cat.value)}
                         className={cn(
-                            "px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 whitespace-nowrap",
+                            "px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all duration-300 whitespace-nowrap",
                             selectedCategory === cat.value
                                 ? "bg-primary text-white shadow-lg shadow-primary/20 scale-105"
                                 : "text-muted-foreground hover:text-primary hover:bg-primary/5"
@@ -181,14 +181,14 @@ export default function InvestorDocumentsPage() {
                                     )}>
                                         {getFileIcon(doc.type)}
                                     </div>
-                                    <Badge variant="outline" className="text-[9px] font-black uppercase tracking-widest border-border/50 bg-muted/30">
+                                    <Badge variant="outline" className="text-xs font-black uppercase tracking-widest border-border/50 bg-muted/30">
                                         {getCategoryBadge(doc.category)}
                                     </Badge>
                                 </div>
                                 <h4 className="text-sm font-black uppercase italic tracking-tighter truncate group-hover:text-primary transition-colors">
                                     {doc.title}
                                 </h4>
-                                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground opacity-60 mt-1">
+                                <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground opacity-60 mt-1">
                                     Agregado: {new Date(doc.created_at).toLocaleDateString()}
                                 </p>
                             </div>
@@ -212,7 +212,7 @@ export default function InvestorDocumentsPage() {
                                                 <FileText className="h-8 w-8" />
                                             </div>
                                             <div className="text-center space-y-1">
-                                                <span className="text-[10px] font-black uppercase tracking-[0.2em] block text-red-600/60">PDF DOCUMENT</span>
+                                                <span className="text-xs font-black uppercase tracking-[0.2em] block text-red-600/60">PDF DOCUMENT</span>
                                                 <span className="text-[8px] font-bold text-muted-foreground/40 uppercase block">Vault Verified</span>
                                             </div>
                                         </div>
@@ -222,7 +222,7 @@ export default function InvestorDocumentsPage() {
                                                 <File className="h-8 w-8" />
                                             </div>
                                             <div className="text-center space-y-1">
-                                                <span className="text-[10px] font-black uppercase tracking-[0.2em] block">PREVIEW VAULT</span>
+                                                <span className="text-xs font-black uppercase tracking-[0.2em] block">PREVIEW VAULT</span>
                                                 <span className="text-[8px] font-bold text-muted-foreground/60 uppercase block">{doc.type || 'FILE'}</span>
                                             </div>
                                         </div>
@@ -237,7 +237,7 @@ export default function InvestorDocumentsPage() {
                                 {doc.expiry_date && (
                                     <div className="flex items-center gap-2 px-1">
                                         <div className="h-1.5 w-1.5 rounded-full bg-orange-500 animate-pulse" />
-                                        <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-orange-500 italic">
+                                        <span className="text-xs font-bold uppercase tracking-[0.2em] text-orange-500 italic">
                                             Expira: {new Date(doc.expiry_date).toLocaleDateString()}
                                         </span>
                                     </div>
@@ -247,7 +247,7 @@ export default function InvestorDocumentsPage() {
                                     <Button
                                         variant="outline"
                                         size="sm"
-                                        className="flex-1 rounded-xl font-black uppercase text-[10px] tracking-widest h-11 border-border/50 hover:bg-primary hover:text-white transition-all shadow-lg hover:shadow-primary/20"
+                                        className="flex-1 rounded-xl font-black uppercase text-xs tracking-widest h-11 border-border/50 hover:bg-primary hover:text-white transition-all shadow-lg hover:shadow-primary/20"
                                         onClick={() => setPreviewDoc(doc)}
                                     >
                                         <Eye className="h-4 w-4 mr-2" />
@@ -282,14 +282,14 @@ export default function InvestorDocumentsPage() {
                                 <FileText className="h-5 w-5 text-primary" />
                                 {previewDoc?.title}
                             </DialogTitle>
-                            <DialogDescription className="text-slate-400 font-bold uppercase text-[10px] tracking-widest">
+                            <DialogDescription className="text-slate-400 font-bold uppercase text-xs tracking-widest">
                                 {previewDoc?.category ? getCategoryBadge(previewDoc.category) : "Documento General"} • {previewDoc && new Date(previewDoc.created_at).toLocaleDateString()}
                             </DialogDescription>
                         </div>
                         <Button
                             variant="outline"
                             size="sm"
-                            className="mr-10 rounded-xl bg-white/5 border-white/10 text-white hover:bg-white/10 font-bold uppercase text-[10px] tracking-widest"
+                            className="mr-10 rounded-xl bg-white/5 border-white/10 text-white hover:bg-white/10 font-bold uppercase text-xs tracking-widest"
                             onClick={() => {
                                 if (previewDoc) {
                                     const a = document.createElement('a')

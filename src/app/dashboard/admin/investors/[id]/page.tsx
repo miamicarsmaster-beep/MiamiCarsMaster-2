@@ -127,7 +127,7 @@ export default async function InvestorDetailPage({ params }: PageProps) {
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 <Card className="glass-card group">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                        <CardTitle className="text-xs font-black uppercase tracking-widest text-muted-foreground">
                             Vehículos Asignados
                         </CardTitle>
                         <div className="p-2 bg-blue-500/10 rounded-lg">
@@ -136,7 +136,7 @@ export default async function InvestorDetailPage({ params }: PageProps) {
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-black tracking-tighter">{investor.vehicleCount}</div>
-                        <p className="text-[9px] text-muted-foreground font-bold uppercase mt-1">
+                        <p className="text-xs text-muted-foreground font-bold uppercase mt-1">
                             Unidades activas
                         </p>
                     </CardContent>
@@ -144,7 +144,7 @@ export default async function InvestorDetailPage({ params }: PageProps) {
 
                 <Card className="glass-card group">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                        <CardTitle className="text-xs font-black uppercase tracking-widest text-muted-foreground">
                             Ingresos Totales
                         </CardTitle>
                         <div className="p-2 bg-emerald-500/10 rounded-lg">
@@ -155,7 +155,7 @@ export default async function InvestorDetailPage({ params }: PageProps) {
                         <div className="text-2xl font-black tracking-tighter text-emerald-500">
                             ${investor.totalIncome.toLocaleString()}
                         </div>
-                        <p className="text-[9px] text-muted-foreground font-bold uppercase mt-1">
+                        <p className="text-xs text-muted-foreground font-bold uppercase mt-1">
                             Histórico completo
                         </p>
                     </CardContent>
@@ -163,7 +163,7 @@ export default async function InvestorDetailPage({ params }: PageProps) {
 
                 <Card className="glass-card group">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                        <CardTitle className="text-xs font-black uppercase tracking-widest text-muted-foreground">
                             Gastos Totales
                         </CardTitle>
                         <div className="p-2 bg-red-500/10 rounded-lg">
@@ -174,7 +174,7 @@ export default async function InvestorDetailPage({ params }: PageProps) {
                         <div className="text-2xl font-black tracking-tighter text-red-500">
                             ${investor.totalExpenses.toLocaleString()}
                         </div>
-                        <p className="text-[9px] text-muted-foreground font-bold uppercase mt-1">
+                        <p className="text-xs text-muted-foreground font-bold uppercase mt-1">
                             Histórico completo
                         </p>
                     </CardContent>
@@ -182,7 +182,7 @@ export default async function InvestorDetailPage({ params }: PageProps) {
 
                 <Card className="glass-card group border-l-4 border-l-primary/40">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-[10px] font-black uppercase tracking-widest text-primary">
+                        <CardTitle className="text-xs font-black uppercase tracking-widest text-primary">
                             Balance Neto
                         </CardTitle>
                         <div className="p-2 bg-primary/10 rounded-lg">
@@ -196,7 +196,7 @@ export default async function InvestorDetailPage({ params }: PageProps) {
                         )}>
                             ${investor.netBalance.toLocaleString()}
                         </div>
-                        <p className="text-[9px] text-muted-foreground font-bold uppercase mt-1">
+                        <p className="text-xs text-muted-foreground font-bold uppercase mt-1">
                             Caja actual
                         </p>
                     </CardContent>
@@ -238,14 +238,14 @@ export default async function InvestorDetailPage({ params }: PageProps) {
                                             <h4 className="text-sm font-black uppercase tracking-tight text-white leading-none">
                                                 {vehicle.make} {vehicle.model}
                                             </h4>
-                                            <p className="text-[9px] font-bold uppercase tracking-widest text-white/70 mt-1">
+                                            <p className="text-xs font-bold uppercase tracking-widest text-white/70 mt-1">
                                                 {vehicle.licensePlate || 'Sin matrícula'}
                                             </p>
                                         </div>
                                     </div>
                                     <div className="p-4 space-y-2">
                                         <div className="flex items-center justify-between">
-                                            <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">
+                                            <span className="text-xs font-black uppercase tracking-widest text-muted-foreground">
                                                 Ingresos
                                             </span>
                                             <span className="text-sm font-black italic text-emerald-500">
@@ -253,7 +253,7 @@ export default async function InvestorDetailPage({ params }: PageProps) {
                                             </span>
                                         </div>
                                         <div className="flex items-center justify-between">
-                                            <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">
+                                            <span className="text-xs font-black uppercase tracking-widest text-muted-foreground">
                                                 Gastos
                                             </span>
                                             <span className="text-sm font-black italic text-red-500">
@@ -262,7 +262,7 @@ export default async function InvestorDetailPage({ params }: PageProps) {
                                         </div>
                                         <div className="pt-2 border-t border-border/50">
                                             <div className="flex items-center justify-between">
-                                                <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">
+                                                <span className="text-xs font-black uppercase tracking-widest text-muted-foreground">
                                                     Balance
                                                 </span>
                                                 <span className={cn(
@@ -302,16 +302,16 @@ export default async function InvestorDetailPage({ params }: PageProps) {
                             <table className="w-full border-collapse">
                                 <thead>
                                     <tr className="bg-muted/40 border-b border-border/50">
-                                        <th className="px-4 py-3 text-left text-[9px] font-black uppercase tracking-widest text-muted-foreground">
+                                        <th className="px-4 py-3 text-left text-xs font-black uppercase tracking-widest text-muted-foreground">
                                             Mes
                                         </th>
-                                        <th className="px-4 py-3 text-right text-[9px] font-black uppercase tracking-widest text-muted-foreground hidden sm:table-cell">
+                                        <th className="px-4 py-3 text-right text-xs font-black uppercase tracking-widest text-muted-foreground hidden sm:table-cell">
                                             Ingresos
                                         </th>
-                                        <th className="px-4 py-3 text-right text-[9px] font-black uppercase tracking-widest text-muted-foreground hidden sm:table-cell">
+                                        <th className="px-4 py-3 text-right text-xs font-black uppercase tracking-widest text-muted-foreground hidden sm:table-cell">
                                             Gastos
                                         </th>
-                                        <th className="px-4 py-3 text-right text-[9px] font-black uppercase tracking-widest text-muted-foreground">
+                                        <th className="px-4 py-3 text-right text-xs font-black uppercase tracking-widest text-muted-foreground">
                                             Balance
                                         </th>
                                     </tr>
@@ -367,7 +367,7 @@ export default async function InvestorDetailPage({ params }: PageProps) {
                         <CardTitle className="text-lg md:text-xl font-black uppercase tracking-widest">
                             Historial de Transacciones
                         </CardTitle>
-                        <Badge variant="outline" className="ml-auto font-black text-[9px]">
+                        <Badge variant="outline" className="ml-auto font-black text-xs">
                             {transactions.length} Registros
                         </Badge>
                     </div>
@@ -383,22 +383,22 @@ export default async function InvestorDetailPage({ params }: PageProps) {
                             <table className="w-full border-collapse">
                                 <thead>
                                     <tr className="bg-muted/40 border-b border-border/50">
-                                        <th className="px-4 py-3 text-left text-[9px] font-black uppercase tracking-widest text-muted-foreground">
+                                        <th className="px-4 py-3 text-left text-xs font-black uppercase tracking-widest text-muted-foreground">
                                             Fecha
                                         </th>
-                                        <th className="px-4 py-3 text-left text-[9px] font-black uppercase tracking-widest text-muted-foreground">
+                                        <th className="px-4 py-3 text-left text-xs font-black uppercase tracking-widest text-muted-foreground">
                                             Vehículo
                                         </th>
-                                        <th className="px-4 py-3 text-left text-[9px] font-black uppercase tracking-widest text-muted-foreground hidden md:table-cell">
+                                        <th className="px-4 py-3 text-left text-xs font-black uppercase tracking-widest text-muted-foreground hidden md:table-cell">
                                             Categoría
                                         </th>
-                                        <th className="px-4 py-3 text-left text-[9px] font-black uppercase tracking-widest text-muted-foreground hidden lg:table-cell">
+                                        <th className="px-4 py-3 text-left text-xs font-black uppercase tracking-widest text-muted-foreground hidden lg:table-cell">
                                             Descripción
                                         </th>
-                                        <th className="px-4 py-3 text-center text-[9px] font-black uppercase tracking-widest text-muted-foreground hidden sm:table-cell">
+                                        <th className="px-4 py-3 text-center text-xs font-black uppercase tracking-widest text-muted-foreground hidden sm:table-cell">
                                             Tipo
                                         </th>
-                                        <th className="px-4 py-3 text-right text-[9px] font-black uppercase tracking-widest text-muted-foreground">
+                                        <th className="px-4 py-3 text-right text-xs font-black uppercase tracking-widest text-muted-foreground">
                                             Monto
                                         </th>
                                     </tr>

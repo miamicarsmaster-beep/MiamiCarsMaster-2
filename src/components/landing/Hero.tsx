@@ -25,7 +25,7 @@ export function Hero() {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.6 }}
-                        className="inline-flex items-center gap-3 px-5 py-2 rounded-full bg-white/5 backdrop-blur-xl border border-white/10 text-white text-[10px] font-black uppercase tracking-[0.3em] mb-10"
+                        className="inline-flex items-center gap-3 px-5 py-2 rounded-full bg-white/5 backdrop-blur-xl border border-white/10 text-white text-xs font-black uppercase tracking-[0.3em] mb-10"
                     >
                         <span className="flex h-2 w-2 rounded-full bg-primary animate-pulse shadow-[0_0_10px_rgba(var(--primary),0.8)]" />
                         Inversión Estratégica & Rendimiento v2.0
@@ -87,7 +87,7 @@ export function Hero() {
                                 <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
                                     <feat.icon className="h-5 w-5" />
                                 </div>
-                                <span className="text-[10px] font-black uppercase tracking-widest text-white/70">{feat.label}</span>
+                                <span className="text-xs font-black uppercase tracking-widest text-white/70">{feat.label}</span>
                             </div>
                         ))}
                     </motion.div>

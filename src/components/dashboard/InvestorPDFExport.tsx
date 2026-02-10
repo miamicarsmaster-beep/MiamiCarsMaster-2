@@ -250,7 +250,7 @@ export function InvestorPDFExport({ investor, transactions, monthlyBreakdown }: 
     return (
         <Button
             onClick={handleExportPDF}
-            className="rounded-xl h-10 font-black uppercase text-[10px] tracking-widest bg-emerald-600 hover:bg-emerald-700 shadow-lg"
+            className="rounded-xl h-10 font-black uppercase text-xs tracking-widest bg-emerald-600 hover:bg-emerald-700 shadow-lg"
         >
             <Download className="h-4 w-4 mr-2" />
             Exportar PDF

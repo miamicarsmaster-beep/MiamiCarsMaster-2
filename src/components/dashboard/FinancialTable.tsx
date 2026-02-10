@@ -182,21 +182,21 @@ export function FinancialTable({ records: initialRecords, vehicles }: FinancialT
         <div className="space-y-8">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="glass-card p-6 bg-gradient-to-br from-emerald-500/10 to-transparent border-emerald-500/20 group hover:from-emerald-500/20 transition-all">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-emerald-500 mb-1">Ingresos Consolidados</p>
+                    <p className="text-xs font-black uppercase tracking-widest text-emerald-500 mb-1">Ingresos Consolidados</p>
                     <div className="flex justify-between items-end">
                         <p className="text-3xl font-black italic tracking-tighter text-emerald-500 dark:text-emerald-400">${totals.income.toLocaleString()}</p>
                         <TrendingUp className="h-8 w-8 text-emerald-500/30 group-hover:text-emerald-500/50 transition-colors" />
                     </div>
                 </div>
                 <div className="glass-card p-6 bg-gradient-to-br from-red-500/10 to-transparent border-red-500/20 group hover:from-red-500/20 transition-all">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-red-500 mb-1">Egresos Totales</p>
+                    <p className="text-xs font-black uppercase tracking-widest text-red-500 mb-1">Egresos Totales</p>
                     <div className="flex justify-between items-end">
                         <p className="text-3xl font-black italic tracking-tighter text-red-500 dark:text-red-400">${totals.expenses.toLocaleString()}</p>
                         <TrendingDown className="h-8 w-8 text-red-500/30 group-hover:text-red-500/50 transition-colors" />
                     </div>
                 </div>
                 <div className="glass-card p-6 bg-gradient-to-br from-primary/10 to-transparent border-primary/20 group hover:from-primary/20 transition-all">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-primary mb-1">Balance Operativo</p>
+                    <p className="text-xs font-black uppercase tracking-widest text-primary mb-1">Balance Operativo</p>
                     <div className="flex justify-between items-end">
                         <p className="text-3xl font-black italic tracking-tighter text-primary">${totals.net.toLocaleString()}</p>
                         <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -209,13 +209,13 @@ export function FinancialTable({ records: initialRecords, vehicles }: FinancialT
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 px-2">
                 <div className="flex flex-col gap-1">
                     <h3 className="text-lg md:text-xl font-black uppercase tracking-widest italic">Registros <span className="text-primary">Recientes</span></h3>
-                    <p className="text-[10px] text-muted-foreground font-bold">{records.length} Operaciones registradas</p>
+                    <p className="text-xs text-muted-foreground font-bold">{records.length} Operaciones registradas</p>
                 </div>
                 <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
                     <DialogTrigger asChild>
                         <Button
                             onClick={resetForm}
-                            className="h-11 px-6 rounded-xl font-bold uppercase tracking-widest text-[10px] shadow-xl shadow-primary/20"
+                            className="h-11 px-6 rounded-xl font-bold uppercase tracking-widest text-xs shadow-xl shadow-primary/20"
                         >
                             <Plus className="mr-2 h-4 w-4" /> Nueva Operación
                         </Button>
@@ -320,7 +320,7 @@ export function FinancialTable({ records: initialRecords, vehicles }: FinancialT
                                         id="description"
                                         value={formData.description}
                                         onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                        className="bg-secondary/50 border-border rounded-xl font-bold text-sm p-4 min-h-[100px] resize-none focus:bg-primary/5 transition-all uppercase placeholder:text-[10px] placeholder:tracking-widest"
+                                        className="bg-secondary/50 border-border rounded-xl font-bold text-sm p-4 min-h-[100px] resize-none focus:bg-primary/5 transition-all uppercase placeholder:text-xs placeholder:tracking-widest"
                                         placeholder="Breve explicación del movimiento..."
                                     />
                                 </div>
@@ -353,12 +353,12 @@ export function FinancialTable({ records: initialRecords, vehicles }: FinancialT
                         <Table>
                             <TableHeader className="bg-secondary/30">
                                 <TableRow className="hover:bg-transparent border-border">
-                                    <TableHead className="font-bold uppercase text-[10px] tracking-widest py-5">Fecha</TableHead>
-                                    <TableHead className="font-bold uppercase text-[10px] tracking-widest py-5">Activo / Unidad</TableHead>
-                                    <TableHead className="font-bold uppercase text-[10px] tracking-widest py-5">Categoría</TableHead>
-                                    <TableHead className="font-bold uppercase text-[10px] tracking-widest py-5">Detalle</TableHead>
-                                    <TableHead className="text-right font-bold uppercase text-[10px] tracking-widest py-5">Monto Final</TableHead>
-                                    <TableHead className="text-right font-bold uppercase text-[10px] tracking-widest py-5 px-6">Acciones</TableHead>
+                                    <TableHead className="font-bold uppercase text-xs tracking-widest py-5">Fecha</TableHead>
+                                    <TableHead className="font-bold uppercase text-xs tracking-widest py-5">Activo / Unidad</TableHead>
+                                    <TableHead className="font-bold uppercase text-xs tracking-widest py-5">Categoría</TableHead>
+                                    <TableHead className="font-bold uppercase text-xs tracking-widest py-5">Detalle</TableHead>
+                                    <TableHead className="text-right font-bold uppercase text-xs tracking-widest py-5">Monto Final</TableHead>
+                                    <TableHead className="text-right font-bold uppercase text-xs tracking-widest py-5 px-6">Acciones</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -381,7 +381,7 @@ export function FinancialTable({ records: initialRecords, vehicles }: FinancialT
                                                     <span className="font-black italic text-sm tracking-tight group-hover:text-primary transition-colors uppercase">
                                                         {record.vehicle?.make} {record.vehicle?.model}
                                                     </span>
-                                                    <span className="text-[10px] font-bold text-muted-foreground tracking-widest opacity-60">
+                                                    <span className="text-xs font-bold text-muted-foreground tracking-widest opacity-60">
                                                         ID: {record.vehicle?.license_plate || record.vehicle_id.slice(0, 8)}
                                                     </span>
                                                 </div>
@@ -437,7 +437,7 @@ export function FinancialTable({ records: initialRecords, vehicles }: FinancialT
                                     <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary to-transparent opacity-50" />
                                     <div className="flex flex-col md:flex-row justify-between items-start gap-4">
                                         <div>
-                                            <Badge className={`rounded-full border-0 px-3 py-1 text-[10px] uppercase font-black italic tracking-widest shadow-lg text-white mb-4
+                                            <Badge className={`rounded-full border-0 px-3 py-1 text-xs uppercase font-black italic tracking-widest shadow-lg text-white mb-4
                                                     ${selectedRecord.type === 'income' ? 'bg-emerald-600' : 'bg-red-600'}`}>
                                                 {selectedRecord.category}
                                             </Badge>
@@ -458,7 +458,7 @@ export function FinancialTable({ records: initialRecords, vehicles }: FinancialT
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                         <div className="space-y-6">
                                             <div className="space-y-2">
-                                                <Label className="text-[10px] font-black uppercase tracking-widest text-primary/40 flex items-center gap-2">
+                                                <Label className="text-xs font-black uppercase tracking-widest text-primary/40 flex items-center gap-2">
                                                     <Calendar className="h-3 w-3" /> Fecha de Ejecución
                                                 </Label>
                                                 <p className="text-base md:text-lg font-black italic text-foreground/80">
@@ -467,22 +467,22 @@ export function FinancialTable({ records: initialRecords, vehicles }: FinancialT
                                             </div>
 
                                             <div className="space-y-2">
-                                                <Label className="text-[10px] font-black uppercase tracking-widest text-primary/40 flex items-center gap-2">
+                                                <Label className="text-xs font-black uppercase tracking-widest text-primary/40 flex items-center gap-2">
                                                     <DollarSign className="h-3 w-3" /> Asociado a Unidad
                                                 </Label>
                                                 <div className="p-4 rounded-2xl bg-secondary/50 border border-border">
                                                     <p className="font-black italic text-primary uppercase">
                                                         {selectedRecord.vehicle?.make} {selectedRecord.vehicle?.model}
                                                     </p>
-                                                    <p className="text-[10px] font-bold opacity-60">PLACA: {selectedRecord.vehicle?.license_plate || 'SIN PLACA'}</p>
+                                                    <p className="text-xs font-bold opacity-60">PLACA: {selectedRecord.vehicle?.license_plate || 'SIN PLACA'}</p>
                                                     {selectedRecord.mileage_at_operation && (
-                                                        <p className="text-[10px] font-bold text-emerald-500 mt-1">MILLAS REGISTRADAS: {selectedRecord.mileage_at_operation.toLocaleString()} MI</p>
+                                                        <p className="text-xs font-bold text-emerald-500 mt-1">MILLAS REGISTRADAS: {selectedRecord.mileage_at_operation.toLocaleString()} MI</p>
                                                     )}
                                                 </div>
                                             </div>
 
                                             <div className="space-y-2">
-                                                <Label className="text-[10px] font-black uppercase tracking-widest text-primary/40 flex items-center gap-2">
+                                                <Label className="text-xs font-black uppercase tracking-widest text-primary/40 flex items-center gap-2">
                                                     <FileText className="h-3 w-3" /> Descripción
                                                 </Label>
                                                 <p className="text-sm font-bold italic leading-relaxed text-muted-foreground uppercase">
@@ -492,7 +492,7 @@ export function FinancialTable({ records: initialRecords, vehicles }: FinancialT
                                         </div>
 
                                         <div className="space-y-4">
-                                            <Label className="text-[10px] font-black uppercase tracking-widest text-primary/40 flex items-center gap-2">
+                                            <Label className="text-xs font-black uppercase tracking-widest text-primary/40 flex items-center gap-2">
                                                 Comprobante / Ticket
                                             </Label>
                                             <div className="relative aspect-[4/5] rounded-[2rem] overflow-hidden border-2 border-border bg-muted/30 group">
@@ -503,12 +503,13 @@ export function FinancialTable({ records: initialRecords, vehicles }: FinancialT
                                                             fallbackSrc="/placeholder-doc.svg"
                                                             alt="Comprobante"
                                                             fill
+                                                            unoptimized
                                                             className="object-cover transition-transform duration-500 group-hover:scale-110"
                                                         />
                                                         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-center pb-6">
                                                             <Button
                                                                 variant="outline"
-                                                                className="bg-white/10 backdrop-blur-md border-white/20 text-white rounded-xl font-black uppercase text-[10px] tracking-widest"
+                                                                className="bg-white/10 backdrop-blur-md border-white/20 text-white rounded-xl font-black uppercase text-xs tracking-widest"
                                                                 onClick={() => window.open(selectedRecord.proof_image_url!, '_blank')}
                                                             >
                                                                 Expandir Imagen
@@ -518,7 +519,7 @@ export function FinancialTable({ records: initialRecords, vehicles }: FinancialT
                                                 ) : (
                                                     <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground/30">
                                                         <FileText className="h-12 w-12 mb-2" />
-                                                        <p className="text-[10px] font-black uppercase tracking-widest">Sin Documento</p>
+                                                        <p className="text-xs font-black uppercase tracking-widest">Sin Documento</p>
                                                     </div>
                                                 )}
                                             </div>

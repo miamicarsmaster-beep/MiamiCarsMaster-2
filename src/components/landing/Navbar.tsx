@@ -25,7 +25,7 @@ export function Navbar() {
                     </div>
                 </Link>
 
-                <div className="hidden lg:flex items-center gap-12 text-[10px] font-black uppercase tracking-[0.3em] text-white/60">
+                <div className="hidden lg:flex items-center gap-12 text-xs font-black uppercase tracking-[0.3em] text-white/60">
                     <Link href="#como-funciona" className="hover:text-primary transition-all hover:tracking-[0.4em]">
                         Cómo funciona
                     </Link>
@@ -42,12 +42,12 @@ export function Navbar() {
 
                 <div className="flex items-center gap-3">
                     <Link href="/login" className="hidden sm:block">
-                        <Button variant="ghost" className="text-[10px] font-black uppercase tracking-widest text-white/50 hover:text-white hover:bg-white/5 rounded-xl px-6">
+                        <Button variant="ghost" className="text-xs font-black uppercase tracking-widest text-white/50 hover:text-white hover:bg-white/5 rounded-xl px-6">
                             Area Inversor
                         </Button>
                     </Link>
                     <Link href="/login">
-                        <Button className="h-11 px-8 text-[10px] font-black uppercase tracking-widest rounded-xl bg-primary shadow-xl shadow-primary/20 hover:scale-105 active:scale-95 transition-all">
+                        <Button className="h-11 px-8 text-xs font-black uppercase tracking-widest rounded-xl bg-primary shadow-xl shadow-primary/20 hover:scale-105 active:scale-95 transition-all">
                             Acceso Directo
                         </Button>
                     </Link>

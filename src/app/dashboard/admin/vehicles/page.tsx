@@ -20,7 +20,7 @@ export default async function VehiclesPage() {
         return (
             <div className="space-y-10">
                 <div className="flex flex-col gap-2">
-                    <h2 className="text-4xl font-black italic tracking-tighter uppercase font-sans">Flota de <span className="text-primary">Vehículos</span></h2>
+                    <h2 className="text-3xl font-black italic tracking-tighter uppercase font-sans">Flota de <span className="text-primary">Vehículos</span></h2>
                     <p className="text-xs font-bold text-muted-foreground uppercase tracking-[0.3em]">
                         Gestión de activos de alto rendimiento
                     </p>

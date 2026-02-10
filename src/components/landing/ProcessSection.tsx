@@ -42,7 +42,7 @@ export function ProcessSection() {
             <div className="container mx-auto px-6">
                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-20">
                     <div className="space-y-4 max-w-2xl">
-                        <span className="text-[10px] font-black uppercase tracking-[0.4em] text-primary italic">Metodología Miami Cars</span>
+                        <span className="text-xs font-black uppercase tracking-[0.4em] text-primary italic">Metodología Miami Cars</span>
                         <h2 className="text-4xl md:text-6xl font-black tracking-tighter uppercase italic leading-none">
                             Ciclo de Inversión <br />
                             <span className="text-primary italic">Optimizado.</span>

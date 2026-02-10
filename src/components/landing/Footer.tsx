@@ -17,7 +17,7 @@ export function Footer() {
                                 className="object-contain object-left"
                             />
                         </div>
-                        <p className="mt-4 text-[10px] font-bold uppercase tracking-widest text-slate-500 max-w-sm leading-relaxed italic">
+                        <p className="mt-4 text-xs font-bold uppercase tracking-widest text-slate-500 max-w-sm leading-relaxed italic">
                             Plataforma tecnológica líder en gestión de activos <br />
                             y optimización de flotas en Florida. <br />
                             <span className="text-primary not-italic mt-2 block">v2.0 Built for International Excellence</span>
@@ -25,8 +25,8 @@ export function Footer() {
                     </div>
 
                     <div>
-                        <h4 className="text-[10px] font-black uppercase tracking-[0.3em] mb-8 text-white/40">Navegación</h4>
-                        <ul className="space-y-4 text-[10px] font-black uppercase tracking-widest">
+                        <h4 className="text-xs font-black uppercase tracking-[0.3em] mb-8 text-white/40">Navegación</h4>
+                        <ul className="space-y-4 text-xs font-black uppercase tracking-widest">
                             <li><Link href="#como-funciona" className="hover:text-primary transition-all">Cómo funciona</Link></li>
                             <li><Link href="#beneficios" className="hover:text-primary transition-all">Beneficios</Link></li>
                             <li><Link href="#contacto" className="hover:text-primary transition-all">Contacto</Link></li>
@@ -35,8 +35,8 @@ export function Footer() {
                     </div>
 
                     <div>
-                        <h4 className="text-[10px] font-black uppercase tracking-[0.3em] mb-8 text-white/40">Sistemas</h4>
-                        <ul className="space-y-4 text-[10px] font-black uppercase tracking-widest text-slate-500">
+                        <h4 className="text-xs font-black uppercase tracking-[0.3em] mb-8 text-white/40">Sistemas</h4>
+                        <ul className="space-y-4 text-xs font-black uppercase tracking-widest text-slate-500">
                             <li>STATUS: ONLINE</li>
                             <li>VERSION: v2.0 PE</li>
                             <li>ENCRYPTION: AES-256</li>
@@ -46,10 +46,10 @@ export function Footer() {
                 </div>
 
                 <div className="mt-24 pt-12 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-6">
-                    <p className="text-[9px] font-black uppercase tracking-[0.4em] text-slate-600">
+                    <p className="text-xs font-black uppercase tracking-[0.4em] text-slate-600">
                         © {new Date().getFullYear()} Miami Cars plataforma. Todos los derechos reservados.
                     </p>
-                    <div className="flex gap-8 text-[9px] font-black uppercase tracking-[0.2em] text-slate-600">
+                    <div className="flex gap-8 text-xs font-black uppercase tracking-[0.2em] text-slate-600">
                         <Link href="#" className="hover:text-white transition-colors">Términos</Link>
                         <Link href="#" className="hover:text-white transition-colors">Privacidad</Link>
                     </div>

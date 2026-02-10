@@ -174,7 +174,7 @@ export default async function InvestorFinancePage() {
                     <h1 className="text-4xl md:text-5xl font-black italic tracking-tighter uppercase leading-none">
                         Gestión <span className="text-primary">Financiera</span>
                     </h1>
-                    <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-muted-foreground">Control de rentabilidad y flujo de caja de activos</p>
+                    <p className="text-xs font-bold uppercase tracking-[0.3em] text-muted-foreground">Control de rentabilidad y flujo de caja de activos</p>
                 </div>
 
                 <div className="flex items-center gap-3">
@@ -195,7 +195,7 @@ export default async function InvestorFinancePage() {
                             <TrendingUp className="h-6 w-6" />
                         </div>
                         <div>
-                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-1">Ingresos Totales</p>
+                            <p className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground mb-1">Ingresos Totales</p>
                             <h3 className="text-2xl font-black italic tracking-tighter text-emerald-500">
                                 ${totalIncome.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                             </h3>
@@ -210,7 +210,7 @@ export default async function InvestorFinancePage() {
                             <TrendingDown className="h-6 w-6" />
                         </div>
                         <div>
-                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-1">Gastos Totales</p>
+                            <p className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground mb-1">Gastos Totales</p>
                             <h3 className="text-2xl font-black italic tracking-tighter text-red-500">
                                 ${totalExpenses.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                             </h3>
@@ -225,7 +225,7 @@ export default async function InvestorFinancePage() {
                             <DollarSign className="h-6 w-6" />
                         </div>
                         <div>
-                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-1">Balance Neto</p>
+                            <p className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground mb-1">Balance Neto</p>
                             <h3 className={cn("text-2xl font-black italic tracking-tighter", netBalance >= 0 ? "text-blue-500" : "text-red-500")}>
                                 ${netBalance.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                             </h3>
@@ -240,7 +240,7 @@ export default async function InvestorFinancePage() {
                             <Calendar className="h-6 w-6" />
                         </div>
                         <div>
-                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-1">Balance del Mes</p>
+                            <p className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground mb-1">Balance del Mes</p>
                             <h3 className={cn("text-2xl font-black italic tracking-tighter", monthlyNet >= 0 ? "text-emerald-500" : "text-red-500")}>
                                 ${monthlyNet.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                             </h3>
@@ -265,7 +265,7 @@ export default async function InvestorFinancePage() {
                     {Object.keys(incomeByCategory).length === 0 ? (
                         <div className="flex flex-col items-center justify-center py-10 opacity-20">
                             <PieChart className="h-12 w-12 mb-2" />
-                            <p className="text-[10px] font-black uppercase tracking-widest">Sin datos este mes</p>
+                            <p className="text-xs font-black uppercase tracking-widest">Sin datos este mes</p>
                         </div>
                     ) : (
                         <div className="space-y-5">
@@ -304,7 +304,7 @@ export default async function InvestorFinancePage() {
                     {Object.keys(expenseByCategory).length === 0 ? (
                         <div className="flex flex-col items-center justify-center py-10 opacity-20">
                             <PieChart className="h-12 w-12 mb-2" />
-                            <p className="text-[10px] font-black uppercase tracking-widest">Sin datos este mes</p>
+                            <p className="text-xs font-black uppercase tracking-widest">Sin datos este mes</p>
                         </div>
                     ) : (
                         <div className="space-y-5">
@@ -355,14 +355,14 @@ export default async function InvestorFinancePage() {
                                     <h4 className="text-sm font-black uppercase tracking-tight text-white leading-none">
                                         {vehicle.make} {vehicle.model}
                                     </h4>
-                                    <p className="text-[9px] font-bold uppercase tracking-widest text-white/70 mt-1">
+                                    <p className="text-xs font-bold uppercase tracking-widest text-white/70 mt-1">
                                         {vehicle.licensePlate || 'Sin matrícula'}
                                     </p>
                                 </div>
                             </div>
                             <div className="p-5 space-y-3">
                                 <div className="flex items-center justify-between">
-                                    <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">
+                                    <span className="text-xs font-black uppercase tracking-widest text-muted-foreground">
                                         Ingresos Totales
                                     </span>
                                     <span className="text-sm font-black italic text-emerald-500">
@@ -370,7 +370,7 @@ export default async function InvestorFinancePage() {
                                     </span>
                                 </div>
                                 <div className="flex items-center justify-between">
-                                    <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">
+                                    <span className="text-xs font-black uppercase tracking-widest text-muted-foreground">
                                         Gastos Totales
                                     </span>
                                     <span className="text-sm font-black italic text-red-500">
@@ -379,7 +379,7 @@ export default async function InvestorFinancePage() {
                                 </div>
                                 <div className="pt-2 border-t border-border/50">
                                     <div className="flex items-center justify-between">
-                                        <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">
+                                        <span className="text-xs font-black uppercase tracking-widest text-muted-foreground">
                                             Balance Neto
                                         </span>
                                         <span className={cn(
@@ -422,12 +422,12 @@ export default async function InvestorFinancePage() {
                             <table className="w-full border-collapse">
                                 <thead>
                                     <tr className="bg-muted/40 border-b border-border/50">
-                                        <th className="px-6 py-5 text-left text-[10px] font-black uppercase tracking-widest text-muted-foreground">Fecha</th>
-                                        <th className="px-6 py-5 text-left text-[10px] font-black uppercase tracking-widest text-muted-foreground">Activo</th>
-                                        <th className="px-6 py-5 text-left text-[10px] font-black uppercase tracking-widest text-muted-foreground">Categoría</th>
-                                        <th className="px-6 py-5 text-left text-[10px] font-black uppercase tracking-widest text-muted-foreground">Detalles</th>
-                                        <th className="px-6 py-5 text-left text-[10px] font-black uppercase tracking-widest text-muted-foreground">Tipo</th>
-                                        <th className="px-6 py-5 text-right text-[10px] font-black uppercase tracking-widest text-muted-foreground">Monto</th>
+                                        <th className="px-6 py-5 text-left text-xs font-black uppercase tracking-widest text-muted-foreground">Fecha</th>
+                                        <th className="px-6 py-5 text-left text-xs font-black uppercase tracking-widest text-muted-foreground">Activo</th>
+                                        <th className="px-6 py-5 text-left text-xs font-black uppercase tracking-widest text-muted-foreground">Categoría</th>
+                                        <th className="px-6 py-5 text-left text-xs font-black uppercase tracking-widest text-muted-foreground">Detalles</th>
+                                        <th className="px-6 py-5 text-left text-xs font-black uppercase tracking-widest text-muted-foreground">Tipo</th>
+                                        <th className="px-6 py-5 text-right text-xs font-black uppercase tracking-widest text-muted-foreground">Monto</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -451,16 +451,16 @@ export default async function InvestorFinancePage() {
                                                         <p className="text-xs font-black uppercase tracking-tighter leading-none group-hover:text-primary transition-colors">
                                                             {record.vehicle.make} {record.vehicle.model}
                                                         </p>
-                                                        <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground opacity-60">
+                                                        <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground opacity-60">
                                                             {record.vehicle.license_plate}
                                                         </p>
                                                     </div>
                                                 ) : (
-                                                    <span className="text-[10px] font-bold uppercase tracking-widest opacity-20">—</span>
+                                                    <span className="text-xs font-bold uppercase tracking-widest opacity-20">—</span>
                                                 )}
                                             </td>
                                             <td className="py-6 px-8">
-                                                <Badge variant="outline" className="rounded-lg px-2.5 py-1 text-[9px] font-black uppercase tracking-widest border-border/50 bg-muted/30">
+                                                <Badge variant="outline" className="rounded-lg px-2.5 py-1 text-xs font-black uppercase tracking-widest border-border/50 bg-muted/30">
                                                     {record.category}
                                                 </Badge>
                                             </td>
@@ -471,7 +471,7 @@ export default async function InvestorFinancePage() {
                                             </td>
                                             <td className="py-6 px-8">
                                                 <div className={cn(
-                                                    "inline-flex items-center gap-2 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest",
+                                                    "inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-black uppercase tracking-widest",
                                                     record.type === 'income' ? "bg-emerald-500/10 text-emerald-500" : "bg-red-500/10 text-red-500"
                                                 )}>
                                                     <div className={cn("h-1.5 w-1.5 rounded-full", record.type === 'income' ? "bg-emerald-500 animate-pulse" : "bg-red-500")} />
@@ -498,7 +498,7 @@ export default async function InvestorFinancePage() {
 
                 {records.length > 20 && (
                     <div className="flex justify-center">
-                        <Button variant="ghost" className="rounded-xl font-black uppercase text-[10px] tracking-[0.2em] text-muted-foreground hover:text-primary hover:bg-primary/5">
+                        <Button variant="ghost" className="rounded-xl font-black uppercase text-xs tracking-[0.2em] text-muted-foreground hover:text-primary hover:bg-primary/5">
                             Cargar más transacciones <ArrowUpRight className="h-3 w-3 ml-2" />
                         </Button>
                     </div>

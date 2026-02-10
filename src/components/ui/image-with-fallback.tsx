@@ -8,16 +8,20 @@ interface ImageWithFallbackProps extends ImageProps {
 }
 
 export function ImageWithFallback({ src, fallbackSrc, alt, ...props }: ImageWithFallbackProps) {
-    const [imgSrc, setImgSrc] = useState(src)
+    // Use fallback immediately if src is null, undefined, or empty string
+    const initialSrc = src && String(src).trim() !== '' ? src : fallbackSrc
+    const [imgSrc, setImgSrc] = useState(initialSrc)
 
     useEffect(() => {
-        setImgSrc(src)
-    }, [src])
+        // Update imgSrc when src changes, but use fallback if src is invalid
+        const newSrc = src && String(src).trim() !== '' ? src : fallbackSrc
+        setImgSrc(newSrc)
+    }, [src, fallbackSrc])
 
     return (
         <Image
             {...props}
-            src={imgSrc || fallbackSrc}
+            src={imgSrc}
             alt={alt}
             onError={() => {
                 setImgSrc(fallbackSrc)

@@ -138,7 +138,7 @@ export function ActivityFeed({ investorId }: { investorId: string }) {
                     <Clock className="h-8 w-8 text-primary opacity-50" />
                 </div>
                 <h4 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Sin Novedades</h4>
-                <p className="text-[10px] font-medium text-muted-foreground/60 mt-2 uppercase tracking-wide">No hay actividad reciente en tu flota</p>
+                <p className="text-xs font-medium text-muted-foreground/60 mt-2 uppercase tracking-wide">No hay actividad reciente en tu flota</p>
             </div>
         )
     }
@@ -171,17 +171,17 @@ export function ActivityFeed({ investorId }: { investorId: string }) {
 
                         <div className="flex flex-1 flex-col pb-6 border-b border-border/10 last:border-0 pt-1">
                             <div className="flex items-center justify-between mb-1">
-                                <span className="text-[10px] font-black uppercase tracking-widest text-primary italic">
+                                <span className="text-xs font-black uppercase tracking-widest text-primary italic">
                                     {activity.vehicle_info}
                                 </span>
-                                <span className="text-[9px] font-bold text-muted-foreground bg-muted/50 px-2 py-0.5 rounded-full">
+                                <span className="text-xs font-bold text-muted-foreground bg-muted/50 px-2 py-0.5 rounded-full">
                                     {formatDistanceToNow(new Date(activity.date), { addSuffix: true, locale: es })}
                                 </span>
                             </div>
                             <h5 className="text-sm font-black uppercase italic tracking-tighter leading-tight group-hover:text-primary transition-colors">
                                 {activity.title}
                             </h5>
-                            <p className="text-[10px] font-medium text-muted-foreground mt-1 line-clamp-1 opacity-70">
+                            <p className="text-xs font-medium text-muted-foreground mt-1 line-clamp-1 opacity-70">
                                 {activity.subtitle}
                             </p>
                         </div>
@@ -189,7 +189,7 @@ export function ActivityFeed({ investorId }: { investorId: string }) {
                 ))}
             </div>
 
-            <button className="w-full mt-6 py-4 rounded-2xl border border-dashed border-border/50 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground hover:bg-primary/5 hover:text-primary hover:border-primary/30 transition-all flex items-center justify-center gap-2">
+            <button className="w-full mt-6 py-4 rounded-2xl border border-dashed border-border/50 text-xs font-black uppercase tracking-[0.2em] text-muted-foreground hover:bg-primary/5 hover:text-primary hover:border-primary/30 transition-all flex items-center justify-center gap-2">
                 Ver Todo el Historial
                 <ChevronRight className="h-3 w-3" />
             </button>

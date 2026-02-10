@@ -463,7 +463,7 @@ export default function DocumentsPage() {
                                             <div className="p-3 bg-white dark:bg-slate-900 rounded-full shadow-sm">
                                                 <FileText className={`h-8 w-8 ${doc.category?.includes('pdf') ? 'text-red-500' : 'text-slate-400'}`} />
                                             </div>
-                                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                                            <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">
                                                 {doc.category?.split('/')[1] || 'FILE'}
                                             </span>
                                         </div>
@@ -479,14 +479,14 @@ export default function DocumentsPage() {
                                 {(doc.vehicle || doc.owner) && (
                                     <div className="space-y-1.5 pt-1 border-t border-slate-100 dark:border-slate-800">
                                         {doc.vehicle && (
-                                            <div className="flex items-center gap-1.5 text-[10px] text-slate-500 uppercase tracking-tight">
-                                                <Badge variant="outline" className="h-4 px-1 text-[9px] font-bold">AUTO</Badge>
+                                            <div className="flex items-center gap-1.5 text-xs text-slate-500 uppercase tracking-tight">
+                                                <Badge variant="outline" className="h-4 px-1 text-xs font-bold">AUTO</Badge>
                                                 <span className="truncate">{doc.vehicle.make} {doc.vehicle.model} ({doc.vehicle.year})</span>
                                             </div>
                                         )}
                                         {doc.owner && (
-                                            <div className="flex items-center gap-1.5 text-[10px] text-slate-500 uppercase tracking-tight">
-                                                <Badge variant="outline" className="h-4 px-1 text-[9px] font-bold">VEND</Badge>
+                                            <div className="flex items-center gap-1.5 text-xs text-slate-500 uppercase tracking-tight">
+                                                <Badge variant="outline" className="h-4 px-1 text-xs font-bold">VEND</Badge>
                                                 <span className="truncate">{doc.owner.full_name || doc.owner.email}</span>
                                             </div>
                                         )}
