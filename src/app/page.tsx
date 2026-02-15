@@ -8,6 +8,7 @@ import { SystemPreview } from "@/components/landing/SystemPreview"
 import { ContactSection } from "@/components/landing/ContactSection"
 import { Footer } from "@/components/landing/Footer"
 import { FloatingWhatsApp } from "@/components/landing/FloatingWhatsApp"
+import { TuroSection } from "@/components/landing/TuroSection"
 
 export default function Home() {
   return (
@@ -15,6 +16,7 @@ export default function Home() {
       <Navbar />
       <Hero />
       <VehicleFleet />
+      <TuroSection />
       <ProcessSection />
       <ExperienceSection />
       <BenefitsSection />
