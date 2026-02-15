@@ -109,6 +109,8 @@ export function VehiclesGrid({ vehicles: initialVehicles, investors }: VehiclesG
                 mileage: Number(values.mileage),
                 daily_rental_price: values.daily_rental_price ? Number(values.daily_rental_price) : null,
                 assigned_investor_id: values.assigned_investor_id === "none" ? null : (values.assigned_investor_id || null),
+                license_plate: values.license_plate?.trim() || null,
+                vin: values.vin?.trim() || null,
                 image_url: finalImageUrl,
                 expected_occupancy_days: Number(values.expected_occupancy_days) || 240,
                 management_fee_percent: Number(values.management_fee_percent) || 20,

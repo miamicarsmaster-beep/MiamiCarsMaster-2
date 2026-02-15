@@ -277,6 +277,22 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
                 updateData.assigned_investor_id = formData.assigned_investor_id;
             }
 
+            // Normalizar campos opcionales para evitar problemas con UNIQUE constraints (strings vacíos vs null)
+            if (updateData.license_plate === "") updateData.license_plate = null;
+            if (updateData.vin === "") updateData.vin = null;
+
+            // Detectar si el millaje cambió para crear un registro en el historial
+            const hasMileageChanged = Number(formData.mileage) !== vehicle.mileage;
+
+            if (hasMileageChanged) {
+                await createMileageLogAction({
+                    vehicle_id: vehicle.id,
+                    mileage: Number(formData.mileage),
+                    date: new Date().toISOString(),
+                    notes: "Actualización manual desde panel general"
+                })
+            }
+
             const { success, data, error } = await updateVehicleAction(vehicle.id, updateData)
 
             if (error) throw new Error(error)
@@ -502,7 +518,20 @@ export function VehicleAdminPanel({ vehicle, investors = [], onClose, onUpdate, 
 
             if (error) throw new Error(error)
 
-            // Si hay un costo, registrarlo en financial_records
+            // 1.5 Update vehicle mileage if it's greater than current
+            if (currentMileage > vehicle.mileage) {
+                await createMileageLogAction({
+                    vehicle_id: vehicle.id,
+                    mileage: currentMileage,
+                    date: maintenanceForm.date,
+                    notes: `Registro automático desde mantenimiento: ${type}`
+                })
+                setFormData(prev => ({ ...prev, mileage: currentMileage }))
+                if (onUpdate) onUpdate({ ...vehicle, mileage: currentMileage })
+                loadMileageHistory() // Re-cargar historial de millaje
+            }
+
+            // 2. Si hay un costo, registrarlo en financial_records
             if (cost > 0) {
                 const { error: finError } = await createFinancialRecordAction({
                     vehicle_id: vehicle.id,

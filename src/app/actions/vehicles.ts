@@ -44,6 +44,16 @@ export async function createVehicleAction(payload: any) {
             return { error: error.message }
         }
 
+        // Create initial mileage log if mileage is provided
+        if (data && payload.mileage > 0) {
+            await supabaseAdmin.from("mileage_history").insert([{
+                vehicle_id: data.id,
+                mileage: payload.mileage,
+                date: new Date().toISOString(),
+                notes: "Millaje inicial de registro"
+            }])
+        }
+
         revalidatePath('/dashboard/admin/vehicles')
         return { success: true, data }
     } catch (error: any) {
