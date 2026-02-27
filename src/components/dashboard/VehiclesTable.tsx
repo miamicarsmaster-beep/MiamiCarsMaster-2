@@ -98,10 +98,6 @@ export function VehiclesGrid({ vehicles: initialVehicles, investors }: VehiclesG
 
     const onSubmit = async (values: VehicleFormValues) => {
         try {
-            const carName = `${values.make} ${values.model}`.replace(/\s+/g, '+')
-            const placeholderUrl = `https://source.unsplash.com/800x600/?${carName},car`
-            const finalImageUrl = values.image_url || placeholderUrl
-
             const payload = {
                 ...values,
                 year: Number(values.year),
@@ -111,7 +107,8 @@ export function VehiclesGrid({ vehicles: initialVehicles, investors }: VehiclesG
                 assigned_investor_id: values.assigned_investor_id === "none" ? null : (values.assigned_investor_id || null),
                 license_plate: values.license_plate?.trim() || null,
                 vin: values.vin?.trim() || null,
-                image_url: finalImageUrl,
+                // Keep as-is; server action handles null fallback
+                image_url: values.image_url?.trim() || null,
                 expected_occupancy_days: Number(values.expected_occupancy_days) || 240,
                 management_fee_percent: Number(values.management_fee_percent) || 20,
                 management_fee_type: values.management_fee_type || 'percentage',

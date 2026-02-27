@@ -18,15 +18,21 @@ export async function createVehicleAction(payload: any) {
     try {
         console.log('[createVehicleAction] Starting creation with payload:', payload)
 
-        // Filter out fields that don't exist in the database schema
+        // Prepare the payload for insertion into the 'vehicles' table.
+        // Filter out fields that are only for form processing or not directly stored in 'vehicles'.
         const {
-            expected_occupancy_days,
-            management_fee_percent,
-            management_fee_type,
-            management_fee_fixed_amount,
-            apply_management_fee,
+            expected_occupancy_days, // Used for calculations, not stored in 'vehicles' table
+            management_fee_percent, // Used for calculations, not stored in 'vehicles' table
+            management_fee_type, // Used for calculations, not stored in 'vehicles' table
+            management_fee_fixed_amount, // Used for calculations, not stored in 'vehicles' table
+            apply_management_fee, // Used for calculations, not stored in 'vehicles' table
             ...validPayload
         } = payload
+
+        // Normalize empty image_url to null
+        if (!validPayload.image_url?.trim()) {
+            validPayload.image_url = null
+        }
 
         console.log('[createVehicleAction] Filtered payload:', validPayload)
 

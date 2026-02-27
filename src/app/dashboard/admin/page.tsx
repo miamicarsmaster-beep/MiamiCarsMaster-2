@@ -13,8 +13,6 @@ import { VehicleCarousel } from "@/components/dashboard/VehicleCarousel"
 
 // Force dynamic rendering since we use cookies for auth
 export const dynamic = 'force-dynamic'
-// Revalidate every 60 seconds for better performance
-export const revalidate = 60
 
 export default async function AdminDashboardPage() {
     const supabase = await createClient()

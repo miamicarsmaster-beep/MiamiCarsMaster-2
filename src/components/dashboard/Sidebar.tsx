@@ -137,16 +137,15 @@ export function Sidebar() {
                     <p className="text-xs text-muted-foreground mt-1 font-bold">Conexión Segura v4.0</p>
                 </div>
 
-                <Link
-                    href="/"
-                    prefetch={false}
+                <a
+                    href="/api/auth/logout"
                     className="text-base group flex p-5 w-full justify-start font-black cursor-pointer hover:bg-red-500/10 hover:text-red-500 rounded-[1rem] transition-all duration-300 text-muted-foreground/70"
                 >
                     <div className="flex items-center flex-1">
                         <LogOut className="h-5 w-5 mr-3 text-red-500/50 group-hover:text-red-500 transition-all duration-500 group-hover:rotate-12" />
                         <span className="tracking-tight uppercase text-xs font-black tracking-widest">Cerrar Sesión</span>
                     </div>
-                </Link>
+                </a>
             </div>
         </div>
     )

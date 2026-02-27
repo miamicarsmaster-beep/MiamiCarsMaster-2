@@ -35,10 +35,8 @@ export function VehicleForm({ investors }: VehicleFormProps) {
     const [previewUrl, setPreviewUrl] = useState("")
     const supabase = createClient()
 
-    const generatePlaceholderImage = (make: string, model: string) => {
-        const carName = `${make} ${model}`.replace(/\s+/g, '+')
-        return `https://source.unsplash.com/800x600/?${carName},car`
-    }
+    // Generic car placeholder as inline SVG data URI - no external requests needed
+    const CAR_PLACEHOLDER = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='500' viewBox='0 0 800 500'%3E%3Crect width='800' height='500' fill='%23111827'/%3E%3Crect x='60' y='280' width='680' height='80' rx='12' fill='%231f2937'/%3E%3Crect x='120' y='190' width='560' height='120' rx='20' fill='%231f2937'/%3E%3Ccircle cx='200' cy='360' r='55' fill='%23374151'/%3E%3Ccircle cx='200' cy='360' r='30' fill='%234b5563'/%3E%3Ccircle cx='600' cy='360' r='55' fill='%23374151'/%3E%3Ccircle cx='600' cy='360' r='30' fill='%234b5563'/%3E%3Ctext x='400' y='160' font-family='sans-serif' font-size='28' fill='%236b7280' text-anchor='middle'%3ENo Image%3C/text%3E%3C/svg%3E`
 
     const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
@@ -110,8 +108,8 @@ export function VehicleForm({ investors }: VehicleFormProps) {
                         {(currentImageUrl || field.value) && (
                             <div className="mt-2 rounded-lg overflow-hidden border relative h-48 w-full">
                                 <ImageWithFallback
-                                    src={currentImageUrl || generatePlaceholderImage(form.watch("make") || "Car", form.watch("model") || "Vehicle")}
-                                    fallbackSrc={generatePlaceholderImage("Car", "Vehicle")}
+                                    src={currentImageUrl || CAR_PLACEHOLDER}
+                                    fallbackSrc={CAR_PLACEHOLDER}
                                     alt="Preview"
                                     fill
                                     unoptimized

@@ -430,7 +430,7 @@ export default function InvestorVehicleDetailPage() {
                                     >
                                         <ImageWithFallback
                                             src={photo.image_url}
-                                            fallbackSrc="https://source.unsplash.com/400x400/?car"
+                                            fallbackSrc={`data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400' viewBox='0 0 400 400'%3E%3Crect width='400' height='400' fill='%23111827'/%3E%3Ctext x='200' y='210' font-family='sans-serif' font-size='16' fill='%236b7280' text-anchor='middle'%3ENo Image%3C/text%3E%3C/svg%3E`}
                                             alt="Vehicle photo"
                                             fill
                                             className="object-cover transition-transform group-hover:scale-110"
