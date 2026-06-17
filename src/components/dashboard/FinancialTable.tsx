@@ -41,6 +41,26 @@ interface FinancialTableProps {
     vehicles: Vehicle[]
 }
 
+type FinancialRecordInsert = {
+    vehicle_id: string
+    type: FinancialRecord["type"]
+    category: string
+    amount: number
+    date: string
+    description: string | null
+    created_by: string | null
+    mileage_at_operation?: number
+}
+
+function getErrorMessage(error: unknown, fallback: string) {
+    if (error instanceof Error) return error.message
+    if (typeof error === "object" && error !== null && "message" in error) {
+        const message = (error as { message?: unknown }).message
+        if (typeof message === "string") return message
+    }
+    return fallback
+}
+
 export function FinancialTable({ records: initialRecords, vehicles }: FinancialTableProps) {
     const [records, setRecords] = useState(initialRecords)
     const [isAddOpen, setIsAddOpen] = useState(false)
@@ -77,7 +97,7 @@ export function FinancialTable({ records: initialRecords, vehicles }: FinancialT
             const { data: { user } } = await supabase.auth.getUser()
 
             // First, filter out empty fields and clean up the payload
-            const insertData: any = {
+            const insertData: FinancialRecordInsert = {
                 vehicle_id: formData.vehicle_id,
                 type: formData.type,
                 category: formData.category,
@@ -92,7 +112,7 @@ export function FinancialTable({ records: initialRecords, vehicles }: FinancialT
                 insertData.mileage_at_operation = Number(formData.mileage_at_operation)
             }
 
-            const { data, error } = await supabase
+            let { data, error } = await supabase
                 .from("financial_records")
                 .insert([insertData])
                 .select(`
@@ -100,6 +120,29 @@ export function FinancialTable({ records: initialRecords, vehicles }: FinancialT
           vehicle:vehicles(id, make, model, year, license_plate)
         `)
                 .single()
+
+            const isMissingMileageColumn =
+                error &&
+                "mileage_at_operation" in insertData &&
+                error.message?.includes("mileage_at_operation") &&
+                error.message?.includes("schema cache")
+
+            if (isMissingMileageColumn) {
+                const fallbackData = { ...insertData }
+                delete fallbackData.mileage_at_operation
+
+                const fallbackResult = await supabase
+                    .from("financial_records")
+                    .insert([fallbackData])
+                    .select(`
+          *,
+          vehicle:vehicles(id, make, model, year, license_plate)
+        `)
+                    .single()
+
+                data = fallbackResult.data
+                error = fallbackResult.error
+            }
 
             if (error) {
                 console.error("Supabase Error detail:", error)
@@ -122,9 +165,9 @@ export function FinancialTable({ records: initialRecords, vehicles }: FinancialT
             setIsAddOpen(false)
             resetForm()
             router.refresh()
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error("Error adding financial record:", error)
-            alert(`Error al agregar registro: ${error.message || "Verifica la conexión o los campos"}`)
+            alert(`Error al agregar registro: ${getErrorMessage(error, "Verifica la conexión o los campos")}`)
         } finally {
             setIsLoading(false)
         }
@@ -145,29 +188,12 @@ export function FinancialTable({ records: initialRecords, vehicles }: FinancialT
             setRecords(records.filter(r => r.id !== id))
             if (selectedRecord?.id === id) setSelectedRecord(null)
             router.refresh()
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error("Error deleting financial record:", error)
-            alert(`Error al eliminar: ${error.message}`)
+            alert(`Error al eliminar: ${getErrorMessage(error, "No se pudo eliminar el registro")}`)
         } finally {
             setIsLoading(false)
         }
-    }
-
-    const getTypeBadge = (type: FinancialRecord["type"]) => {
-        if (type === "income") {
-            return (
-                <Badge className="bg-emerald-500">
-                    <TrendingUp className="h-3 w-3 mr-1" />
-                    Ingreso
-                </Badge>
-            )
-        }
-        return (
-            <Badge className="bg-red-500">
-                <TrendingDown className="h-3 w-3 mr-1" />
-                Gasto
-            </Badge>
-        )
     }
 
     const getTotals = () => {
@@ -544,4 +570,3 @@ export function FinancialTable({ records: initialRecords, vehicles }: FinancialT
         </div>
     )
 }
-
